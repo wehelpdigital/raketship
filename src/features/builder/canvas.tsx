@@ -31,7 +31,12 @@ import {
   type CanvasEdge,
   type CanvasNode,
 } from "@/lib/flow/mappers"
-import { resolveNodeType, withDefaults, type NodeScope } from "@/lib/flow/registry"
+import {
+  nodeTypesForScope,
+  resolveNodeType,
+  withDefaults,
+  type NodeScope,
+} from "@/lib/flow/registry"
 import { cn } from "@/lib/utils"
 
 import {
@@ -129,6 +134,16 @@ function CanvasInner({
     const found = nodes.find((node) => node.id === selectedKey)
     return found ? toCanvasNode(found) : null
   }, [nodes, selectedKey])
+
+  // Elements already at their `maxPerFlow` — the palette hides them rather than
+  // offering a row whose only possible outcome is an error toast.
+  const atCapacity = useMemo(
+    () =>
+      nodeTypesForScope(scope, moduleId)
+        .filter((def) => !canAddNode(nodes, def.type).ok)
+        .map((def) => def.type),
+    [moduleId, nodes, scope]
+  )
 
   const place = useCallback(
     async (type: string, position: { x: number; y: number }) => {
@@ -327,8 +342,10 @@ function CanvasInner({
             size={1.5}
             color="var(--color-border)"
           />
+          {/* React Flow's stylesheet is unlayered, so `.react-flow__controls
+              { display: flex }` beats Tailwind's layered `hidden`. */}
           <Controls
-            className="hidden sm:flex"
+            className="hidden! sm:flex!"
             showInteractive={false}
             position="top-right"
           />
@@ -387,6 +404,7 @@ function CanvasInner({
         scope={scope}
         moduleId={moduleId}
         unlockedTypes={unlockedTypes}
+        atCapacity={atCapacity}
         onAdd={addFromPalette}
       />
 

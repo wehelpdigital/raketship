@@ -204,7 +204,7 @@ export function TierLadder({
 
               {state === "upgrade" && (
                 <Button
-                  className="mt-4 h-11 w-full"
+                  className="mt-3 h-11 w-full"
                   onClick={() => setTarget(tier)}
                   disabled={pending}
                 >

@@ -3,17 +3,21 @@
  * Applies every SQL file in supabase/migrations (lexical order) to the project
  * database.
  *
- * Requires a direct Postgres connection string, because Supabase's REST API
- * cannot execute DDL. Get it from:
- *   Dashboard -> Project Settings -> Database -> Connection string -> URI
+ * Two ways to authenticate, tried in this order:
  *
- * Then either put it in .env.local as SUPABASE_DB_URL=..., or pass it inline:
- *   SUPABASE_DB_URL="postgresql://..." npm run db:push
+ *   1. SUPABASE_ACCESS_TOKEN  — a personal access token (sbp_...) from
+ *      https://supabase.com/dashboard/account/tokens. Runs the SQL through the
+ *      Management API, so no database password is needed. This is also the
+ *      token the Supabase MCP server uses.
+ *
+ *   2. SUPABASE_DB_URL — a direct Postgres URI from
+ *      Dashboard -> Project Settings -> Database -> Connection string.
+ *
+ * Either can live in .env.local or be passed inline.
  */
 import { readFileSync, readdirSync, existsSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
-import postgres from "postgres"
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..")
 
@@ -40,28 +44,6 @@ function loadEnvLocal() {
 
 loadEnvLocal()
 
-const url = process.env.SUPABASE_DB_URL
-if (!url) {
-  console.error(
-    [
-      "",
-      "  SUPABASE_DB_URL is not set.",
-      "",
-      "  Supabase's REST API cannot run DDL, so migrations need a direct",
-      "  Postgres connection. Grab the URI from:",
-      "    Dashboard -> Project Settings -> Database -> Connection string",
-      "",
-      "  Add it to .env.local:",
-      "    SUPABASE_DB_URL=postgresql://postgres.<ref>:<password>@<host>:5432/postgres",
-      "",
-      "  Alternative with no password needed: open supabase/setup.sql and paste",
-      "  it into the Supabase SQL Editor.",
-      "",
-    ].join("\n")
-  )
-  process.exit(1)
-}
-
 const dir = join(root, "supabase", "migrations")
 const files = readdirSync(dir)
   .filter((f) => f.endsWith(".sql"))
@@ -72,31 +54,92 @@ if (files.length === 0) {
   process.exit(1)
 }
 
-const sql = postgres(url, {
-  max: 1,
-  // Supabase requires TLS; its pooler cert is not in Node's default store.
-  ssl: { rejectUnauthorized: false },
-  onnotice: () => {},
-})
-
-let failed = false
-try {
-  for (const file of files) {
-    const body = readFileSync(join(dir, file), "utf8")
-    process.stdout.write(`  applying ${file} ... `)
-    try {
-      await sql.unsafe(body)
-      console.log("ok")
-    } catch (err) {
-      console.log("FAILED")
-      console.error(`\n  ${err.message}\n`)
-      failed = true
-      break
-    }
-  }
-} finally {
-  await sql.end({ timeout: 5 })
+/** Derive the project ref from the Supabase URL. */
+function projectRef() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""
+  const m = url.match(/^https:\/\/([a-z0-9]+)\.supabase\.co/i)
+  return m?.[1] ?? null
 }
 
-if (failed) process.exit(1)
+async function applyViaManagementApi(token) {
+  const ref = projectRef()
+  if (!ref) {
+    console.error("Could not read the project ref from NEXT_PUBLIC_SUPABASE_URL")
+    process.exit(1)
+  }
+  const endpoint = `https://api.supabase.com/v1/projects/${ref}/database/query`
+  console.log(`\n  Applying via Management API (project ${ref})\n`)
+
+  for (const file of files) {
+    const body = readFileSync(join(dir, file), "utf8")
+    process.stdout.write(`  ${file} ... `)
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ query: body }),
+    })
+    if (!res.ok) {
+      console.log("FAILED")
+      console.error(`\n  HTTP ${res.status}\n  ${await res.text()}\n`)
+      process.exit(1)
+    }
+    console.log("ok")
+  }
+}
+
+async function applyViaPostgres(url) {
+  const { default: postgres } = await import("postgres")
+  const sql = postgres(url, {
+    max: 1,
+    ssl: { rejectUnauthorized: false },
+    onnotice: () => {},
+  })
+  console.log("\n  Applying via direct Postgres connection\n")
+  try {
+    for (const file of files) {
+      const body = readFileSync(join(dir, file), "utf8")
+      process.stdout.write(`  ${file} ... `)
+      try {
+        await sql.unsafe(body)
+        console.log("ok")
+      } catch (err) {
+        console.log("FAILED")
+        console.error(`\n  ${err.message}\n`)
+        process.exit(1)
+      }
+    }
+  } finally {
+    await sql.end({ timeout: 5 })
+  }
+}
+
+const token = process.env.SUPABASE_ACCESS_TOKEN
+const dbUrl = process.env.SUPABASE_DB_URL
+
+if (token) {
+  await applyViaManagementApi(token)
+} else if (dbUrl) {
+  await applyViaPostgres(dbUrl)
+} else {
+  console.error(
+    [
+      "",
+      "  No database credential found.",
+      "",
+      "  Set ONE of these in .env.local:",
+      "",
+      "    SUPABASE_ACCESS_TOKEN=sbp_...        (recommended — no DB password,",
+      "                                          and the Supabase MCP uses it too)",
+      "    SUPABASE_DB_URL=postgresql://...     (direct connection)",
+      "",
+      "  Or paste supabase/setup.sql into the Supabase SQL Editor.",
+      "",
+    ].join("\n")
+  )
+  process.exit(1)
+}
+
 console.log("\n  Database is up to date.\n")
