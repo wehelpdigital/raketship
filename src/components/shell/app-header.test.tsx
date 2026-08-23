@@ -38,13 +38,13 @@ describe("pageTitleFor", () => {
   it("names each section", () => {
     expect(pageTitleFor("/dashboard")).toBe("Home")
     expect(pageTitleFor("/raket")).toBe("Build your Raket")
-    expect(pageTitleFor("/marketplace")).toBe("Marketplace")
+    expect(pageTitleFor("/marketplace")).toBe("Raket Market")
     expect(pageTitleFor("/account")).toBe("Account")
   })
 
   it("keeps the section title on nested routes", () => {
     expect(pageTitleFor("/raket/abc-123")).toBe("Build your Raket")
-    expect(pageTitleFor("/marketplace/booking")).toBe("Marketplace")
+    expect(pageTitleFor("/marketplace/booking")).toBe("Raket Market")
   })
 
   it("is empty outside the app sections", () => {
@@ -107,7 +107,7 @@ describe("AppHeader", () => {
 
   it("marks the current section in the inline navigation", () => {
     renderAt("/marketplace/booking")
-    expect(screen.getByRole("link", { name: "Market" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Raket Market" })).toHaveAttribute(
       "aria-current",
       "page"
     )

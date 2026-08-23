@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils"
 export interface NavItem {
   href: string
   label: string
+  /** Used by the bottom tab bar, where a quarter of 390px is all the room there is. */
+  shortLabel?: string
   icon: LucideIcon
   /** The star feature gets a filled chip so it reads as the main action. */
   emphasis?: boolean
@@ -22,8 +24,19 @@ export interface NavItem {
 
 export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
-  { href: "/raket", label: "Raket", icon: Rocket, emphasis: true },
-  { href: "/marketplace", label: "Market", icon: Store },
+  {
+    href: "/raket",
+    label: "Build your Raket",
+    shortLabel: "Raket",
+    icon: Rocket,
+    emphasis: true,
+  },
+  {
+    href: "/marketplace",
+    label: "Raket Market",
+    shortLabel: "Market",
+    icon: Store,
+  },
   { href: "/account", label: "Account", icon: CircleUser },
 ]
 
@@ -79,7 +92,7 @@ export function BottomNav({ className }: { className?: string }) {
                 >
                   <Icon className="size-5" aria-hidden="true" />
                 </span>
-                {item.label}
+                {item.shortLabel ?? item.label}
               </Link>
             </li>
           )

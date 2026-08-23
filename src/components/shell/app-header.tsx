@@ -3,10 +3,16 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LogOut, Rocket, UserRound } from "lucide-react"
+import { Boxes, ChevronDown, LogOut, Rocket, UserRound } from "lucide-react"
 
 import { isNavItemActive, NAV_ITEMS } from "@/components/shell/bottom-nav"
+import {
+  accentChip,
+  moduleHref,
+  type ModuleNavItem,
+} from "@/components/shell/module-nav"
 import { ThemeToggle } from "@/components/shell/theme-toggle"
+import { ModuleIcon } from "@/components/module-icon"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -21,7 +27,7 @@ import { cn } from "@/lib/utils"
 const PAGE_TITLES: ReadonlyArray<readonly [string, string]> = [
   ["/dashboard", "Home"],
   ["/raket", "Build your Raket"],
-  ["/marketplace", "Marketplace"],
+  ["/marketplace", "Raket Market"],
   ["/account", "Account"],
 ]
 
@@ -49,10 +55,16 @@ export function initialsFrom(
 export interface AppHeaderProps {
   name?: string | null
   email?: string | null
+  modules?: readonly ModuleNavItem[]
   className?: string
 }
 
-export function AppHeader({ name, email, className }: AppHeaderProps) {
+export function AppHeader({
+  name,
+  email,
+  modules = [],
+  className,
+}: AppHeaderProps) {
   const pathname = usePathname() ?? ""
   const title = pageTitleFor(pathname)
   const signOutForm = React.useRef<HTMLFormElement>(null)
@@ -64,10 +76,10 @@ export function AppHeader({ name, email, className }: AppHeaderProps) {
         className
       )}
     >
-      <div className="mx-auto flex h-14 w-full max-w-2xl items-center gap-2 px-4 sm:px-6">
+      <div className="mx-auto flex h-14 w-full max-w-2xl items-center gap-2 px-4 sm:px-6 md:max-w-3xl lg:h-16 lg:max-w-5xl lg:px-8 xl:max-w-6xl">
         <Link
           href="/dashboard"
-          className="flex shrink-0 items-center gap-2 rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="flex shrink-0 items-center gap-2 rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50 lg:hidden"
         >
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Rocket className="size-4" aria-hidden="true" />
@@ -86,14 +98,14 @@ export function AppHeader({ name, email, className }: AppHeaderProps) {
               aria-hidden="true"
               className="h-5 w-px shrink-0 bg-border md:hidden"
             />
-            <h1 className="min-w-0 truncate text-sm font-medium text-muted-foreground md:sr-only">
+            <h1 className="min-w-0 truncate text-sm font-medium text-muted-foreground md:sr-only lg:not-sr-only lg:text-lg lg:font-semibold lg:tracking-tight lg:text-foreground">
               {title}
             </h1>
           </>
         ) : null}
 
         {/* On wider screens this row is the navigation; the tab bar hides. */}
-        <nav aria-label="Primary" className="hidden md:flex md:items-center md:gap-1">
+        <nav aria-label="Primary" className="hidden md:flex md:items-center md:gap-1 lg:hidden">
           {NAV_ITEMS.map((item) => {
             const active = isNavItemActive(pathname, item.href)
             const Icon = item.icon
@@ -117,6 +129,8 @@ export function AppHeader({ name, email, className }: AppHeaderProps) {
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-0.5">
+          <ModulesMenu modules={modules} pathname={pathname} />
+
           <ThemeToggle />
 
           <DropdownMenu>
@@ -171,5 +185,76 @@ export function AppHeader({ name, email, className }: AppHeaderProps) {
         </div>
       </div>
     </header>
+  )
+}
+
+/**
+ * The Modules group for phones and tablets. The desktop sidebar renders the
+ * same list inline, so this hides from `lg` up to keep one surface per width.
+ */
+function ModulesMenu({
+  modules,
+  pathname,
+}: {
+  modules: readonly ModuleNavItem[]
+  pathname: string
+}) {
+  const current = modules.find((m) =>
+    isNavItemActive(pathname, moduleHref(m.id))
+  )
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className={cn(
+          "flex h-11 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 lg:hidden",
+          current
+            ? "text-foreground"
+            : "text-muted-foreground hover:text-foreground"
+        )}
+      >
+        <Boxes className="size-4" aria-hidden="true" />
+        <span className="hidden sm:inline">
+          {current ? current.name : "Modules"}
+        </span>
+        <ChevronDown className="size-3.5 opacity-60" aria-hidden="true" />
+        <span className="sr-only">Open modules menu</span>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent align="end" sideOffset={6} className="w-56 min-w-56">
+        <p className="px-2 py-2 text-xs font-semibold tracking-wide text-muted-foreground/80 uppercase">
+          Modules
+        </p>
+
+        {modules.length > 0 ? (
+          modules.map((mod) => (
+            <DropdownMenuItem
+              key={mod.id}
+              className="h-11 gap-2.5 px-2"
+              render={<Link href={moduleHref(mod.id)} />}
+            >
+              <span
+                className={cn(
+                  "flex size-6 shrink-0 items-center justify-center rounded-md",
+                  accentChip(mod.accent)
+                )}
+              >
+                <ModuleIcon
+                  name={mod.icon}
+                  className="size-3.5"
+                  aria-hidden="true"
+                />
+              </span>
+              <span className="min-w-0 flex-1 truncate">{mod.name}</span>
+            </DropdownMenuItem>
+          ))
+        ) : (
+          <p className="px-2 py-2 text-xs text-muted-foreground">
+            No modules yet.
+          </p>
+        )}
+
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

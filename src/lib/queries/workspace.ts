@@ -1,5 +1,7 @@
 import "server-only"
 
+import { cache } from "react"
+
 import { getSupabaseServerClient } from "@/lib/supabase/server"
 import type {
   FlowEdgeRow,
@@ -33,7 +35,9 @@ export interface WorkspaceSummary {
  * Returns nulls rather than throwing when the schema has not been applied yet,
  * so a fresh project shows the setup screen instead of a stack trace.
  */
-export async function getWorkspace(userId: string): Promise<WorkspaceSummary> {
+export const getWorkspace = cache(async function getWorkspace(
+  userId: string
+): Promise<WorkspaceSummary> {
   const supabase = await getSupabaseServerClient()
   const empty: WorkspaceSummary = {
     profile: null,
@@ -73,7 +77,7 @@ export async function getWorkspace(userId: string): Promise<WorkspaceSummary> {
     ),
     raket: (raketRes.data as RaketRow | null) ?? null,
   }
-}
+})
 
 export interface CanvasPayload {
   flow: FlowRow | null
@@ -135,6 +139,28 @@ async function loadCanvasContents(flow: FlowRow): Promise<CanvasPayload> {
     edges: (edgesRes.data as FlowEdgeRow[] | null) ?? [],
   }
 }
+
+/**
+ * The module node a user placed on their raket, found by module slug rather
+ * than by row id — which is what lets /modules/booking be a stable URL instead
+ * of leaking a uuid into navigation.
+ */
+export const getModuleNodeForUser = cache(async function getModuleNodeForUser(
+  userId: string,
+  moduleId: string
+): Promise<FlowNodeRow | null> {
+  const supabase = await getSupabaseServerClient()
+  if (!supabase) return null
+  const { data } = await supabase
+    .from("flow_nodes")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("module_id", moduleId)
+    .eq("type", "module")
+    .limit(1)
+    .maybeSingle()
+  return (data as FlowNodeRow | null) ?? null
+})
 
 /** Find the module node on the outer canvas by its database id. */
 export async function getModuleNode(

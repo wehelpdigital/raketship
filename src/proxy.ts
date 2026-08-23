@@ -8,6 +8,7 @@ const PROTECTED_PREFIXES = [
   "/dashboard",
   "/raket",
   "/marketplace",
+  "/modules",
   "/account",
 ]
 

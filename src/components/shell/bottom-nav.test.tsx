@@ -101,7 +101,7 @@ describe("BottomNav", () => {
     renderAt("/login")
     for (const item of NAV_ITEMS) {
       expect(
-        screen.getByRole("link", { name: item.label })
+        screen.getByRole("link", { name: item.shortLabel ?? item.label })
       ).not.toHaveAttribute("aria-current")
     }
   })
