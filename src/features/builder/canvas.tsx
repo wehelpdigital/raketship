@@ -3,6 +3,7 @@
 import "@xyflow/react/dist/style.css"
 
 import { useCallback, useMemo, useState, type CSSProperties } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   addEdge,
@@ -17,11 +18,12 @@ import {
   type Connection,
   type Edge,
   type NodeTypes,
+  type Viewport,
 } from "@xyflow/react"
-import { Plus, Sparkles } from "lucide-react"
+import { Plus, Sparkles, Store } from "lucide-react"
 import { toast } from "sonner"
 
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   canAddNode,
   edgeKey,
@@ -49,6 +51,7 @@ import { ElementNode, type BuilderNode } from "@/features/builder/element-node"
 import { InspectorSheet } from "@/features/builder/inspector-sheet"
 import { DRAG_MIME, PaletteSheet } from "@/features/builder/palette-sheet"
 import { RunPreview } from "@/features/builder/run-preview"
+import { useViewportMemory } from "@/features/builder/use-viewport-memory"
 
 // Defined once: a fresh nodeTypes object on every render makes React Flow
 // remount every node it draws.
@@ -126,6 +129,11 @@ function CanvasInner({
   const [inspectorOpen, setInspectorOpen] = useState(false)
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const { screenToFlowPosition } = useReactFlow()
+  const { remember } = useViewportMemory(flowId)
+
+  // Modules are bought in the Raket Market, so the outer board has nothing to
+  // add from a palette — only the inner module builders do.
+  const canAddElements = scope === "module"
 
   const previewNodes = useMemo(() => nodes.map(toCanvasNode), [nodes])
   const previewEdges = useMemo(() => edges.map(toCanvasEdge), [edges])
@@ -274,7 +282,18 @@ function CanvasInner({
 
   return (
     <div
-      className="relative h-[calc(100dvh-21rem)] min-h-88 w-full overflow-hidden rounded-xl bg-muted/30 ring-1 ring-border"
+      className={cn(
+        "relative w-full overflow-hidden rounded-xl bg-muted/30 ring-1 ring-border",
+        // Phone: leaves room for the header block, the tab bar and the page
+        // gutters. Tablet: no tab bar. Desktop: the header block has moved
+        // into the right column, so the budget is the 4rem app bar, the 4rem
+        // of page gutter and the module page's back link. 11rem covers the
+        // taller of the two builders, so neither of them scrolls the page.
+        "h-[calc(100dvh-21rem)] min-h-88 md:h-[calc(100dvh-18rem)] lg:h-[calc(100dvh-11rem)] lg:min-h-128",
+        // A framed workspace panel at desktop rather than a bleeding surface.
+        // ring-0 keeps the border from doubling up on the ring.
+        "lg:border lg:shadow-sm lg:ring-0"
+      )}
       style={CANVAS_THEME}
     >
       <div
@@ -325,6 +344,7 @@ function CanvasInner({
           nodeTypes={NODE_RENDERERS}
           fitView
           fitViewOptions={FIT_VIEW_OPTIONS}
+          onMoveEnd={(_, viewport: Viewport) => remember(viewport)}
           minZoom={0.4}
           maxZoom={1.5}
           nodeDragThreshold={3}
@@ -333,7 +353,7 @@ function CanvasInner({
           deleteKeyCode={null}
           zoomOnDoubleClick={false}
           selectNodesOnDrag={false}
-          proOptions={{ hideAttribution: false }}
+          proOptions={{ hideAttribution: true }}
           className="h-full w-full"
         >
           <Background
@@ -354,24 +374,38 @@ function CanvasInner({
 
       {nodes.length === 0 ? (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center p-4">
-          <div className="pointer-events-auto w-full max-w-xs rounded-xl bg-card p-4 text-center shadow-sm ring-1 ring-border sm:p-5">
-            <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Sparkles className="size-6" />
+          <div className="pointer-events-auto w-full max-w-xs rounded-xl bg-card p-4 text-center shadow-sm ring-1 ring-border sm:p-5 lg:max-w-sm lg:p-6">
+            <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary lg:size-14">
+              <Sparkles className="size-6 lg:size-7" />
             </span>
-            <h2 className="mt-3 text-base font-medium text-balance">
+            <h2 className="mt-3 text-base font-medium text-balance lg:mt-4 lg:text-lg">
               Wala pang laman ang canvas
             </h2>
             <p className="mt-1 text-sm text-pretty text-muted-foreground">
-              Start with one step. You can move it, connect it and change it
-              any time.
+              {canAddElements
+                ? "Start with one step. You can move it, connect it and change it any time."
+                : "Your modules land here once you add them from the Raket Market."}
             </p>
-            <Button
-              className="mt-4 h-11 w-full"
-              onClick={() => setPaletteOpen(true)}
-            >
-              <Plus />
-              Add your first step
-            </Button>
+            {canAddElements ? (
+              <Button
+                className="mt-4 h-11 w-full lg:mt-5 lg:h-12"
+                onClick={() => setPaletteOpen(true)}
+              >
+                <Plus />
+                Add your first step
+              </Button>
+            ) : (
+              <Link
+                href="/marketplace"
+                className={cn(
+                  buttonVariants(),
+                  "mt-4 h-11 w-full gap-2 lg:mt-5 lg:h-12"
+                )}
+              >
+                <Store aria-hidden="true" />
+                Go to Raket Market
+              </Link>
+            )}
           </div>
         </div>
       ) : null}
@@ -379,16 +413,17 @@ function CanvasInner({
       <div
         className={cn(
           "pointer-events-none absolute right-4 bottom-4 z-10",
-          "flex flex-col items-end gap-3 sm:bottom-6"
+          "flex flex-col items-end gap-3 sm:right-6 sm:bottom-6"
         )}
       >
-        <div className="pointer-events-auto">
+        <div className="pointer-events-auto lg:hidden">
           <RunPreview
             variant="icon"
             nodes={previewNodes}
             edges={previewEdges}
           />
         </div>
+{canAddElements ? (
         <Button
           className="pointer-events-auto size-14 rounded-full p-0 shadow-lg"
           onClick={() => setPaletteOpen(true)}
@@ -396,6 +431,7 @@ function CanvasInner({
         >
           <Plus className="size-6" />
         </Button>
+        ) : null}
       </div>
 
       <PaletteSheet
