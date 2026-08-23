@@ -164,6 +164,11 @@ export async function addNode(input: {
 
   const def = getNodeType(input.type)
   if (!def) return fail("That element is not part of the toolkit.")
+  // A module node is only meaningful alongside the inner flow that provisioning
+  // creates for it, so it never arrives through the palette.
+  if (input.type === "module") {
+    return fail("Modules join your raket from the marketplace.")
+  }
 
   const flow = await loadFlow(db, userId, input.flowId)
   if (!flow) return fail(NOT_FOUND)
@@ -216,9 +221,8 @@ export async function addNode(input: {
  * no revalidation — a position never changes what the server renders.
  */
 export async function updateNodePosition(input: {
-  nodeId?: string
-  flowId?: string
-  nodeKey?: string
+  flowId: string
+  nodeKey: string
   x: number
   y: number
 }): Promise<Result> {
@@ -231,20 +235,13 @@ export async function updateNodePosition(input: {
     position_y: coordinate(input.y),
   }
 
-  let query = db
+  const { error } = await db
     .from("flow_nodes")
     .update(patch)
     .eq("user_id", userId)
+    .eq("flow_id", input.flowId)
+    .eq("node_key", input.nodeKey)
 
-  if (input.nodeId) {
-    query = query.eq("id", input.nodeId)
-  } else if (input.flowId && input.nodeKey) {
-    query = query.eq("flow_id", input.flowId).eq("node_key", input.nodeKey)
-  } else {
-    return fail("We did not know which step to move.")
-  }
-
-  const { error } = await query
   if (error) return fail("We could not save that position.")
   return { ok: true }
 }
@@ -353,6 +350,7 @@ export async function connectNodes(input: {
     .from("flow_nodes")
     .select("node_key")
     .eq("flow_id", flow.id)
+    .eq("user_id", userId)
     .in("node_key", [input.source, input.target])
 
   const endpoints =
@@ -366,6 +364,7 @@ export async function connectNodes(input: {
     .from("flow_edges")
     .select("id")
     .eq("flow_id", flow.id)
+    .eq("user_id", userId)
     .eq("edge_key", key)
     .maybeSingle()
   if (duplicate) return fail("Those steps are already connected.")

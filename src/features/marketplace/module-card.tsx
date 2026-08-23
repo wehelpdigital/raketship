@@ -22,9 +22,6 @@ export function accentChip(accent: string): string {
   return ACCENT_CHIP[accent] ?? ACCENT_CHIP["chart-1"]
 }
 
-/** Icon names stored in the catalogue and the flow registry, resolved once. */
-export { resolveIcon as iconFor } from "@/components/module-icon"
-
 export function priceHint(fromCentavos: number | null): string {
   if (fromCentavos === null) return "Pricing soon"
   if (fromCentavos <= 0) return "From free"

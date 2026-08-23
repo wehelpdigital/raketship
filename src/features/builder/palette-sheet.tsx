@@ -38,6 +38,8 @@ export interface PaletteSheetProps {
   scope: NodeScope
   moduleId?: string
   unlockedTypes: readonly string[]
+  /** Types already at their `maxPerFlow` — hidden rather than offered. */
+  atCapacity?: readonly string[]
   onAdd: (type: string) => void
 }
 
@@ -161,9 +163,16 @@ export function PaletteSheet({
   scope,
   moduleId,
   unlockedTypes,
+  atCapacity = [],
   onAdd,
 }: PaletteSheetProps) {
-  const available = nodeTypesForScope(scope, moduleId)
+  // A bare module node on the outer canvas would have no inner flow to open,
+  // so modules join the raket from the marketplace instead.
+  const available = nodeTypesForScope(scope, moduleId).filter(
+    (def) =>
+      !(scope === "raket" && def.type === "module") &&
+      !atCapacity.includes(def.type)
+  )
   const groups = CATEGORY_ORDER.map((category) => ({
     category,
     items: available.filter((def) => def.category === category),
@@ -183,8 +192,15 @@ export function PaletteSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="no-scrollbar space-y-6 overflow-y-auto px-4 pb-6">
+        <div className="no-scrollbar min-h-0 space-y-6 overflow-y-auto px-4 pb-6">
           {scope === "raket" ? <MarketplaceRow /> : null}
+
+          {groups.length === 0 && scope !== "raket" ? (
+            <p className="text-sm text-pretty text-muted-foreground">
+              Every step this module offers is already on the canvas. Upgrade
+              the module to unlock more.
+            </p>
+          ) : null}
 
           {groups.map((group) => (
             <section key={group.category} className="space-y-3">
@@ -192,21 +208,19 @@ export function PaletteSheet({
                 {CATEGORY_LABELS[group.category]}
               </h3>
               <div className="space-y-1">
-                {group.items.map((def) =>
-                  scope === "raket" && def.type === "module" ? null : (
-                    <ElementRow
-                      key={def.type}
-                      def={def}
-                      locked={isLocked(def, scope, unlockedTypes)}
-                      moduleId={moduleId}
-                      onAdd={(type) => {
-                        onOpenChange(false)
-                        onAdd(type)
-                      }}
-                      onDragStarted={() => onOpenChange(false)}
-                    />
-                  )
-                )}
+                {group.items.map((def) => (
+                  <ElementRow
+                    key={def.type}
+                    def={def}
+                    locked={isLocked(def, scope, unlockedTypes)}
+                    moduleId={moduleId}
+                    onAdd={(type) => {
+                      onOpenChange(false)
+                      onAdd(type)
+                    }}
+                    onDragStarted={() => onOpenChange(false)}
+                  />
+                ))}
               </div>
             </section>
           ))}

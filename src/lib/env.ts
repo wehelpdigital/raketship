@@ -23,7 +23,16 @@ export const env = {
   supabaseUrl: readPublic("NEXT_PUBLIC_SUPABASE_URL"),
   supabasePublishableKey: readPublic("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"),
   siteUrl: readPublic("NEXT_PUBLIC_SITE_URL", "http://localhost:3000"),
-  demoLoginEnabled: readPublic("NEXT_PUBLIC_ENABLE_DEMO_LOGIN") !== "false",
+  /**
+   * Opt-IN, not opt-out. The demo shortcut signs anyone in as the seeded admin,
+   * so an unset variable must mean "off" — otherwise deploying with
+   * DEMO_ADMIN_* configured silently hands the account to every visitor.
+   * Development keeps it on for convenience.
+   */
+  demoLoginEnabled:
+    process.env.NODE_ENV === "production"
+      ? readPublic("NEXT_PUBLIC_ENABLE_DEMO_LOGIN") === "true"
+      : readPublic("NEXT_PUBLIC_ENABLE_DEMO_LOGIN") !== "false",
 } as const
 
 /** True when both the URL and a browser key are present. */

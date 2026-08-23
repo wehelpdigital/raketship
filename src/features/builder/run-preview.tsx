@@ -56,7 +56,10 @@ export function RunPreview({
         {variant === "icon" ? null : "Preview run"}
       </SheetTrigger>
 
-      <SheetContent side="bottom" className="max-h-[85dvh] rounded-t-xl">
+      <SheetContent
+        side="bottom"
+        className="max-h-[85dvh] rounded-t-xl pb-safe"
+      >
         <SheetHeader>
           <SheetTitle>How this reads</SheetTitle>
           <SheetDescription>
@@ -64,7 +67,7 @@ export function RunPreview({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="no-scrollbar overflow-y-auto px-4 pb-6 pb-safe">
+        <div className="no-scrollbar min-h-0 overflow-y-auto px-4 pb-6">
           {ordered.length === 0 ? (
             <p className="text-sm text-pretty text-muted-foreground">
               Nothing on this canvas yet. Add your first step and it will show

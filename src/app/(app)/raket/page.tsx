@@ -5,8 +5,13 @@ import { Boxes, Rocket } from "lucide-react"
 import { PageContainer } from "@/components/shell/page-container"
 import { SetupNotice } from "@/components/shell/setup-notice"
 import { Button } from "@/components/ui/button"
+import { supabaseConfigured } from "@/lib/env"
 import { rowToCanvasEdge, rowToCanvasNode } from "@/lib/flow/mappers"
-import { getRaketCanvas, getWorkspace } from "@/lib/queries/workspace"
+import {
+  getRaketCanvas,
+  getWorkspace,
+  type CanvasPayload,
+} from "@/lib/queries/workspace"
 import { getCurrentUser } from "@/lib/supabase/server"
 
 import { ensureWorkspace } from "@/features/builder/actions"
@@ -36,7 +41,7 @@ function SetupPanel({
 }: {
   title: string
   body: string
-  action: React.ReactNode
+  action?: React.ReactNode
 }) {
   return (
     <PageContainer>
@@ -46,7 +51,7 @@ function SetupPanel({
         </span>
         <h1 className="mt-3 text-lg font-semibold text-balance">{title}</h1>
         <p className="mt-1 text-sm text-pretty text-muted-foreground">{body}</p>
-        <div className="mt-6">{action}</div>
+        {action ? <div className="mt-6">{action}</div> : null}
       </div>
 
       <SetupNotice />
@@ -58,7 +63,9 @@ export default async function RaketPage() {
   const user = await getCurrentUser()
 
   if (!user) {
-    return (
+    // Without keys there is no session to have, so pointing at /login would
+    // only send people in a circle. The steps below are the real next action.
+    return supabaseConfigured ? (
       <SetupPanel
         title="Build your Raket"
         body="Sign in and we will open your canvas — your modules, wired together the way your business actually runs."
@@ -68,11 +75,16 @@ export default async function RaketPage() {
           </Button>
         }
       />
+    ) : (
+      <SetupPanel
+        title="Build your Raket"
+        body="This is where your modules sit on one canvas, wired together the way your business actually runs. Connect a database and it opens."
+      />
     )
   }
 
   const workspace = await getWorkspace(user.id)
-  const canvas = workspace.raket
+  const canvas: CanvasPayload = workspace.raket
     ? await getRaketCanvas(workspace.raket.id)
     : { flow: null, nodes: [], edges: [] }
 
@@ -94,8 +106,8 @@ export default async function RaketPage() {
 
   const nodes = canvas.nodes.map((row) => rowToCanvasNode(row))
   const edges = canvas.edges.map(rowToCanvasEdge)
-  const nodeIds = Object.fromEntries(
-    canvas.nodes.map((row) => [row.node_key, row.id])
+  const nodeIds: Record<string, string> = Object.fromEntries(
+    canvas.nodes.map((row): [string, string] => [row.node_key, row.id])
   )
   const moduleCount = canvas.nodes.filter((row) => row.type === "module").length
 

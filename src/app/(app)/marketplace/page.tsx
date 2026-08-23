@@ -187,9 +187,7 @@ export default async function MarketplacePage() {
       </section>
 
       <section className="space-y-3">
-        {/* The shell's Tabs only stacks via a data-attribute variant that Base
-            UI does not emit, so the column direction is set here. */}
-        <Tabs defaultValue="all" className="flex-col gap-3">
+        <Tabs defaultValue="all" className="gap-3">
           {/* Full-bleed scroller so the tab row never widens the page. */}
           <div className="-mx-4 overflow-x-auto px-4 no-scrollbar sm:-mx-6 sm:px-6">
             <TabsList className="h-auto w-max group-data-horizontal/tabs:h-auto">

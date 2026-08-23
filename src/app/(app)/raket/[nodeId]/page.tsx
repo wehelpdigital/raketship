@@ -4,8 +4,10 @@ import { notFound } from "next/navigation"
 import { ArrowLeft, Sparkles } from "lucide-react"
 
 import { PageContainer } from "@/components/shell/page-container"
+import { SetupNotice } from "@/components/shell/setup-notice"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { supabaseConfigured } from "@/lib/env"
 import {
   rowToCanvasEdge,
   rowToCanvasNode,
@@ -75,10 +77,14 @@ export default async function ModuleCanvasPage({ params }: PageProps) {
           <p className="mt-1 text-sm text-pretty text-muted-foreground">
             Your modules and the steps inside them live with your account.
           </p>
-          <Button className="mt-6 h-11 w-full" render={<Link href="/login" />}>
-            Sign in
-          </Button>
+          {supabaseConfigured ? (
+            <Button className="mt-6 h-11 w-full" render={<Link href="/login" />}>
+              Sign in
+            </Button>
+          ) : null}
         </div>
+
+        {supabaseConfigured ? null : <SetupNotice />}
       </PageContainer>
     )
   }

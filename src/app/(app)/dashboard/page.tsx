@@ -174,7 +174,7 @@ export default async function DashboardPage() {
         ) : (
           <div className="space-y-3 rounded-xl border border-dashed p-4 text-center sm:p-5">
             <span className="mx-auto flex size-10 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-              <ModuleIcon name={null} className="size-5" aria-hidden="true" />
+              <ModuleIcon name="Blocks" className="size-5" aria-hidden="true" />
             </span>
             <p className="text-sm font-medium">Wala pang modules dito</p>
             <p className="text-sm text-pretty text-muted-foreground">

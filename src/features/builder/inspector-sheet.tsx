@@ -59,7 +59,10 @@ function coerce(
   for (const field of fields) {
     const raw = draft[field.key] ?? ""
     if (field.type === "number") {
-      const parsed = Number(raw.trim())
+      // An emptied box means "leave it alone", not zero.
+      const trimmed = raw.trim()
+      if (trimmed === "") continue
+      const parsed = Number(trimmed)
       if (Number.isFinite(parsed)) values[field.key] = parsed
       continue
     }
@@ -229,7 +232,7 @@ function InspectorForm({
 
   return (
     <>
-      <div className="no-scrollbar space-y-6 overflow-y-auto px-4 pb-2">
+      <div className="no-scrollbar min-h-0 space-y-6 overflow-y-auto px-4 pb-2">
         {locked ? (
           <div className="flex items-start gap-3 rounded-lg bg-muted p-4">
             <Lock className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
@@ -264,7 +267,9 @@ function InspectorForm({
         </div>
       </div>
 
-      <div className="space-y-3 px-4 pb-6 pb-safe">
+      {/* `pb-safe` belongs on the popup, not here: it is a later rule in the
+          same utilities layer and would silently cancel `pb-6`. */}
+      <div className="shrink-0 space-y-3 px-4 pb-6">
         <Button
           className="h-11 w-full"
           onClick={save}
@@ -308,7 +313,10 @@ export function InspectorSheet({
 
   return (
     <Sheet open={open} onOpenChange={(next) => onOpenChange(next)}>
-      <SheetContent side="bottom" className="max-h-[85dvh] rounded-t-xl">
+      <SheetContent
+        side="bottom"
+        className="max-h-[85dvh] rounded-t-xl pb-safe"
+      >
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             {def ? (
