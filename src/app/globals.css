@@ -1,0 +1,184 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ---------------------------------------------------------------------------
+   RaketShip design tokens
+   Brand: energetic indigo "launch" primary, warm amber accents for upgrades.
+   Neutrals carry a faint cool cast so cards read crisp on small screens.
+--------------------------------------------------------------------------- */
+:root {
+  --radius: 0.75rem;
+
+  --background: oklch(0.994 0.002 275);
+  --foreground: oklch(0.185 0.021 275);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.185 0.021 275);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.185 0.021 275);
+
+  --primary: oklch(0.523 0.226 273);
+  --primary-foreground: oklch(0.99 0.005 275);
+
+  --secondary: oklch(0.963 0.009 275);
+  --secondary-foreground: oklch(0.245 0.028 275);
+
+  --muted: oklch(0.966 0.007 275);
+  --muted-foreground: oklch(0.522 0.021 275);
+
+  --accent: oklch(0.949 0.026 275);
+  --accent-foreground: oklch(0.245 0.038 275);
+
+  --destructive: oklch(0.583 0.238 27.3);
+  --destructive-foreground: oklch(0.99 0.005 275);
+
+  --success: oklch(0.596 0.145 152);
+  --success-foreground: oklch(0.99 0.005 152);
+
+  --warning: oklch(0.746 0.155 74);
+  --warning-foreground: oklch(0.24 0.05 74);
+
+  --border: oklch(0.909 0.008 275);
+  --input: oklch(0.909 0.008 275);
+  --ring: oklch(0.523 0.226 273);
+
+  /* Flow-builder node hues — one per element category */
+  --chart-1: oklch(0.523 0.226 273); /* trigger  — indigo */
+  --chart-2: oklch(0.746 0.155 74);  /* delay    — amber  */
+  --chart-3: oklch(0.596 0.145 152); /* action   — green  */
+  --chart-4: oklch(0.617 0.213 12);  /* decision — rose   */
+  --chart-5: oklch(0.643 0.116 220); /* data     — cyan   */
+}
+
+.dark {
+  --background: oklch(0.158 0.015 275);
+  --foreground: oklch(0.971 0.005 275);
+
+  --card: oklch(0.203 0.018 275);
+  --card-foreground: oklch(0.971 0.005 275);
+
+  --popover: oklch(0.213 0.018 275);
+  --popover-foreground: oklch(0.971 0.005 275);
+
+  --primary: oklch(0.664 0.201 273);
+  --primary-foreground: oklch(0.155 0.025 275);
+
+  --secondary: oklch(0.263 0.021 275);
+  --secondary-foreground: oklch(0.971 0.005 275);
+
+  --muted: oklch(0.263 0.021 275);
+  --muted-foreground: oklch(0.706 0.017 275);
+
+  --accent: oklch(0.302 0.033 275);
+  --accent-foreground: oklch(0.971 0.005 275);
+
+  --destructive: oklch(0.704 0.191 22.2);
+  --destructive-foreground: oklch(0.155 0.025 275);
+
+  --success: oklch(0.696 0.147 152);
+  --success-foreground: oklch(0.155 0.025 152);
+
+  --warning: oklch(0.802 0.152 74);
+  --warning-foreground: oklch(0.2 0.05 74);
+
+  --border: oklch(1 0 0 / 11%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.664 0.201 273);
+
+  --chart-1: oklch(0.664 0.201 273);
+  --chart-2: oklch(0.802 0.152 74);
+  --chart-3: oklch(0.696 0.147 152);
+  --chart-4: oklch(0.694 0.192 12);
+  --chart-5: oklch(0.715 0.116 220);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    /* Prevent iOS rubber-band revealing a mismatched colour behind the app */
+    overscroll-behavior-y: none;
+  }
+
+  /* Inputs below 16px trigger iOS Safari auto-zoom on focus. */
+  @supports (-webkit-touch-callout: none) {
+    input,
+    select,
+    textarea {
+      font-size: max(16px, 1em);
+    }
+  }
+}
+
+@layer utilities {
+  /* Respect notches / home indicators without hard-coding pixel values. */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .mb-safe {
+    margin-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  /* Full viewport height that accounts for mobile browser chrome. */
+  .min-h-dvh-safe {
+    min-height: 100dvh;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
