@@ -34,7 +34,6 @@ if (!global.ResizeObserver) {
 if (!global.DOMMatrixReadOnly) {
   global.DOMMatrixReadOnly = class {
     m22 = 1
-    constructor(_transform?: string) {}
   } as unknown as typeof DOMMatrixReadOnly
 }
 

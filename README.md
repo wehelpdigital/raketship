@@ -48,8 +48,13 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Dashboard → Project Settings → **API Keys** → the `sb_publishable_…` key |
 | `SUPABASE_SECRET_KEY` | same page, the `sb_secret_…` key — **server only** |
 
-> This project uses Supabase's **new API key system**. The old `anon` JWT is disabled and
-> returns `Invalid API key`; you need the `sb_publishable_…` key, not the legacy one.
+> This project has Supabase's **new API key system** enabled. Either the `sb_publishable_…`
+> key or the legacy `anon` JWT authenticates, but prefer the publishable key — the legacy
+> JWTs are the deprecated path.
+>
+> A note if you go probing with curl: `GET /rest/v1/` (the OpenAPI root) answers
+> `Invalid API key` for anything but `service_role`. That is about the *endpoint*, not your
+> key. Test against a real table instead — `GET /rest/v1/plans?select=id&limit=1`.
 
 ### 2. Create the schema
 

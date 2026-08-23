@@ -1,0 +1,19 @@
+{
+  "name": "RaketShip",
+  "short_name": "RaketShip",
+  "description": "Build your raket. Start free, add only the modules your business needs.",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1d1b2e",
+  "theme_color": "#1d1b2e",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

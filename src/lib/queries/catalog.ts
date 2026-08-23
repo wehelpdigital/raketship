@@ -37,9 +37,9 @@ export async function getModule(
     .maybeSingle()
 
   if (!data) return null
-  const module = data as CatalogModule
-  module.tiers = (module.tiers ?? []).sort((a, b) => a.level - b.level)
-  return module
+  const mod = data as CatalogModule
+  mod.tiers = (mod.tiers ?? []).sort((a, b) => a.level - b.level)
+  return mod
 }
 
 export async function getPlans(): Promise<PlanRow[]> {

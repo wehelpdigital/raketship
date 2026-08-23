@@ -23,6 +23,11 @@ export const metadata: Metadata = {
   description:
     "The tingi-style business toolkit for Filipino raketeros. Start free, then add only the modules your business actually needs.",
   applicationName: "RaketShip",
+  manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/icon.svg" }],
+  },
   appleWebApp: {
     capable: true,
     title: "RaketShip",

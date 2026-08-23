@@ -42,3 +42,6 @@ next-env.d.ts
 
 # ...but do track the template
 !.env.example
+
+# Claude Code local settings (may contain tokens)
+.claude/settings.local.json

@@ -17,7 +17,7 @@ export type SubscriptionStatus = "active" | "past_due" | "cancelled"
 export type UserModuleStatus = "active" | "paused"
 export type FlowKind = "raket" | "module"
 
-export interface ProfileRow {
+export type ProfileRow = {
   id: string
   email: string | null
   full_name: string | null
@@ -29,7 +29,7 @@ export interface ProfileRow {
   updated_at: string
 }
 
-export interface PlanRow {
+export type PlanRow = {
   id: string
   name: string
   tagline: string | null
@@ -43,7 +43,7 @@ export interface PlanRow {
   created_at: string
 }
 
-export interface SubscriptionRow {
+export type SubscriptionRow = {
   id: string
   user_id: string
   plan_id: string
@@ -53,7 +53,7 @@ export interface SubscriptionRow {
   updated_at: string
 }
 
-export interface ModuleRow {
+export type ModuleRow = {
   id: string
   name: string
   tagline: string | null
@@ -67,7 +67,7 @@ export interface ModuleRow {
   created_at: string
 }
 
-export interface ModuleTierRow {
+export type ModuleTierRow = {
   id: string
   module_id: string
   key: string
@@ -80,7 +80,7 @@ export interface ModuleTierRow {
   created_at: string
 }
 
-export interface UserModuleRow {
+export type UserModuleRow = {
   id: string
   user_id: string
   module_id: string
@@ -91,7 +91,7 @@ export interface UserModuleRow {
   updated_at: string
 }
 
-export interface RaketRow {
+export type RaketRow = {
   id: string
   user_id: string
   name: string
@@ -100,7 +100,7 @@ export interface RaketRow {
   updated_at: string
 }
 
-export interface FlowRow {
+export type FlowRow = {
   id: string
   raket_id: string
   user_id: string
@@ -112,7 +112,7 @@ export interface FlowRow {
   updated_at: string
 }
 
-export interface FlowNodeRow {
+export type FlowNodeRow = {
   id: string
   flow_id: string
   user_id: string
@@ -126,7 +126,7 @@ export interface FlowNodeRow {
   updated_at: string
 }
 
-export interface FlowEdgeRow {
+export type FlowEdgeRow = {
   id: string
   flow_id: string
   user_id: string
@@ -139,41 +139,90 @@ export interface FlowEdgeRow {
   created_at: string
 }
 
-type Table<Row, Required extends keyof Row> = {
+type Relationship<
+  Column extends string,
+  Referenced extends string,
+  ReferencedColumn extends string = "id",
+> = {
+  foreignKeyName: `${string}_${Column}_fkey`
+  columns: [Column]
+  isOneToOne: false
+  referencedRelation: Referenced
+  referencedColumns: [ReferencedColumn]
+}
+
+/**
+ * `Relationships` is what lets PostgREST embeds (`select("*, plan:plans(*)")`)
+ * type-resolve. An empty array makes every embedded column infer as
+ * SelectQueryError, so foreign keys used by a query must be declared here.
+ */
+type Table<
+  Row,
+  Required extends keyof Row,
+  Relationships extends readonly unknown[] = [],
+> = {
   Row: Row
   Insert: Partial<Row> & Pick<Row, Required>
   Update: Partial<Row>
-  Relationships: []
+  Relationships: Relationships
 }
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
       profiles: Table<ProfileRow, "id">
       plans: Table<PlanRow, "id" | "name">
-      subscriptions: Table<SubscriptionRow, "user_id" | "plan_id">
+      subscriptions: Table<
+        SubscriptionRow,
+        "user_id" | "plan_id",
+        [Relationship<"plan_id", "plans">]
+      >
       modules: Table<ModuleRow, "id" | "name">
-      module_tiers: Table<ModuleTierRow, "module_id" | "key" | "name">
-      user_modules: Table<UserModuleRow, "user_id" | "module_id">
+      module_tiers: Table<
+        ModuleTierRow,
+        "module_id" | "key" | "name",
+        [Relationship<"module_id", "modules">]
+      >
+      user_modules: Table<
+        UserModuleRow,
+        "user_id" | "module_id",
+        [
+          Relationship<"module_id", "modules">,
+          Relationship<"tier_id", "module_tiers">,
+        ]
+      >
       rakets: Table<RaketRow, "user_id">
-      flows: Table<FlowRow, "raket_id" | "user_id" | "kind">
+      flows: Table<
+        FlowRow,
+        "raket_id" | "user_id" | "kind",
+        [
+          Relationship<"raket_id", "rakets">,
+          Relationship<"module_id", "modules">,
+          Relationship<"parent_node_id", "flow_nodes">,
+        ]
+      >
       flow_nodes: Table<
         FlowNodeRow,
-        "flow_id" | "user_id" | "node_key" | "type"
+        "flow_id" | "user_id" | "node_key" | "type",
+        [
+          Relationship<"flow_id", "flows">,
+          Relationship<"module_id", "modules">,
+        ]
       >
       flow_edges: Table<
         FlowEdgeRow,
-        "flow_id" | "user_id" | "edge_key" | "source_key" | "target_key"
+        "flow_id" | "user_id" | "edge_key" | "source_key" | "target_key",
+        [Relationship<"flow_id", "flows">]
       >
     }
-    Views: Record<never, never>
+    Views: Record<string, never>
     Functions: {
       ensure_my_workspace: {
-        Args: Record<never, never>
+        Args: Record<string, never>
         Returns: undefined
       }
     }
-    Enums: Record<never, never>
-    CompositeTypes: Record<never, never>
+    Enums: Record<string, never>
+    CompositeTypes: Record<string, never>
   }
 }

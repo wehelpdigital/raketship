@@ -18,8 +18,12 @@ which opens an inner canvas. Booking ships pre-wired Booking → Timer → Email
 - **shadcn/ui sits on `@base-ui/react`, not Radix.** Radix-only props will not work.
   There is **no `form` component** and no `react-hook-form` — use server actions with
   `useActionState`, or controlled inputs.
-- Supabase uses the **new API key system**: `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-  (`sb_publishable_…`), not the legacy anon JWT, which is disabled and 401s.
+- Supabase has the **new API key system** enabled: prefer
+  `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (`sb_publishable_…`). The legacy anon JWT still
+  authenticates, but it is the deprecated path.
+  When probing with curl, note that `GET /rest/v1/` answers `Invalid API key` for any key
+  except `service_role` — that is the endpoint's rule, not a broken key. Probe a real
+  table instead.
 
 ## Non-negotiables
 
