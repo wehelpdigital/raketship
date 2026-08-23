@@ -309,6 +309,7 @@ begin
   end loop;
 end;
 $rls$;
+
 -- =============================================================================
 -- RaketShip — catalogue seed (plans, modules, module tiers)
 -- Idempotent: safe to re-run.
@@ -480,6 +481,7 @@ on conflict (module_id, key) do update set
   level          = excluded.level,
   features       = excluded.features,
   node_types     = excluded.node_types;
+
 -- =============================================================================
 -- RaketShip — new-user provisioning
 -- =============================================================================
@@ -621,7 +623,14 @@ begin
   )
   on conflict (id) do nothing;
 
-  perform public.provision_user(new.id);
+  -- A provisioning failure must never block account creation: the user would
+  -- be unable to sign up at all. ensure_my_workspace() repairs it on next load.
+  begin
+    perform public.provision_user(new.id);
+  exception when others then
+    raise warning 'provision_user failed for %: %', new.id, sqlerrm;
+  end;
+
   return new;
 end;
 $hnu$;
@@ -653,4 +662,9 @@ begin
 end;
 $ens$;
 
+-- provision_user() takes a user id and runs as definer, so it must not be
+-- reachable from the API — otherwise one user could provision rows for another.
+revoke all on function public.provision_user(uuid) from public, anon, authenticated;
+
+revoke all on function public.ensure_my_workspace() from public, anon;
 grant execute on function public.ensure_my_workspace() to authenticated;

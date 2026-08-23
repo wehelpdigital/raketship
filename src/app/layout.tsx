@@ -45,8 +45,10 @@ export const viewport: Viewport = {
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  // Next 16 stopped forcing scroll-to-top on navigation; the data attribute
+  // opts back in, which matters because globals.css sets scroll-behavior: smooth.
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans`}
       >
