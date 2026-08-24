@@ -25,14 +25,8 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { FieldPreview } from "@/features/booking/field-preview"
+import { ZonePicker } from "@/features/booking/zone-picker"
 import {
   getAvailableSlots,
   submitBooking,
@@ -1006,69 +1000,6 @@ function TimePicker({
           </button>
         )
       })}
-    </div>
-  )
-}
-
-/**
- * Which zone the times are written in.
- *
- * Defaults to the visitor's own once hydration reveals it, because the common
- * case is someone booking from where they are. The owner's zone stays in the
- * list and is named, so it is always clear whose clock is whose.
- */
-function ZonePicker({
-  value,
-  options,
-  calendarZone,
-  calendarLabel,
-  onChange,
-}: {
-  value: string
-  options: string[]
-  calendarZone: string
-  calendarLabel: string
-  onChange: (zone: string) => void
-}) {
-  const id = React.useId()
-  const showingOwners = value === calendarZone
-
-  return (
-    <div className="space-y-1.5">
-      <Label
-        htmlFor={id}
-        className="flex items-center gap-1.5 text-xs font-normal text-muted-foreground"
-      >
-        <Globe className="size-3.5 shrink-0" aria-hidden />
-        Oras na ipinapakita
-      </Label>
-      <Select value={value} onValueChange={(next) => onChange(String(next))}>
-        <SelectTrigger id={id} className="h-12 w-full text-base">
-          <SelectValue />
-        </SelectTrigger>
-        {/*
-          alignItemWithTrigger lines the chosen row up with the trigger, which
-          squeezes the list into whatever space is left beside it. With a few
-          hundred zones to scroll, dropping below the trigger and taking the
-          full height is far easier to use.
-        */}
-        <SelectContent
-          alignItemWithTrigger={false}
-          className="max-h-[min(26rem,60vh)]"
-        >
-          {options.map((zone) => (
-            <SelectItem key={zone} value={zone} className="h-11 text-base">
-              {zoneCity(zone)}
-              {zone === calendarZone ? " — oras ng shop" : ""}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <p className="text-xs text-pretty text-muted-foreground">
-        {showingOwners
-          ? `Sa oras ng shop (${calendarLabel}).`
-          : `Naka-adjust na sa ${zoneCity(value)}. Sa shop ito ay ${calendarLabel}.`}
-      </p>
     </div>
   )
 }

@@ -71,3 +71,48 @@ export function timezoneChoices(...ensure: (string | null | undefined)[]): strin
     a.localeCompare(b)
   )
 }
+
+/** "GMT+8", or "GMT+5:30" where the zone needs the minutes. */
+export function zoneOffsetLabel(zone: string, at: Date = new Date()): string {
+  let parts: Intl.DateTimeFormatPart[]
+  try {
+    parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: zone,
+      hour12: false,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).formatToParts(at)
+  } catch {
+    return ""
+  }
+  const g = (t: string) =>
+    Number(parts.find((x) => x.type === t)?.value ?? "0")
+  const asUtc = Date.UTC(g("year"), g("month") - 1, g("day"), g("hour") % 24, g("minute"))
+  const offset = Math.round((asUtc - at.getTime()) / 60000)
+  const sign = offset < 0 ? "-" : "+"
+  const abs = Math.abs(offset)
+  const h = Math.floor(abs / 60)
+  const m = abs % 60
+  return `GMT${sign}${h}${m ? `:${String(m).padStart(2, "0")}` : ""}`
+}
+
+/** "Asia/Manila" -> "Asia", for grouping and for a second line in a list. */
+export function zoneRegion(zone: string): string {
+  const [region] = zone.split("/")
+  return region ?? zone
+}
+
+/**
+ * Matches a zone against a typed query. Deliberately loose: people search for
+ * "manila", "philippines-ish spellings", "gmt+8" or "asia", and underscores in
+ * the IANA name should never be something they have to type.
+ */
+export function zoneMatches(zone: string, query: string): boolean {
+  const q = query.trim().toLowerCase()
+  if (!q) return true
+  const haystack = `${zone} ${zone.replace(/_/g, " ")} ${zoneCity(zone)} ${zoneRegion(zone)}`.toLowerCase()
+  return q.split(/\s+/).every((word) => haystack.includes(word))
+}
