@@ -18,6 +18,7 @@ import {
 import { BusinessHeader } from "@/features/business/business-header"
 import { BusinessFooter } from "@/features/business/business-footer"
 import { PaletteStyle } from "@/components/shell/palette-style"
+import { CHALLENGE_BITS, issueChallenge } from "@/lib/booking/captcha"
 import { bookingUrl } from "@/lib/booking/slug"
 import { env } from "@/lib/env"
 import { getPublishedCalendar, getTakenSlots } from "@/lib/queries/booking"
@@ -94,6 +95,13 @@ export default async function PublicBookingPage({ params }: PageProps) {
     branding.
   */
   const business = await getPublicBusinessProfile(calendar.user_id)
+
+  /*
+    A fresh anti-robot challenge for this visit. Minted on the server so the
+    browser is never trusted to say it passed, and issued on every render so a
+    cached page cannot hand two visitors the same one.
+  */
+  const challenge = issueChallenge()
 
   /*
     Trimmed to what the page actually renders. The stored rows carry the
@@ -220,6 +228,8 @@ export default async function PublicBookingPage({ params }: PageProps) {
           fields={fields}
           openRanges={openRanges}
           horizonDays={calendar.booking_horizon_days}
+          challenge={challenge}
+          challengeBits={CHALLENGE_BITS}
         />
       ) : (
         <div className="rounded-2xl bg-card p-6 text-center ring-1 ring-border">

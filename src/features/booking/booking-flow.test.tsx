@@ -34,6 +34,17 @@ const OPEN_RANGES: OpenRange[] = [
   { from: "2026-09-08T01:00:00.000Z", to: "2026-09-08T09:00:00.000Z" },
 ]
 
+/*
+  A stub challenge. Four bits so the browser solves it in a handful of hashes —
+  the real sixteen would make every test in this file wait on real work, and
+  what the field does with the answer is what these cases are about.
+*/
+const CHALLENGE = {
+  nonce: "a".repeat(32),
+  issuedAt: 1_800_000_000_000,
+  signature: "b".repeat(64),
+}
+
 const SERVICES: PublicService[] = [
   {
     id: "11111111-1111-4111-8111-111111111111",
@@ -66,6 +77,8 @@ function renderFlow(
       fields={[]}
       openRanges={OPEN_RANGES}
       horizonDays={14}
+      challenge={CHALLENGE}
+      challengeBits={4}
       {...overrides}
     />
   )

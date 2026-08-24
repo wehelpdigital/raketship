@@ -12,13 +12,18 @@
  *   - every answer is re-checked with validateAnswers();
  *   - the owner (`user_id`) is read from the calendar row, never from input.
  *
- * The RLS policy in 0004 enforces that last point too. This is the belt; that
- * is the braces.
+ * Reads still go through the anonymous key, so RLS keeps deciding what a
+ * stranger may SEE. Writes do not: 0012 removed the anonymous insert policy
+ * because it let a script POST at PostgREST and skip this file entirely,
+ * anti-robot check and all. The booking is written with the service key after
+ * every check above has passed, which makes this function the only way in
+ * rather than one of two.
  */
 
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
+import { verifyChallenge } from "@/lib/booking/captcha"
 import { validateAnswers, type AnswerValue } from "@/lib/booking/fields"
 import {
   buildSlots,
@@ -33,6 +38,7 @@ import {
 } from "@/lib/booking/slots"
 import { getTakenSlots } from "@/lib/queries/booking"
 import { isKnownTimezone } from "@/lib/booking/timezones"
+import { getSupabaseAdminClient } from "@/lib/supabase/admin"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
 import type {
   BookingAvailabilityRow,
@@ -63,6 +69,13 @@ const NOT_LIVE =
   "This booking link is not taking bookings right now. Pakitanong po ang may-ari."
 const NO_DB = "Bookings are not connected yet, so nothing can be saved."
 const OUT_OF_RANGE = "That date is not open for booking. Pumili po ng ibang araw."
+/*
+  One message for every way the anti-robot check can fail. Naming the exact
+  reason would tell a script precisely what to fix, and a real person cannot
+  act on the difference anyway — reloading is the answer to all of them.
+*/
+const NOT_A_PERSON =
+  "Hindi namin ma-verify ang request na ito. Pakireload po ang page at subukan ulit."
 const PICK_SERVICE = "Pumili po muna ng serbisyo."
 
 // -----------------------------------------------------------------------------
@@ -87,9 +100,26 @@ const AnswerInput = z.union([
   z.null(),
 ])
 
+/**
+ * The anti-robot token. Loosely typed on purpose: verifyChallenge() does the
+ * real checking and must see whatever actually arrived, not a version zod has
+ * already reshaped or rejected on its behalf.
+ */
+const CaptchaInput = z
+  .object({
+    nonce: z.unknown(),
+    issuedAt: z.unknown(),
+    signature: z.unknown(),
+    solution: z.unknown(),
+    honeypot: z.unknown(),
+  })
+  .partial()
+  .optional()
+
 const SubmitInput = z.object({
   calendarId: z.string().regex(UUID_RE),
   serviceId: z.string().regex(UUID_RE).optional(),
+  captcha: CaptchaInput,
   startsAt: z.string().min(1).max(64),
   customerName: z
     .string()
@@ -137,6 +167,14 @@ export interface SubmitBookingInput {
   calendarId: string
   /** Required when the calendar sells a catalogue. */
   serviceId?: string
+  /** The anti-robot token the page issued. Mandatory. */
+  captcha?: {
+    nonce?: unknown
+    issuedAt?: unknown
+    signature?: unknown
+    solution?: unknown
+    honeypot?: unknown
+  }
   startsAt: string
   customerName: string
   customerEmail?: string | null
@@ -472,6 +510,34 @@ export async function submitBooking(
   const supabase = await getSupabaseServerClient()
   if (!supabase) return { ok: false, message: NO_DB }
 
+  /*
+    Before anything is read or written on behalf of this caller. The checks are
+    pure and cost nothing, so a script gets turned away without ever touching
+    the database — which is the point of having them.
+  */
+  const challenge = verifyChallenge(parsed.data.captcha ?? {})
+  if (!challenge.ok) return { ok: false, message: NOT_A_PERSON }
+
+  /*
+    Writes go through the service key. Anonymous callers can no longer insert
+    into either table — see 0012 — so this is the only path, and it is the one
+    with the checks on it.
+  */
+  const writer = getSupabaseAdminClient()
+  if (!writer) return { ok: false, message: NO_DB }
+
+  /*
+    Spending the nonce is what makes the token single-use: the signature proves
+    we minted it, but only the primary key can stop it being replayed. Done
+    BEFORE the booking is written, so two submissions of the same token race
+    here rather than at the slot.
+  */
+  const { error: spendError } = await writer
+    .from("booking_challenges")
+    .insert({ nonce: challenge.nonce })
+
+  if (spendError) return { ok: false, message: NOT_A_PERSON }
+
   const bundle = await loadPublished(supabase, parsed.data.calendarId)
   if (!bundle) return { ok: false, message: NOT_LIVE }
 
@@ -565,14 +631,13 @@ export async function submitBooking(
 
   // --- write ----------------------------------------------------------------
   //
-  // The id is minted here rather than read back. `bookings` has exactly one
-  // read policy — the owner's — so a visitor may insert a row but may not
-  // select one. Asking PostgREST for the row (`.select()`) would attach a
-  // RETURNING clause the anonymous caller is not allowed to read, and the whole
-  // booking would fail at the last step. The insert therefore stays write-only.
+  // The id is minted here rather than read back. Nothing is returned to the
+  // visitor beyond this id, and generating it means the insert stays
+  // write-only — which it was already forced to be when this ran as the
+  // anonymous caller, and which is still the smallest thing that works.
   const bookingId = crypto.randomUUID()
 
-  const { error } = await supabase.from("bookings").insert({
+  const { error } = await writer.from("bookings").insert({
     id: bookingId,
     calendar_id: calendar.id,
     // Read off the calendar row. An id sent by the caller is never consulted.

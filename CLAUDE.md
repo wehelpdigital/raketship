@@ -222,6 +222,26 @@ Switching to `catalog` with an empty list is refused server-side, and deleting
 the last service falls the calendar back to `fixed` — a live page must never be
 left with nothing to offer and no way forward.
 
+**Every public booking passes an anti-robot check.** Not optional, not in the
+form builder: a raketero should not have to know what a bot is, and an owner who
+could switch it off would eventually be the one who did. No third-party captcha
+either — those want an account, two keys and a script from someone else's domain.
+`lib/booking/captcha.ts` mints an HMAC-signed, time-limited nonce; the browser
+spends ~65k SHA-256 hashes finding a 16-bit proof-of-work while the customer is
+still picking a date; the server re-checks signature, age, work, a honeypot and
+a minimum fill time, then CONSUMES the nonce in `booking_challenges` so it
+cannot be replayed. Every failure returns the same sentence — naming the check
+would tell a script what to fix. The hash is our own `sha256.ts` rather than
+`crypto.subtle`, which does not exist on the plain-http LAN address a raketero
+tests from; it is verified against node:crypto in a test.
+
+**Bookings are written by the SERVER, not by the visitor.** 0012 removed the
+anonymous insert policy that 0004 added. Measured first: an anonymous POST
+naming the calendar's own owner returned 201, and the owner id is on the public
+page — so a script could skip the form and the check with it. `submitBooking()`
+now writes with the service key after its own checks. Reads are untouched; RLS
+still decides what a stranger may SEE.
+
 **The public surface.** `/book/[slug]` is unauthenticated and outside the app
 shell, so RLS is the only guard. Verified against the live database:
 
@@ -230,7 +250,10 @@ shell, so RLS is the only guard. Verified against the live database:
 | Read a draft calendar | `[]` |
 | Read it once published | visible |
 | Read anyone's bookings | `[]` |
-| Book a published calendar | `201` |
+| Book a published calendar via the server action | `201` |
+| Insert a booking directly | `401` |
+| Spend a captcha nonce directly | `401` |
+| Replay a spent nonce | `409` |
 | Book the same slot twice | `409` |
 | Book an unpublished calendar | `401` |
 | Book under a forged `user_id` | `401` |

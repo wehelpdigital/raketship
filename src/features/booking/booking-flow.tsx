@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { CaptchaField, type CaptchaValue } from "@/features/booking/captcha-field"
 import { FieldPreview } from "@/features/booking/field-preview"
 import { ZonePicker } from "@/features/booking/zone-picker"
 import {
@@ -155,6 +156,9 @@ export interface BookingFlowProps {
   openRanges: OpenRange[]
   /** How far ahead this calendar accepts bookings. */
   horizonDays: number
+  /** The anti-robot challenge for this visit. Not optional, ever. */
+  challenge: { nonce: string; issuedAt: number; signature: string }
+  challengeBits: number
 }
 
 type SlotState =
@@ -207,6 +211,8 @@ export function BookingFlow({
   fields,
   openRanges,
   horizonDays,
+  challenge,
+  challengeBits,
 }: BookingFlowProps) {
   /*
     A catalogue turns the length into a choice, and the length decides which
@@ -236,6 +242,10 @@ export function BookingFlow({
   const [email, setEmail] = React.useState("")
   const [phone, setPhone] = React.useState("")
   const [answers, setAnswers] = React.useState<Record<string, AnswerValue>>({})
+
+  // Null until the browser has finished the work, which is what stops the
+  // Confirm button rather than a message telling somebody to wait.
+  const [captcha, setCaptcha] = React.useState<CaptchaValue | null>(null)
 
   const [errors, setErrors] = React.useState<Record<string, string>>({})
   const [formError, setFormError] = React.useState<string | null>(null)
@@ -456,6 +466,7 @@ export function BookingFlow({
       const result = await submitBooking({
         calendarId,
         serviceId: selectedService?.id,
+        captcha: captcha ?? undefined,
         startsAt: selectedSlot.startsAt,
         customerName: name.trim(),
         customerEmail: email.trim() || null,
@@ -748,6 +759,15 @@ export function BookingFlow({
                     </div>
                   ) : null}
 
+                  <CaptchaField
+                    nonce={challenge.nonce}
+                    issuedAt={challenge.issuedAt}
+                    signature={challenge.signature}
+                    bits={challengeBits}
+                    disabled={submitting}
+                    onChange={setCaptcha}
+                  />
+
                   {formError ? (
                     <p
                       role="alert"
@@ -759,10 +779,14 @@ export function BookingFlow({
 
                   <Button
                     type="submit"
-                    disabled={submitting}
+                    disabled={submitting || !captcha}
                     className="h-11 w-full"
                   >
-                    {submitting ? "Booking…" : "Confirm booking"}
+                    {submitting
+                      ? "Booking…"
+                      : captcha
+                        ? "Confirm booking"
+                        : "Sandali lang…"}
                   </Button>
 
                   <p className="text-center text-xs text-muted-foreground">

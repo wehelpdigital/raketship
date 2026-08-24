@@ -1,9 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { getAvailableSlots, submitBooking } from "./public-actions"
+import {
+  CHALLENGE_BITS,
+  issueChallenge,
+  leadingZeroBits,
+  solutionHash,
+} from "@/lib/booking/captcha"
 
 const mocks = vi.hoisted(() => ({
   getSupabaseServerClient: vi.fn(),
+  getSupabaseAdminClient: vi.fn(),
   getTakenSlots: vi.fn(),
   revalidatePath: vi.fn(),
 }))
@@ -11,6 +18,12 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/lib/supabase/server", () => ({
   getSupabaseServerClient: mocks.getSupabaseServerClient,
   getCurrentUser: vi.fn(),
+}))
+
+// Writes go through the service key now — 0012 took the anonymous insert away
+// so the anti-robot check could not be walked around.
+vi.mock("@/lib/supabase/admin", () => ({
+  getSupabaseAdminClient: mocks.getSupabaseAdminClient,
 }))
 
 vi.mock("@/lib/queries/booking", () => ({
@@ -155,6 +168,8 @@ interface ClientOptions {
   fields?: unknown[]
   services?: unknown[]
   insertResult?: QueryResult
+  /** Set to an error to simulate a nonce that has already been spent. */
+  challengeResult?: QueryResult
 }
 
 function stubClient(options: ClientOptions = {}) {
@@ -174,6 +189,12 @@ function stubClient(options: ClientOptions = {}) {
         return makeQuery({ data: options.fields ?? [], error: null })
       case "booking_services":
         return makeQuery({ data: options.services ?? [], error: null })
+      case "booking_challenges":
+        // Spending a nonce succeeds unless a test says otherwise — a failure
+        // here is what a replayed token looks like.
+        return makeQuery(
+          options.challengeResult ?? { data: null, error: null }
+        )
       case "bookings":
         return makeQuery(
           options.insertResult ?? { data: { id: "booking-1" }, error: null },
@@ -185,12 +206,39 @@ function stubClient(options: ClientOptions = {}) {
   })
 
   mocks.getSupabaseServerClient.mockResolvedValue({ from })
+  // The same tables, so an assertion about what was written does not care
+  // which key wrote it.
+  mocks.getSupabaseAdminClient.mockReturnValue({ from })
   return { from, insert }
+}
+
+/**
+ * A real, solved anti-robot token.
+ *
+ * Solved once and reused: the work is genuine — sixty-odd thousand hashes —
+ * and paying it in every test would make the file slow for no extra coverage.
+ * Issued ten seconds before NOW so it clears the minimum fill time.
+ */
+let solvedChallenge: ReturnType<typeof solveChallenge> | null = null
+
+function solveChallenge() {
+  const challenge = issueChallenge(NOW.getTime() - 10_000)
+  let counter = 0
+  while (leadingZeroBits(solutionHash(challenge.nonce, counter)) < CHALLENGE_BITS) {
+    counter++
+  }
+  return { ...challenge, solution: counter, honeypot: "" }
+}
+
+function captcha() {
+  solvedChallenge ??= solveChallenge()
+  return solvedChallenge
 }
 
 function validSubmission(overrides: Record<string, unknown> = {}) {
   return {
     calendarId: CALENDAR_ID,
+    captcha: captcha(),
     startsAt: NINE_AM,
     customerName: "Juan dela Cruz",
     customerEmail: "juan@example.com",
@@ -724,5 +772,117 @@ describe("a calendar that sells a catalogue", () => {
     expect(row.service_id).toBeNull()
     expect(row.service_name).toBeNull()
     expect(row.service_price_centavos).toBeNull()
+  })
+})
+
+// -----------------------------------------------------------------------------
+// The anti-robot check, which every booking has to pass first
+// -----------------------------------------------------------------------------
+
+describe("the anti-robot check", () => {
+  it("refuses a booking with no token at all", async () => {
+    const { insert } = stubClient()
+
+    const result = await submitBooking({
+      calendarId: CALENDAR_ID,
+      startsAt: NINE_AM,
+      customerName: "Juan dela Cruz",
+      customerEmail: "juan@example.com",
+      answers: {},
+    })
+
+    expect(result.ok).toBe(false)
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  it("refuses a token nobody issued", async () => {
+    const { insert } = stubClient()
+
+    const result = await submitBooking(
+      validSubmission({
+        captcha: { ...captcha(), signature: "a".repeat(64) },
+      })
+    )
+
+    expect(result.ok).toBe(false)
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  it("refuses one whose work was not done", async () => {
+    const { insert } = stubClient()
+
+    const result = await submitBooking(
+      validSubmission({ captcha: { ...captcha(), solution: 0 } })
+    )
+
+    expect(result.ok).toBe(false)
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  it("refuses one with anything in the honeypot", async () => {
+    const { insert } = stubClient()
+
+    const result = await submitBooking(
+      validSubmission({ captcha: { ...captcha(), honeypot: "https://spam" } })
+    )
+
+    expect(result.ok).toBe(false)
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  it("refuses a token that has already been spent", async () => {
+    // The signature proves we minted it; only the primary key can stop it
+    // being replayed.
+    const { insert } = stubClient({
+      challengeResult: { data: null, error: { code: "23505" } },
+    })
+
+    const result = await submitBooking(validSubmission())
+
+    expect(result.ok).toBe(false)
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  it("says the same thing however it failed", async () => {
+    // Naming the exact check would tell a script what to fix, and a person
+    // cannot act on the difference anyway.
+    stubClient()
+    const reasons = await Promise.all([
+      submitBooking(validSubmission({ captcha: undefined })),
+      submitBooking(validSubmission({ captcha: { ...captcha(), solution: 0 } })),
+      submitBooking(
+        validSubmission({ captcha: { ...captcha(), honeypot: "x" } })
+      ),
+    ])
+
+    const messages = new Set(reasons.map((r) => r.message))
+    expect(messages.size).toBe(1)
+  })
+
+  it("spends the nonce before writing anything", async () => {
+    const { from } = stubClient()
+
+    await submitBooking(validSubmission())
+
+    const tables = from.mock.calls.map((call) => call[0])
+    // If the booking were written first, a replayed token would still have
+    // cost a row before being caught.
+    expect(tables.indexOf("booking_challenges")).toBeLessThan(
+      tables.lastIndexOf("bookings")
+    )
+  })
+})
+
+describe("when the server has no service key", () => {
+  it("refuses the booking rather than writing without one", async () => {
+    // Reads still work — the page renders — but nothing can be written, and
+    // saying so is better than a silent failure.
+    stubClient()
+    mocks.getSupabaseAdminClient.mockReturnValue(null)
+
+    const result = await submitBooking(validSubmission())
+
+    expect(result.ok).toBe(false)
+    expect(result.message).toMatch(/not connected/i)
   })
 })

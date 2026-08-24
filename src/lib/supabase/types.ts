@@ -291,6 +291,12 @@ export type BusinessProfileRow = {
   updated_at: string
 }
 
+/** A spent captcha nonce. Insert-only; nothing ever reads it back. */
+export type BookingChallengeRow = {
+  nonce: string
+  used_at: string
+}
+
 type Relationship<
   Column extends string,
   Referenced extends string,
@@ -378,6 +384,7 @@ export type Database = {
         "calendar_id" | "user_id" | "label",
         [Relationship<"calendar_id", "booking_calendars">]
       >
+      booking_challenges: Table<BookingChallengeRow, "nonce">
       booking_services: Table<
         BookingServiceRow,
         "calendar_id" | "user_id" | "name",
