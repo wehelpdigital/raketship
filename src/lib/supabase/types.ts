@@ -243,6 +243,53 @@ export type BookingRow = {
   created_at: string
 }
 
+/** How much of the address a visitor is allowed to see. */
+export type AddressVisibility = "full" | "area" | "hidden"
+
+/**
+ * Who the raket is. One row per user.
+ *
+ * `business_name` is not here on purpose — it lives on ProfileRow, which is
+ * already written by the account and signup actions. Two copies would be two
+ * answers to the same question.
+ */
+export type BusinessProfileRow = {
+  user_id: string
+  /**
+   * The publicly readable copy. profiles.business_name stays the one the
+   * dashboard and account page read; both are written by the same save,
+   * because profiles is owner-only under RLS and the anonymous booking page
+   * cannot read the name there.
+   */
+  business_name: string | null
+  tagline: string | null
+  description: string | null
+  business_type: string | null
+  /** Storage object path in the 'business-media' bucket, not a URL. */
+  logo_path: string | null
+  cover_path: string | null
+  /** A key into src/lib/theme/palettes.ts. Unknown keys fall back to the brand. */
+  theme_preset: string
+  mobile_number: string | null
+  chat_apps: string[]
+  facebook_url: string | null
+  instagram_handle: string | null
+  website_url: string | null
+  gcash_number: string | null
+  maya_number: string | null
+  payment_name: string | null
+  payment_note: string | null
+  street_address: string | null
+  barangay: string | null
+  city: string | null
+  province: string | null
+  landmark: string | null
+  address_visibility: AddressVisibility
+  hours_note: string | null
+  created_at: string
+  updated_at: string
+}
+
 type Relationship<
   Column extends string,
   Referenced extends string,
@@ -275,6 +322,7 @@ export type Database = {
   public: {
     Tables: {
       profiles: Table<ProfileRow, "id">
+      business_profiles: Table<BusinessProfileRow, "user_id">
       plans: Table<PlanRow, "id" | "name">
       subscriptions: Table<
         SubscriptionRow,

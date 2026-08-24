@@ -20,9 +20,13 @@ import {
   zonedTimeToInstant,
   type SlotRules,
 } from "@/lib/booking/slots"
+import { BusinessHeader } from "@/features/business/business-header"
+import { BusinessFooter } from "@/features/business/business-footer"
+import { PaletteStyle } from "@/components/shell/palette-style"
 import { bookingUrl } from "@/lib/booking/slug"
 import { env } from "@/lib/env"
 import { getPublishedCalendar, getTakenSlots } from "@/lib/queries/booking"
+import { getPublicBusinessProfile } from "@/lib/queries/business"
 interface PageProps {
   params: Promise<{ slug: string }>
 }
@@ -34,15 +38,6 @@ function gmtLabel(at: Date, timeZone: string): string {
   const hours = Math.floor(absolute / 60)
   const minutes = absolute % 60
   return `GMT${sign}${hours}${minutes ? `:${String(minutes).padStart(2, "0")}` : ""}`
-}
-function initialsOf(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  if (parts.length === 0) return "R"
-  return parts
-    .slice(0, 2)
-    .map((part) => part.charAt(0))
-    .join("")
-    .toUpperCase()
 }
 /**
  * These links travel by being pasted — into Messenger, Viber, a Facebook page
@@ -95,6 +90,15 @@ export default async function PublicBookingPage({ params }: PageProps) {
   // page must not have.
   if (!detail || !detail.calendar.is_published) notFound()
   const { calendar, availability, blackouts, fields, services } = detail
+
+  /*
+    The business behind the link. Scoped by the OWNER's id read off the calendar
+    row, never off the request — and readable at all only because the
+    "published owner is public" policy opens while that owner has a live
+    calendar. A missing row is normal, not an error: the page simply shows no
+    branding.
+  */
+  const business = await getPublicBusinessProfile(calendar.user_id)
 
   /*
     Trimmed to what the page actually renders. The stored rows carry the
@@ -179,6 +183,9 @@ export default async function PublicBookingPage({ params }: PageProps) {
   const hasTimes = availability.length > 0 && openDays > 0
   return (
     <div className="mx-auto w-full max-w-xl px-4 py-6 sm:px-6 lg:max-w-2xl lg:px-8 lg:py-10">
+      {/* The OWNER's colour, not the visitor's — this page is their shopfront.
+          Server-rendered so it is in the first byte, with no flash of red. */}
+      <PaletteStyle preset={business?.theme_preset} />
       {/*
         Action first. The old layout put the identity, a meta card, a seven-row
         opening-hours table and a privacy note above the wizard, so a phone
@@ -187,14 +194,10 @@ export default async function PublicBookingPage({ params }: PageProps) {
         Now: a compact header, then the booking, then the detail for whoever
         wants it. Desktop gets the detail as a column instead of a disclosure.
       */}
+      <BusinessHeader business={business} fallbackName={calendar.name} />
+
       <header className="mb-6 lg:mb-8">
         <div className="flex items-start gap-3 sm:gap-4">
-          <span
-            aria-hidden
-            className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-base font-semibold text-primary ring-1 ring-primary/15 sm:size-14 sm:text-lg"
-          >
-            {initialsOf(calendar.name)}
-          </span>
           <div className="min-w-0 flex-1 space-y-1">
             <h1 className="text-xl font-semibold tracking-tight text-balance sm:text-2xl lg:text-3xl">
               {calendar.name}
@@ -248,6 +251,8 @@ export default async function PublicBookingPage({ params }: PageProps) {
           </p>
         </div>
       )}
+
+      <BusinessFooter business={business} />
 
       <p className="mt-6 flex items-start justify-center gap-2 text-xs text-muted-foreground">
         <ShieldCheck className="mt-0.5 size-3.5 shrink-0" aria-hidden />

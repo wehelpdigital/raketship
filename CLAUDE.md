@@ -35,7 +35,8 @@ which opens an inner canvas. Booking ships pre-wired Booking → Timer → Email
 - **Never interpolate Tailwind class names** (`` bg-${accent} ``). The scanner cannot see
   them. Use a static lookup map.
 - **Tokens only** — `bg-card`, `text-muted-foreground`, `bg-chart-1/12`. No raw hex, no
-  `gray-*`/`slate-*`/`bg-white`.
+  `gray-*`/`slate-*`/`bg-white`. The one exception is a palette swatch, which IS the
+  colour and is painted with an inline `style`.
 
 ## Spacing scale (the user cares about this)
 
@@ -72,6 +73,53 @@ Apply migrations with `npm run db:push` (needs `SUPABASE_DB_URL`), or paste
 ```bash
 npm run verify   # typecheck + lint + test
 ```
+
+## Your Business module
+
+Every account has it — `modules.is_default = true` and `sort_order = -1`, so
+provisioning hands it out and it sorts above Booking. `/modules/business` is a
+static segment shadowing `/modules/[moduleId]`, exactly like `/modules/booking`.
+
+`business_profiles` is one row per user (`0007_business_profile.sql`): identity,
+logo and cover paths, palette key, contact, payment, address.
+
+**`business_name` exists twice, on purpose.** `profiles` is owner-only under RLS
+and also holds the email and the admin flag, and RLS grants access by ROW rather
+than by column — so opening it to the anonymous booking page would hand out the
+email with the shop name. `saveBusinessProfile()` writes both copies in one call.
+
+**Address visibility defaults to `area`**, which drops the street. The same table
+serves a stall that wants to be found and a freelancer working from a bedroom, so
+filling the address in must never publish a home by accident.
+
+**Colour themes.** `src/lib/theme/palettes.ts` is generated and then reviewed.
+Every pair is measured, never eyeballed: `primaryForeground` clears 4.5:1 on
+`primary` in both modes, `accentForeground` clears 7:1 on `accent`, nothing
+clips out of sRGB, and every dark primary is lifted because full-chroma colour on
+near-black vibrates. `palettes.test.ts` re-derives the contrast maths
+independently so a bug in the generator cannot certify its own output. `pula` is
+pinned to the tokens already in `globals.css` — the default must repaint nothing.
+
+Applying one is `<PaletteStyle preset={key} />`, server-rendered in both the app
+shell and `/book/[slug]`, so the colour is in the first byte and never flashes red
+first. Two details are load-bearing:
+
+- The CSS selector is `html:root` (0,1,1), which beats `globals.css`'s `:root`
+  (0,1,0) on **specificity, not source order** — React hoists style tags, so
+  order is not ours to depend on.
+- The properties land on the root element. Dialogs and dropdowns portal to
+  `document.body`, so a theme scoped to a wrapper would leave every one of them
+  in the default red.
+
+An unknown key falls back to the brand rather than rendering nothing, so removing
+a palette cannot break the pages of everyone who chose it.
+
+**Storage.** `business-media` is **public**, unlike `booking-uploads` — these
+images sit in links people paste into Facebook, and a signed URL expires long
+before the post does. Objects live under `<uid>/`, and the bucket needs a
+**select** policy as well as insert/update/delete: the storage API resolves the
+row before deleting it, and without select the owner's own remove came back 403
+while every replaced logo stayed behind as an orphan.
 
 ## Booking module
 
@@ -126,6 +174,11 @@ shell, so RLS is the only guard. Verified against the live database:
 | Read services of a draft calendar | `[]` |
 | Read them once published | visible |
 | Insert a service | `401` |
+| Read a business profile with no live calendar | `[]` |
+| Read it once a calendar is published | visible |
+| Read `profiles` (the email) | `[]` |
+| Write a business profile | refused |
+| Upload into another user's media folder | `400` |
 
 The forged-owner case is why the insert policy matches `c.user_id = bookings.user_id`
 — without it anyone could file bookings into someone else's account. `public-actions.ts`

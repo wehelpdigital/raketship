@@ -3,8 +3,10 @@ import { redirect } from "next/navigation"
 
 import { AppHeader } from "@/components/shell/app-header"
 import { BottomNav } from "@/components/shell/bottom-nav"
+import { PaletteStyle } from "@/components/shell/palette-style"
 import { SideNav, type ModuleNavItem } from "@/components/shell/side-nav"
 import { supabaseConfigured } from "@/lib/env"
+import { getThemePreset } from "@/lib/queries/business"
 import { getWorkspace } from "@/lib/queries/workspace"
 import { getCurrentUser, getSupabaseServerClient } from "@/lib/supabase/server"
 import type { ProfileRow } from "@/lib/supabase/types"
@@ -44,6 +46,11 @@ export default async function AppLayout({
   // The Modules group is driven by what the user actually activated, so an
   // empty workspace simply renders the group's "No modules yet" state.
   const workspace = user ? await getWorkspace(user.id) : null
+
+  // Read on the server and painted into the first byte of HTML. A branding
+  // feature that flashes the default red before correcting itself is worse
+  // than no branding at all, so there is no client-side apply here.
+  const palette = user ? await getThemePreset(user.id) : null
   const modules: ModuleNavItem[] = (workspace?.modules ?? [])
     .filter((m) => m.status === "active" && m.module)
     .map((m) => ({
@@ -58,6 +65,7 @@ export default async function AppLayout({
   // phone -> BottomNav, tablet -> the header's inline row, desktop -> SideNav.
   return (
     <div className="min-h-dvh bg-background lg:pl-64">
+      <PaletteStyle preset={palette} />
       <SideNav modules={modules} />
       <div className="flex min-h-dvh flex-col">
         <AppHeader

@@ -31,6 +31,14 @@ export function accentChip(accent: string | null | undefined): string {
   return (accent && ACCENT_CHIP[accent]) || ACCENT_CHIP["chart-1"]
 }
 
+/**
+ * Modules with a bespoke home. These are static segments that deliberately
+ * shadow the dynamic /modules/[moduleId] route; everything else falls through
+ * to the generic page. Listed here so navigation and the generic page agree
+ * about which is which.
+ */
+export const BESPOKE_MODULES = new Set(["business", "booking"])
+
 export function moduleHref(moduleId: string): string {
   return `/modules/${moduleId}`
 }
