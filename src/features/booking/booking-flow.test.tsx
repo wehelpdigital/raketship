@@ -1,8 +1,8 @@
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { BookingFlow, type BookingDay } from "./booking-flow"
+import { BookingFlow, type OpenRange } from "./booking-flow"
 
 const actions = vi.hoisted(() => ({
   getAvailableSlots: vi.fn(),
@@ -24,10 +24,10 @@ const SLOTS = [
   },
 ]
 
-/** Two open days so a date is always tappable. */
-const DAYS: BookingDay[] = [
-  { iso: "2026-09-07", open: true },
-  { iso: "2026-09-08", open: true },
+/** The shop is open across these instants, so days derive as open. */
+const OPEN_RANGES: OpenRange[] = [
+  { from: "2026-09-07T01:00:00.000Z", to: "2026-09-07T09:00:00.000Z" },
+  { from: "2026-09-08T01:00:00.000Z", to: "2026-09-08T09:00:00.000Z" },
 ]
 
 function renderFlow() {
@@ -39,7 +39,8 @@ function renderFlow() {
       timezone="Asia/Manila"
       timezoneLabel="Manila · GMT+8"
       fields={[]}
-      days={DAYS}
+      openRanges={OPEN_RANGES}
+      horizonDays={14}
     />
   )
 }
@@ -49,10 +50,19 @@ const dateStep = () => screen.queryByText("Pumili ng petsa")
 const timeStep = () => screen.queryByText("Pumili ng oras")
 const detailStep = () => screen.queryByText("Your details")
 
+/** Fixed so the open ranges below are always "today" and "tomorrow". */
+const NOW = new Date("2026-09-07T00:30:00.000Z")
+
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] })
+  vi.setSystemTime(NOW)
   actions.getAvailableSlots.mockReset()
   actions.submitBooking.mockReset()
   actions.getAvailableSlots.mockResolvedValue({ ok: true, slots: SLOTS })
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 describe("BookingFlow as a wizard", () => {
@@ -66,7 +76,7 @@ describe("BookingFlow as a wizard", () => {
   })
 
   it("advances to the times once a date is picked", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     renderFlow()
 
     await user.click(screen.getAllByRole("button", { name: /2026-09-07|Mon|Tue|Wed|Thu|Fri|Sat|Sun/ })[0])
@@ -76,7 +86,7 @@ describe("BookingFlow as a wizard", () => {
   })
 
   it("goes back to the dates and keeps the one already chosen", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     renderFlow()
 
     const firstDay = screen.getAllByRole("button", {
@@ -97,7 +107,7 @@ describe("BookingFlow as a wizard", () => {
   })
 
   it("reaches the details step after a time is picked", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     renderFlow()
 
     await user.click(
@@ -112,7 +122,7 @@ describe("BookingFlow as a wizard", () => {
   })
 
   it("lets the stepper walk back to a finished step, but never forward", async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     renderFlow()
 
     await user.click(
@@ -132,39 +142,42 @@ describe("BookingFlow as a wizard", () => {
   })
 })
 
-describe("reading times in your own timezone", () => {
-  async function reachTheTimes(user: ReturnType<typeof userEvent.setup>) {
+describe("choosing a timezone", () => {
+  it("asks for the zone before the dates, not after", () => {
     renderFlow()
-    await user.click(
-      screen.getAllByRole("button", { name: /Mon|Tue|Wed|Thu|Fri|Sat|Sun/ })[0]
-    )
-    await waitFor(() =>
-      expect(screen.queryByText("Pumili ng oras")).toBeInTheDocument()
-    )
-  }
-
-  it("shows the shop's own clock until told otherwise", async () => {
-    const user = userEvent.setup()
-    await reachTheTimes(user)
-
-    // vitest.setup stubs matchMedia and jsdom reports UTC, so the viewer's zone
-    // never differs here — the calendar's own times stand.
-    expect(await screen.findByRole("button", { name: /9:00 AM/ })).toBeInTheDocument()
+    // The zone decides which day a slot falls on, so it cannot come second:
+    // picking it later would silently change what an already-chosen date meant.
+    expect(dateStep()).toBeInTheDocument()
+    expect(screen.getByText("Oras na ipinapakita")).toBeInTheDocument()
   })
 
-  it("offers a way to change which zone the times are read in", async () => {
-    const user = userEvent.setup()
-    await reachTheTimes(user)
-
-    expect(screen.getByText("Oras na ipinapakita")).toBeInTheDocument()
-    // The shop's own zone is always in reach, so whose clock is whose stays clear.
+  it("keeps the shop's own zone reachable and labelled", () => {
+    renderFlow()
     expect(screen.getByText(/oras ng shop/)).toBeInTheDocument()
   })
 
-  it("names the shop's timezone alongside the times", async () => {
-    const user = userEvent.setup()
-    await reachTheTimes(user)
+  it("names the shop's zone on the times step once a date is chosen", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    renderFlow()
 
-    expect(screen.getByText(/Manila · GMT\+8/)).toBeInTheDocument()
+    await user.click(
+      screen.getAllByRole("button", { name: /Mon|Tue|Wed|Thu|Fri|Sat|Sun/ })[0]
+    )
+    await waitFor(() => expect(timeStep()).toBeInTheDocument())
+
+    // jsdom reports UTC and the fixture shop is Manila, so the two differ and
+    // the times step says which clock is being read.
+    expect(screen.getByText(/Oras ng shop|Oras sa /)).toBeInTheDocument()
+  })
+
+  it("derives the days from open instants, not a server-decided list", () => {
+    renderFlow()
+    // The ranges cover today and tomorrow, so at least those two are tappable
+    // and the rest of the fortnight is not.
+    const enabled = screen
+      .getAllByRole("button", { name: /Mon|Tue|Wed|Thu|Fri|Sat|Sun/ })
+      .filter((b) => !b.hasAttribute("disabled"))
+    expect(enabled.length).toBeGreaterThan(0)
+    expect(enabled.length).toBeLessThan(14)
   })
 })

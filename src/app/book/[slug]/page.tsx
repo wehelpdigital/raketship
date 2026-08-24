@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { CalendarCheck, Clock, Globe, ShieldCheck } from "lucide-react"
 
-import { BookingFlow, type BookingDay } from "@/features/booking/booking-flow"
+import { BookingFlow, type OpenRange } from "@/features/booking/booking-flow"
 import {
   buildSlots,
   groupAvailabilityByDay,
@@ -126,26 +126,38 @@ export default async function PublicBookingPage({ params }: PageProps) {
     zonedTimeToInstant(lastDate, 1440, calendar.timezone).toISOString()
   )
 
-  // Which days are worth tapping, decided on the server. The flow still asks
-  // for the actual times when a date is picked — this only greys out the
-  // obviously shut days so nobody taps into an empty list.
-  const days: BookingDay[] = dates.map((iso) => ({
-    iso,
-    open:
-      buildSlots({
+  /*
+    The server cannot know the visitor's timezone, and their day is not the
+    shop's: a Manila shop's Monday is Sunday evening in New York. So instead of
+    deciding which DAYS are open, it sends the open stretches as absolute
+    instants and lets the browser group them by whatever zone the visitor picks.
+
+    First and last instant per shop-day is enough to grey out the picker — it
+    over-approximates across a lunch break, and the fetch on tapping a day is
+    what actually decides. A handful of numbers travels; a year of slots does not.
+  */
+  const openRanges: OpenRange[] = dates
+    .map((iso) => {
+      const slots = buildSlots({
         isoDate: iso,
         rules,
         availability,
         blackouts,
         taken,
         now,
-      }).length > 0,
-  }))
+      })
+      if (slots.length === 0) return null
+      return {
+        from: slots[0].startsAt,
+        to: slots[slots.length - 1].endsAt,
+      }
+    })
+    .filter((range): range is OpenRange => range !== null)
 
   const city =
     calendar.timezone.split("/").pop()?.replace(/_/g, " ") ?? calendar.timezone
   const timezoneLabel = `${city} · ${gmtLabel(now, calendar.timezone)}`
-  const openDays = days.filter((day) => day.open).length
+  const openDays = openRanges.length
 
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6 md:max-w-3xl lg:max-w-5xl lg:px-8 lg:py-10 xl:max-w-6xl">
@@ -265,7 +277,8 @@ export default async function PublicBookingPage({ params }: PageProps) {
             timezone={calendar.timezone}
             timezoneLabel={timezoneLabel}
             fields={fields}
-            days={days}
+            openRanges={openRanges}
+            horizonDays={calendar.booking_horizon_days}
           />
         </div>
       </div>

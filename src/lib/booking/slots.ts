@@ -327,6 +327,62 @@ export function instantInZone(iso: string, timeZone: string): ZonedInstant {
   return { time: formatTimeLabel(minutes), isoDate }
 }
 
+export interface DayWindow {
+  /** Midnight opening the day, in that zone. */
+  start: Date
+  /** Midnight opening the NEXT day — the exclusive end. */
+  end: Date
+}
+
+/** The instants a given calendar day spans, as one zone experiences it. */
+export function dayWindowInZone(isoDate: string, timeZone: string): DayWindow {
+  return {
+    start: zonedTimeToInstant(isoDate, 0, timeZone),
+    end: zonedTimeToInstant(isoDate, 1440, timeZone),
+  }
+}
+
+/**
+ * Which of the calendar's own dates a viewer's day touches.
+ *
+ * This is the crux of showing a shop's hours to someone in another country.
+ * A Manila shop's Monday is Sunday evening in New York, so a New Yorker's
+ * "Monday" draws slots from the shop's Monday AND Tuesday. Offsets reach ±14
+ * hours, and a day is 24 long, so a window can only ever touch two or three
+ * of the calendar's dates — but it is never reliably just one.
+ */
+export function calendarDatesTouching(
+  window: DayWindow,
+  calendarZone: string
+): string[] {
+  const dates: string[] = []
+  const first = isoDateInZone(window.start, calendarZone)
+  // One millisecond inside the end, so a window that stops exactly at midnight
+  // does not claim the day it never actually reaches.
+  const last = isoDateInZone(new Date(window.end.getTime() - 1), calendarZone)
+
+  dates.push(first)
+  if (last !== first) {
+    // Walk day by day rather than assuming exactly two: a large offset swing
+    // can put a third date in between.
+    let cursor = new Date(window.start.getTime())
+    for (let i = 0; i < 4; i++) {
+      cursor = new Date(cursor.getTime() + 86400_000)
+      if (cursor.getTime() >= window.end.getTime()) break
+      const middle = isoDateInZone(cursor, calendarZone)
+      if (!dates.includes(middle)) dates.push(middle)
+    }
+    if (!dates.includes(last)) dates.push(last)
+  }
+  return dates
+}
+
+/** Whether an instant falls inside a day window. */
+export function withinWindow(iso: string, window: DayWindow): boolean {
+  const at = new Date(iso).getTime()
+  return at >= window.start.getTime() && at < window.end.getTime()
+}
+
 export interface DayHours {
   /** 0 = Sunday. */
   weekday: number

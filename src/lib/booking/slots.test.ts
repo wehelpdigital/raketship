@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest"
 
 import {
   buildSlots,
+  calendarDatesTouching,
+  dayWindowInZone,
   formatTimeLabel,
   groupAvailabilityByDay,
   instantInZone,
+  withinWindow,
   isoDateInZone,
   minutesToTime,
   summariseAvailability,
@@ -363,5 +366,57 @@ describe("instantInZone", () => {
       isoDate: "",
     })
     expect(() => instantInZone(NINE_AM_MANILA, "Not/AZone")).not.toThrow()
+  })
+})
+
+describe("a viewer's day versus the calendar's day", () => {
+  it("spans midnight to midnight in the viewer's own zone", () => {
+    const w = dayWindowInZone("2026-09-07", MANILA)
+    // Manila is UTC+8, so its Monday starts at 16:00 UTC the day before.
+    expect(w.start.toISOString()).toBe("2026-09-06T16:00:00.000Z")
+    expect(w.end.toISOString()).toBe("2026-09-07T16:00:00.000Z")
+  })
+
+  it("touches two of the calendar's dates when the zones differ", () => {
+    // A New Yorker's Monday overlaps the shop's Monday AND Tuesday in Manila.
+    const w = dayWindowInZone("2026-09-07", NEW_YORK)
+    expect(calendarDatesTouching(w, MANILA)).toEqual(["2026-09-07", "2026-09-08"])
+  })
+
+  it("touches exactly one date when the viewer is in the shop's zone", () => {
+    const w = dayWindowInZone("2026-09-07", MANILA)
+    expect(calendarDatesTouching(w, MANILA)).toEqual(["2026-09-07"])
+  })
+
+  it("does not claim a day the window only just fails to reach", () => {
+    // The window is exclusive at the end; midnight belongs to the next day.
+    const w = dayWindowInZone("2026-09-07", MANILA)
+    const dates = calendarDatesTouching(w, MANILA)
+    expect(dates).not.toContain("2026-09-08")
+  })
+
+  it("places a shop's morning slot in the previous day for a viewer out west", () => {
+    // 9am Monday in Manila is 9pm SUNDAY in New York — this is the case that
+    // made grouping by the shop's day wrong.
+    const nineAmManila = "2026-09-07T01:00:00.000Z"
+    const nyMonday = dayWindowInZone("2026-09-07", NEW_YORK)
+    const nySunday = dayWindowInZone("2026-09-06", NEW_YORK)
+
+    expect(withinWindow(nineAmManila, nySunday)).toBe(true)
+    expect(withinWindow(nineAmManila, nyMonday)).toBe(false)
+  })
+
+  it("keeps that same instant inside the shop's own Monday", () => {
+    const nineAmManila = "2026-09-07T01:00:00.000Z"
+    expect(
+      withinWindow(nineAmManila, dayWindowInZone("2026-09-07", MANILA))
+    ).toBe(true)
+  })
+
+  it("handles a viewer far to the east too", () => {
+    // Auckland is ahead of Manila, so its day reaches back into the shop's
+    // previous date rather than forward.
+    const w = dayWindowInZone("2026-09-07", "Pacific/Auckland")
+    expect(calendarDatesTouching(w, MANILA)).toEqual(["2026-09-06", "2026-09-07"])
   })
 })

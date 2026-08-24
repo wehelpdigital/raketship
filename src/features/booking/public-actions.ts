@@ -22,13 +22,17 @@ import { z } from "zod"
 import { validateAnswers, type AnswerValue } from "@/lib/booking/fields"
 import {
   buildSlots,
+  calendarDatesTouching,
+  dayWindowInZone,
   isoDateInZone,
   weekdayInZone,
+  withinWindow,
   zonedTimeToInstant,
   type Slot,
   type SlotRules,
 } from "@/lib/booking/slots"
 import { getTakenSlots } from "@/lib/queries/booking"
+import { isKnownTimezone } from "@/lib/booking/timezones"
 import { getSupabaseServerClient } from "@/lib/supabase/server"
 import type {
   BookingAvailabilityRow,
@@ -66,6 +70,9 @@ const OUT_OF_RANGE = "That date is not open for booking. Pumili po ng ibang araw
 const SlotsInput = z.object({
   calendarId: z.string().regex(UUID_RE),
   isoDate: z.string().regex(ISO_DATE_RE),
+  // Optional: an older client, or one whose runtime hid the zone, simply gets
+  // the shop's own days.
+  viewerZone: z.string().max(64).optional(),
 })
 
 const AnswerInput = z.union([
@@ -208,10 +215,12 @@ async function loadPublished(
  */
 async function takenAround(
   calendar: BookingCalendarRow,
-  isoDate: string
+  isoDate: string,
+  /** The last of the shop's dates in play, when a viewer's day spans two. */
+  throughIsoDate: string = isoDate
 ): Promise<{ startsAt: string; endsAt: string }[]> {
   const dayStart = zonedTimeToInstant(isoDate, 0, calendar.timezone)
-  const dayEnd = zonedTimeToInstant(isoDate, 1440, calendar.timezone)
+  const dayEnd = zonedTimeToInstant(throughIsoDate, 1440, calendar.timezone)
   return getTakenSlots(
     calendar.id,
     new Date(dayStart.getTime() - 86400_000).toISOString(),
@@ -226,12 +235,18 @@ async function takenAround(
 function withinHorizon(
   isoDate: string,
   timeZone: string,
-  horizonDays: number
+  horizonDays: number,
+  /** The shop's zone, when it differs from the one the date is written in. */
+  calendarZone: string = timeZone
 ): boolean {
   const now = new Date()
   // ISO dates compare correctly as plain strings, which keeps this out of the
   // business of parsing them back into instants.
-  if (isoDate < isoDateInZone(now, timeZone)) return false
+  const floor = isoDateInZone(
+    new Date(now.getTime() - 86400_000),
+    calendarZone
+  )
+  if (isoDate < floor) return false
 
   // The page is only a UI; nothing stops a script from posting dates straight
   // at the action, so the owner's setting is re-read here rather than trusted
@@ -290,7 +305,10 @@ function emptyReason(
 /** The times still on offer for one date, recomputed from the rules each call. */
 export async function getAvailableSlots(input: {
   calendarId: string
+  /** A date on the VIEWER's calendar, not necessarily the shop's. */
   isoDate: string
+  /** The zone that date is written in. Defaults to the calendar's own. */
+  viewerZone?: string
 }): Promise<AvailableSlotsResult> {
   const parsed = SlotsInput.safeParse(input)
   if (!parsed.success) {
@@ -303,37 +321,64 @@ export async function getAvailableSlots(input: {
   const bundle = await loadPublished(supabase, parsed.data.calendarId)
   if (!bundle) return { ok: false, slots: [], message: NOT_LIVE }
 
+  const calendarZone = bundle.calendar.timezone
   const { isoDate } = parsed.data
+  // An unknown zone is not an error worth failing on — it just means we show
+  // the shop's own days, which is the honest fallback.
+  const viewerZone =
+    parsed.data.viewerZone && isKnownTimezone(parsed.data.viewerZone)
+      ? parsed.data.viewerZone
+      : calendarZone
+
   if (
     !withinHorizon(
       isoDate,
-      bundle.calendar.timezone,
-      bundle.calendar.booking_horizon_days
+      viewerZone,
+      bundle.calendar.booking_horizon_days,
+      calendarZone
     )
   ) {
     return {
       ok: false,
       slots: [],
-      timezone: bundle.calendar.timezone,
+      timezone: calendarZone,
       message: OUT_OF_RANGE,
     }
   }
 
-  const taken = await takenAround(bundle.calendar, isoDate)
+  // The viewer's day rarely lines up with the shop's. A Manila shop's Monday
+  // is Sunday evening in New York, so a New Yorker's Monday draws slots from
+  // two of the shop's dates — build both, then keep only what falls inside the
+  // day the viewer actually asked for.
+  const window = dayWindowInZone(isoDate, viewerZone)
+  const sourceDates = calendarDatesTouching(window, calendarZone)
 
-  const slots = buildSlots({
-    isoDate,
-    rules: rulesOf(bundle.calendar),
-    availability: bundle.availability,
-    blackouts: bundle.blackouts,
-    taken,
-  })
+  const rules = rulesOf(bundle.calendar)
+  const taken = await takenAround(bundle.calendar, sourceDates[0], sourceDates.at(-1))
+
+  const slots = sourceDates
+    .flatMap((date) =>
+      buildSlots({
+        isoDate: date,
+        rules,
+        availability: bundle.availability,
+        blackouts: bundle.blackouts,
+        taken,
+      })
+    )
+    .filter((slot) => withinWindow(slot.startsAt, window))
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
 
   return {
     ok: true,
     slots,
-    timezone: bundle.calendar.timezone,
-    reason: slots.length === 0 ? emptyReason(bundle, isoDate, taken) : undefined,
+    timezone: calendarZone,
+    // The reason is asked of the shop's date that contributed most of the
+    // window, which is the one a customer would recognise as "that day".
+    reason:
+      slots.length === 0
+        ? emptyReason(bundle, sourceDates[0], taken)
+        : undefined,
   }
 }
 

@@ -40,7 +40,9 @@ import {
 } from "@/features/booking/public-actions"
 import { validateAnswers, type AnswerValue } from "@/lib/booking/fields"
 import {
+  dayWindowInZone,
   instantInZone,
+  upcomingDates,
   WEEKDAY_LABELS,
   WEEKDAY_SHORT,
   type Slot,
@@ -139,8 +141,13 @@ const EMPTY_COPY: Record<EmptyReason, { title: string; body: string }> = {
 
 export interface BookingDay {
   iso: string
-  /** Precomputed on the server, so a shut day is greyed out before any tap. */
   open: boolean
+}
+
+/** An unbroken stretch the shop is open, as absolute instants. */
+export interface OpenRange {
+  from: string
+  to: string
 }
 
 export interface BookingFlowProps {
@@ -152,8 +159,13 @@ export interface BookingFlowProps {
   /** "Manila · GMT+8", built server-side. */
   timezoneLabel: string
   fields: BookingFormFieldRow[]
-  /** The next fortnight, starting today in the calendar's own zone. */
-  days: BookingDay[]
+  /**
+   * When the shop is open, as instants rather than days — the server cannot
+   * know the visitor's zone, and their days are not the shop's.
+   */
+  openRanges: OpenRange[]
+  /** How far ahead this calendar accepts bookings. */
+  horizonDays: number
 }
 
 type SlotState =
@@ -199,7 +211,8 @@ export function BookingFlow({
   timezone,
   timezoneLabel,
   fields,
-  days,
+  openRanges,
+  horizonDays,
 }: BookingFlowProps) {
   const [selectedDate, setSelectedDate] = React.useState<string | null>(null)
   const [loaded, setLoaded] = React.useState<LoadedSlots>({ status: "empty" })
@@ -249,6 +262,44 @@ export function BookingFlow({
     [timezone, detectedZone]
   )
 
+  /*
+    The dates are the VIEWER's, not the shop's. This is the whole reason the
+    zone is chosen first: a Manila shop's Monday is Sunday evening in New York,
+    so "which day is this slot on" has no answer until we know whose calendar
+    is being read. Changing the zone re-cuts the days, it does not merely
+    relabel the times.
+  */
+  const days: BookingDay[] = React.useMemo(() => {
+    const spans = openRanges.map((range) => ({
+      from: new Date(range.from).getTime(),
+      to: new Date(range.to).getTime(),
+    }))
+    return upcomingDates(new Date(), horizonDays, shownZone).map((iso) => {
+      const window = dayWindowInZone(iso, shownZone)
+      const start = window.start.getTime()
+      const end = window.end.getTime()
+      return {
+        iso,
+        // Overlap, not containment: a stretch can begin the previous evening
+        // in this zone and still put slots inside today.
+        open: spans.some((span) => start < span.to && end > span.from),
+      }
+    })
+  }, [openRanges, horizonDays, shownZone])
+
+  /*
+    Changing zone re-cuts the days underneath any choice already made, so the
+    honest move is to start the pick again rather than keep a date that now
+    means something else.
+  */
+  function chooseZone(next: string) {
+    setZoneChoice(next)
+    setSelectedDate(null)
+    setSelectedSlot(null)
+    setFormError(null)
+    setStepIndex(0)
+  }
+
   const slotState: SlotState = React.useMemo(() => {
     if (!selectedDate) return { status: "idle" }
     if (loaded.status !== "empty" && loaded.forDate === selectedDate) {
@@ -297,7 +348,7 @@ export function BookingFlow({
     return () => {
       cancelled = true
     }
-  }, [calendarId, selectedDate, reloadToken])
+  }, [calendarId, selectedDate, reloadToken, shownZone])
 
   /** Phone only — desktop already shows every step at once. */
   function revealOnPhone(target: React.RefObject<HTMLDivElement | null>) {
@@ -444,14 +495,32 @@ export function BookingFlow({
                 <CalendarCheck className="size-4 text-primary" aria-hidden />
                 Pumili ng petsa
               </CardTitle>
-              <CardDescription>The next two weeks.</CardDescription>
+              <CardDescription>
+                {horizonDays === 1
+                  ? "Ngayong araw lang."
+                  : `Sa susunod na ${horizonDays} araw.`}
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <DayPicker
-                days={days}
-                selected={selectedDate}
-                onPick={pickDate}
+              {/*
+                Above the dates on purpose. The zone decides which day each slot
+                falls on, not merely how the time reads — so choosing it after
+                picking a date would silently change what that date meant.
+              */}
+              <ZonePicker
+                value={shownZone}
+                options={zoneOptions}
+                calendarZone={timezone}
+                calendarLabel={timezoneLabel}
+                onChange={chooseZone}
               />
+              <div className="mt-4">
+                <DayPicker
+                  days={days}
+                  selected={selectedDate}
+                  onPick={pickDate}
+                />
+              </div>
             </CardContent>
           </Card>
 
@@ -477,13 +546,12 @@ export function BookingFlow({
                     shownZone={shownZone}
                     calendarDate={selectedDate}
                   />
-                  <ZonePicker
-                    value={shownZone}
-                    options={zoneOptions}
-                    calendarZone={timezone}
-                    calendarLabel={timezoneLabel}
-                    onChange={setZoneChoice}
-                  />
+                  <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Globe className="size-3.5 shrink-0" aria-hidden />
+                    {shownZone === timezone
+                      ? `Oras ng shop · ${timezoneLabel}`
+                      : `Oras sa ${zoneCity(shownZone)}`}
+                  </p>
                 </CardContent>
               </Card>
             ) : null}
@@ -960,7 +1028,7 @@ function ZonePicker({
   const showingOwners = value === calendarZone
 
   return (
-    <div className="mt-3 space-y-1.5">
+    <div className="space-y-1.5">
       <Label
         htmlFor={id}
         className="flex items-center gap-1.5 text-xs font-normal text-muted-foreground"
