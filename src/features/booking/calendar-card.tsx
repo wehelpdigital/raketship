@@ -2,24 +2,15 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { CalendarCheck, Check, Clock, Copy, Timer } from "lucide-react"
+import { CalendarCheck, Check, Copy, Timer } from "lucide-react"
 import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { summariseAvailability } from "@/lib/booking/slots"
-import type {
-  BookingAvailabilityRow,
-  BookingCalendarRow,
-} from "@/lib/supabase/types"
-import { cn } from "@/lib/utils"
+import type { BookingCalendarRow } from "@/lib/supabase/types"
 
 export interface CalendarCardProps {
   calendar: BookingCalendarRow
-  availability: Pick<
-    BookingAvailabilityRow,
-    "weekday" | "start_minute" | "end_minute"
-  >[]
   bookingCount: number
   /** Absolute public URL, built on the server so it matches on hydration. */
   publicUrl: string
@@ -40,25 +31,15 @@ function durationLabel(minutes: number): string {
 
 function Meta({
   icon: Icon,
-  clamp = false,
   children,
 }: {
-  icon: typeof Clock
-  /** Cap at two lines — a full seven-day week would otherwise run on. */
-  clamp?: boolean
+  icon: typeof Timer
   children: React.ReactNode
 }) {
   return (
     <p className="flex items-start gap-2 text-sm text-muted-foreground">
       <Icon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-      <span
-        className={cn(
-          "min-w-0 flex-1 text-pretty",
-          clamp && "line-clamp-2"
-        )}
-      >
-        {children}
-      </span>
+      <span className="min-w-0 flex-1 text-pretty">{children}</span>
     </p>
   )
 }
@@ -72,7 +53,6 @@ function Meta({
  */
 export function CalendarCard({
   calendar,
-  availability,
   bookingCount,
   publicUrl,
 }: CalendarCardProps) {
@@ -125,9 +105,6 @@ export function CalendarCard({
       ) : null}
 
       <div className="space-y-1.5">
-        <Meta icon={Clock} clamp>
-          {summariseAvailability(availability)}
-        </Meta>
         <Meta icon={Timer}>
           {durationLabel(calendar.duration_minutes)} per booking ·{" "}
           {calendar.timezone}

@@ -208,7 +208,6 @@ export default async function BookingModulePage() {
                 <CalendarCard
                   key={calendar.id}
                   calendar={calendar}
-                  availability={calendar.availability}
                   bookingCount={calendar.bookingCount}
                   publicUrl={bookingUrl(calendar.slug, env.siteUrl)}
                 />

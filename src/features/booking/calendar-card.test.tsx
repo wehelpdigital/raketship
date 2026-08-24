@@ -41,11 +41,6 @@ function makeCalendar(
   }
 }
 
-const MON_TO_FRI = [
-  { weekday: 1, start_minute: 540, end_minute: 1020 },
-  { weekday: 5, start_minute: 540, end_minute: 720 },
-]
-
 const PUBLIC_URL = "https://raketship.ph/book/aling-nena-haircut"
 
 describe("CalendarCard", () => {
@@ -53,7 +48,6 @@ describe("CalendarCard", () => {
     render(
       <CalendarCard
         calendar={makeCalendar({ is_published: true })}
-        availability={MON_TO_FRI}
         bookingCount={3}
         publicUrl={PUBLIC_URL}
       />
@@ -79,7 +73,6 @@ describe("CalendarCard", () => {
     render(
       <CalendarCard
         calendar={makeCalendar()}
-        availability={MON_TO_FRI}
         bookingCount={0}
         publicUrl={PUBLIC_URL}
       />
@@ -96,7 +89,6 @@ describe("CalendarCard", () => {
     render(
       <CalendarCard
         calendar={makeCalendar()}
-        availability={[]}
         bookingCount={0}
         publicUrl={PUBLIC_URL}
       />
@@ -107,38 +99,43 @@ describe("CalendarCard", () => {
     ).toHaveAttribute("href", "/modules/booking/cal-1")
   })
 
-  it("summarises the week, and says so plainly when there is none", () => {
+  it("counts bookings, singular and plural and none", () => {
     const { unmount } = render(
       <CalendarCard
         calendar={makeCalendar()}
-        availability={MON_TO_FRI}
         bookingCount={1}
         publicUrl={PUBLIC_URL}
       />
     )
-
-    expect(screen.getByText(/Mon 9:00 AM/)).toBeInTheDocument()
     expect(screen.getByText("1 booking")).toBeInTheDocument()
     unmount()
 
     render(
       <CalendarCard
         calendar={makeCalendar()}
-        availability={[]}
         bookingCount={0}
         publicUrl={PUBLIC_URL}
       />
     )
-
-    expect(screen.getByText("No days set yet")).toBeInTheDocument()
     expect(screen.getByText("No bookings yet")).toBeInTheDocument()
+  })
+
+  it("does not print the weekly hours — that lives in the editor", () => {
+    render(
+      <CalendarCard
+        calendar={makeCalendar()}
+        bookingCount={0}
+        publicUrl={PUBLIC_URL}
+      />
+    )
+    expect(screen.queryByText(/9:00 AM/)).not.toBeInTheDocument()
+    expect(screen.queryByText("No days set yet")).not.toBeInTheDocument()
   })
 
   it("renders a calendar with no description without crashing", () => {
     render(
       <CalendarCard
         calendar={makeCalendar({ description: null })}
-        availability={[]}
         bookingCount={0}
         publicUrl={PUBLIC_URL}
       />
