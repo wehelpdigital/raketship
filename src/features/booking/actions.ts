@@ -38,6 +38,7 @@ export interface UpdateCalendarInput {
   durationMinutes?: number
   bufferMinutes?: number
   noticeHours?: number
+  horizonDays?: number
   timezone?: string
   country?: string
 }
@@ -182,6 +183,17 @@ const noticeSchema = z
   .min(0, "Notice cannot be negative.")
   .max(720, "Keep the notice under 30 days.")
 
+/**
+ * Mirrors the booking_calendars_horizon_range check constraint. Kept in step
+ * with it deliberately: the database is the real guard, this is only so the
+ * owner gets a sentence instead of a Postgres error code.
+ */
+const horizonSchema = z
+  .number()
+  .int("Days need to be a whole number.")
+  .min(1, "A calendar has to accept bookings for at least a day.")
+  .max(365, "A year ahead is the furthest a calendar can go.")
+
 const countrySchema = z
   .string()
   .regex(/^[A-Za-z]{2}$/, "Pick a country from the list.")
@@ -192,6 +204,7 @@ const calendarSchema = z.object({
   durationMinutes: durationSchema,
   bufferMinutes: bufferSchema,
   noticeHours: noticeSchema,
+  horizonDays: horizonSchema,
   timezone: z.string().min(1, "Pick a timezone.").max(64, "Pick a timezone."),
   country: countrySchema,
   slug: z.string().max(64, "Keep the link short."),
@@ -355,6 +368,7 @@ export async function createCalendar(
     durationMinutes: numberField(formData, "durationMinutes", 30),
     bufferMinutes: numberField(formData, "bufferMinutes", 0),
     noticeHours: numberField(formData, "noticeHours", 2),
+    horizonDays: numberField(formData, "horizonDays", 14),
     timezone: text(formData, "timezone") || "Asia/Manila",
     country: text(formData, "country") || "PH",
     slug: text(formData, "slug"),
@@ -383,6 +397,7 @@ export async function createCalendar(
     duration_minutes: input.durationMinutes,
     buffer_minutes: input.bufferMinutes,
     notice_hours: input.noticeHours,
+    booking_horizon_days: input.horizonDays,
     is_published: false,
   }
 
@@ -442,6 +457,12 @@ export async function updateCalendar(
     const parsed = noticeSchema.safeParse(input.noticeHours)
     if (!parsed.success) return fail(firstIssue(parsed.error))
     patch.notice_hours = parsed.data
+  }
+
+  if (input.horizonDays !== undefined) {
+    const parsed = horizonSchema.safeParse(input.horizonDays)
+    if (!parsed.success) return fail(firstIssue(parsed.error))
+    patch.booking_horizon_days = parsed.data
   }
 
   if (input.timezone !== undefined) {

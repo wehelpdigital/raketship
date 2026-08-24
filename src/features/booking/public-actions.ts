@@ -46,14 +46,13 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const MAX_ANSWER_KEYS = 100
 
 /**
- * How far ahead this endpoint will look at all.
+ * The furthest any calendar may reach, whatever it has configured.
  *
- * The public page offers a fortnight, but the horizon is enforced here too and
- * with a little slack: the page is only a UI, and nothing stops a script from
- * posting dates straight at the action. Without a bound, one loop could file a
- * booking on every open day for the next decade.
+ * Mirrors the booking_calendars_horizon_range check constraint. The per-calendar
+ * value is the real bound; this is the backstop for a row that predates the
+ * column or somehow escapes the constraint.
  */
-const MAX_HORIZON_DAYS = 60
+const ABSOLUTE_MAX_HORIZON_DAYS = 365
 
 const NOT_LIVE =
   "This booking link is not taking bookings right now. Pakitanong po ang may-ari."
@@ -224,13 +223,26 @@ async function takenAround(
  * Whether a date is one this link will talk about at all — today onwards, in
  * the calendar's own zone, and no further than the horizon.
  */
-function withinHorizon(isoDate: string, timeZone: string): boolean {
+function withinHorizon(
+  isoDate: string,
+  timeZone: string,
+  horizonDays: number
+): boolean {
   const now = new Date()
   // ISO dates compare correctly as plain strings, which keeps this out of the
   // business of parsing them back into instants.
   if (isoDate < isoDateInZone(now, timeZone)) return false
+
+  // The page is only a UI; nothing stops a script from posting dates straight
+  // at the action, so the owner's setting is re-read here rather than trusted
+  // from the request.
+  const days = Math.min(
+    Math.max(1, Math.trunc(horizonDays) || 1),
+    ABSOLUTE_MAX_HORIZON_DAYS
+  )
+  // Day 1 is today, so a 14-day horizon reaches 13 days forward.
   const last = isoDateInZone(
-    new Date(now.getTime() + MAX_HORIZON_DAYS * 86400_000),
+    new Date(now.getTime() + (days - 1) * 86400_000),
     timeZone
   )
   return isoDate <= last
@@ -292,7 +304,13 @@ export async function getAvailableSlots(input: {
   if (!bundle) return { ok: false, slots: [], message: NOT_LIVE }
 
   const { isoDate } = parsed.data
-  if (!withinHorizon(isoDate, bundle.calendar.timezone)) {
+  if (
+    !withinHorizon(
+      isoDate,
+      bundle.calendar.timezone,
+      bundle.calendar.booking_horizon_days
+    )
+  ) {
     return {
       ok: false,
       slots: [],
@@ -358,7 +376,9 @@ export async function submitBooking(
   // Which day this instant falls on is the calendar's business, not the
   // visitor's — a customer in Dubai must not shift a Manila calendar's date.
   const isoDate = isoDateInZone(start, calendar.timezone)
-  if (!withinHorizon(isoDate, calendar.timezone)) {
+  if (
+    !withinHorizon(isoDate, calendar.timezone, calendar.booking_horizon_days)
+  ) {
     return { ok: false, retry: true, message: OUT_OF_RANGE }
   }
 

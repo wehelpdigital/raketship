@@ -49,6 +49,9 @@ export const BUFFERS = [0, 5, 10, 15, 30]
 /** How far ahead a suki must book, in hours. */
 export const NOTICES = [0, 1, 2, 4, 12, 24, 48]
 
+/** How far ahead the public page offers. Capped at a year by the database. */
+export const HORIZONS = [7, 14, 30, 60, 90, 180, 365]
+
 export function minuteLabel(minutes: number): string {
   if (minutes === 0) return "No gap"
   if (minutes < 60) return `${minutes} minutes`
@@ -56,6 +59,21 @@ export function minuteLabel(minutes: number): string {
   const rest = minutes % 60
   const hourWord = hours === 1 ? "1 hour" : `${hours} hours`
   return rest === 0 ? hourWord : `${hourWord} ${rest} min`
+}
+
+export function horizonLabel(days: number): string {
+  if (days === 1) return "Today only"
+  if (days === 7) return "1 week ahead"
+  if (days % 365 === 0) return days === 365 ? "1 year ahead" : `${days / 365} years ahead`
+  if (days % 30 === 0) {
+    const months = days / 30
+    return months === 1 ? "1 month ahead" : `${months} months ahead`
+  }
+  if (days % 7 === 0) {
+    const weeks = days / 7
+    return `${weeks} weeks ahead`
+  }
+  return `${days} days ahead`
 }
 
 export function noticeLabel(hours: number): string {
@@ -156,6 +174,9 @@ export function CalendarForm({
   )
   const [buffer, setBuffer] = React.useState(calendar?.buffer_minutes ?? 0)
   const [notice, setNotice] = React.useState(calendar?.notice_hours ?? 2)
+  const [horizon, setHorizon] = React.useState(
+    calendar?.booking_horizon_days ?? 14
+  )
   const [error, setError] = React.useState<string | null>(null)
   const [saving, startSaving] = React.useTransition()
 
@@ -172,6 +193,7 @@ export function CalendarForm({
           payload.set("durationMinutes", String(duration))
           payload.set("bufferMinutes", String(buffer))
           payload.set("noticeHours", String(notice))
+          payload.set("horizonDays", String(horizon))
 
           const result = await createCalendar(payload)
           if (!result.ok) {
@@ -213,6 +235,7 @@ export function CalendarForm({
   const durationId = `${uid}-duration`
   const bufferId = `${uid}-buffer`
   const noticeId = `${uid}-notice`
+  const horizonId = `${uid}-horizon`
 
   return (
     <div className={cn("space-y-6", className)}>
@@ -255,7 +278,7 @@ export function CalendarForm({
 
         {/* Three short numeric answers: stacked on a phone so every control
             keeps its 44px target, side by side the moment there is room. */}
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-1.5">
             <Label htmlFor={durationId}>Length</Label>
             <NumberSelect
@@ -280,6 +303,19 @@ export function CalendarForm({
               onChange={setBuffer}
             />
             <p className="text-xs text-muted-foreground">Between bookings</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor={horizonId}>Books up to</Label>
+            <NumberSelect
+              id={horizonId}
+              value={horizon}
+              choices={withCurrent(HORIZONS, horizon)}
+              label={horizonLabel}
+              disabled={saving}
+              onChange={setHorizon}
+            />
+            <p className="text-xs text-muted-foreground">How far ahead</p>
           </div>
 
           <div className="space-y-1.5">

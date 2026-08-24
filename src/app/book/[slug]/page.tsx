@@ -18,13 +18,6 @@ import { env } from "@/lib/env"
 import { getPublishedCalendar, getTakenSlots } from "@/lib/queries/booking"
 import { cn } from "@/lib/utils"
 
-/**
- * How far ahead this page offers. The action behind it enforces its own, wider
- * bound, so this can be shortened or stretched a little without a server
- * change — anything beyond a couple of months needs both.
- */
-const HORIZON_DAYS = 14
-
 interface PageProps {
   params: Promise<{ slug: string }>
 }
@@ -112,7 +105,14 @@ export default async function PublicBookingPage({ params }: PageProps) {
     noticeHours: calendar.notice_hours,
   }
 
-  const dates = upcomingDates(now, HORIZON_DAYS, calendar.timezone)
+  // How far ahead this calendar accepts bookings is the owner's decision.
+  // getAvailableSlots re-derives the same bound, so a hand-typed date beyond it
+  // is refused rather than merely unclickable.
+  const dates = upcomingDates(
+    now,
+    calendar.booking_horizon_days,
+    calendar.timezone
+  )
   const firstDate = dates[0] ?? isoDateInZone(now, calendar.timezone)
   const lastDate = dates[dates.length - 1] ?? firstDate
 

@@ -165,6 +165,8 @@ export type BookingCalendarRow = {
   duration_minutes: number
   buffer_minutes: number
   notice_hours: number
+  /** How many days ahead the public page offers, today counting as day 1. */
+  booking_horizon_days: number
   is_published: boolean
   created_at: string
   updated_at: string

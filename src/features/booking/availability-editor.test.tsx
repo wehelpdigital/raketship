@@ -629,6 +629,7 @@ const CALENDAR: BookingCalendarRow = {
   duration_minutes: 30,
   buffer_minutes: 0,
   notice_hours: 2,
+  booking_horizon_days: 14,
   is_published: false,
   created_at: "2026-01-01T00:00:00.000Z",
   updated_at: "2026-01-01T00:00:00.000Z",

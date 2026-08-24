@@ -727,7 +727,7 @@ function DayPicker({
   return (
     <>
       {/* Phone and tablet: a thumb-friendly rail. */}
-      <div className="no-scrollbar snap-x snap-mandatory overflow-x-auto pb-1 lg:hidden">
+      <div className="no-scrollbar snap-x snap-mandatory overflow-x-auto p-1 lg:hidden">
         <div className="flex w-max gap-2">
           {days.map((day, index) => {
             const active = day.iso === selected
@@ -741,6 +741,7 @@ function DayPicker({
                 aria-label={`${longDate(day.iso)}${day.open ? "" : " — walang bakante"}`}
                 className={cn(
                   "flex h-19 w-15 shrink-0 snap-start flex-col items-center justify-center gap-0.5 rounded-xl ring-1 transition-colors",
+                  "outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   active
                     ? "bg-primary text-primary-foreground ring-primary"
                     : day.open
@@ -847,7 +848,15 @@ function TimePicker({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:max-h-72 lg:grid-cols-2 lg:overflow-y-auto lg:pr-1 xl:grid-cols-3">
+    <div
+      className={cn(
+        "grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-3",
+        // A ring is painted outside the border box, so a scroll container with
+        // padding on one side only clips it on the other three — which is what
+        // shaved the first and last rows.
+        "lg:max-h-76 lg:grid-cols-2 lg:overflow-y-auto lg:p-1"
+      )}
+    >
       {state.slots.map((slot) => {
         const active = slot.startsAt === selected?.startsAt
         return (
@@ -858,6 +867,7 @@ function TimePicker({
             aria-pressed={active}
             className={cn(
               "h-11 rounded-lg text-sm font-medium tabular-nums ring-1 transition-colors",
+              "outline-none focus-visible:ring-2 focus-visible:ring-ring",
               active
                 ? "bg-primary text-primary-foreground ring-primary"
                 : "bg-card text-foreground ring-border hover:bg-muted"

@@ -88,6 +88,7 @@ function calendarRow(overrides: Record<string, unknown> = {}) {
     duration_minutes: 30,
     buffer_minutes: 0,
     notice_hours: 2,
+    booking_horizon_days: 60,
     is_published: true,
     created_at: "2026-01-01T00:00:00.000Z",
     updated_at: "2026-01-01T00:00:00.000Z",
@@ -482,5 +483,70 @@ describe("submitBooking", () => {
 
     expect(result.ok).toBe(false)
     expect(result.message).toMatch(/not connected/i)
+  })
+})
+
+describe("the booking horizon", () => {
+  // NOW is 2027-02-24; MONDAY is 2027-03-01, five days out.
+  it("offers a date inside the calendar's own horizon", async () => {
+    stubClient({ calendar: calendarRow({ booking_horizon_days: 14 }) })
+
+    const result = await getAvailableSlots({
+      calendarId: CALENDAR_ID,
+      isoDate: MONDAY,
+    })
+
+    expect(result.ok).toBe(true)
+    expect(result.slots.length).toBeGreaterThan(0)
+  })
+
+  it("refuses the same date once the horizon is shortened past it", async () => {
+    // Three days ahead only, so the Monday five days out is now out of reach.
+    stubClient({ calendar: calendarRow({ booking_horizon_days: 3 }) })
+
+    const result = await getAvailableSlots({
+      calendarId: CALENDAR_ID,
+      isoDate: MONDAY,
+    })
+
+    // The page would not offer it, but the action is what a script would hit.
+    expect(result.slots).toEqual([])
+  })
+
+  it("counts today as day one, so a horizon of 1 means today only", async () => {
+    stubClient({ calendar: calendarRow({ booking_horizon_days: 1 }) })
+
+    const tomorrow = "2027-02-25"
+    const result = await getAvailableSlots({
+      calendarId: CALENDAR_ID,
+      isoDate: tomorrow,
+    })
+
+    expect(result.slots).toEqual([])
+  })
+
+  it("caps a calendar that somehow holds an absurd horizon", async () => {
+    // The check constraint blocks this, so it can only arrive from a row that
+    // predates the column — the action still must not honour it.
+    stubClient({ calendar: calendarRow({ booking_horizon_days: 99_999 }) })
+
+    const farFuture = "2032-03-01"
+    const result = await getAvailableSlots({
+      calendarId: CALENDAR_ID,
+      isoDate: farFuture,
+    })
+
+    expect(result.slots).toEqual([])
+  })
+
+  it("still refuses a date already past, whatever the horizon", async () => {
+    stubClient({ calendar: calendarRow({ booking_horizon_days: 365 }) })
+
+    const result = await getAvailableSlots({
+      calendarId: CALENDAR_ID,
+      isoDate: "2027-02-01",
+    })
+
+    expect(result.slots).toEqual([])
   })
 })
