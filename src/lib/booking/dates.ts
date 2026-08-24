@@ -58,3 +58,34 @@ export function longDateWithYear(iso: string): string {
   const { year, month, day } = partsOf(iso)
   return `${WEEKDAY_LABELS[weekdayOfIso(iso)]}, ${day} ${MONTHS[month - 1]} ${year}`
 }
+
+/** Whole days from one ISO date to another. Negative when `to` is earlier. */
+export function dayOffset(fromIso: string, toIso: string): number {
+  const day = (iso: string) => {
+    const { year, month, day: d } = partsOf(iso)
+    return Date.UTC(year, month - 1, d)
+  }
+  return Math.round((day(toIso) - day(fromIso)) / 86_400_000)
+}
+
+/**
+ * "Ngayon", "Bukas", "Kahapon", or the day written out.
+ *
+ * A booking list is read relative to today far more often than absolutely —
+ * an owner wants to know what is happening now, not to parse a date — so the
+ * three days either side of today say so in words.
+ */
+export function relativeDayLabel(iso: string, todayIso: string): string {
+  switch (dayOffset(todayIso, iso)) {
+    case 0:
+      return "Ngayon"
+    case 1:
+      return "Bukas"
+    case 2:
+      return "Makalawa"
+    case -1:
+      return "Kahapon"
+    default:
+      return longDate(iso)
+  }
+}

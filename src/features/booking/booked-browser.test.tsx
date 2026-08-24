@@ -57,6 +57,13 @@ function renderBrowser(
 
 const search = () => screen.getByPlaceholderText(/Pangalan, number/)
 
+/*
+  The rows, and only the rows. aria-expanded is no longer unique to them — the
+  filter toggle carries one too — so they are picked by the one thing that is
+  always theirs: the customer's name is in the button.
+*/
+const rowButtons = () => screen.getAllByRole("button", { name: /Suki|Juan|Maria|Nena/ })
+
 beforeEach(() => {
   vi.clearAllMocks()
 })
@@ -154,7 +161,7 @@ describe("paging", () => {
     renderBrowser({ rows: many })
 
     // The default page size, not all twenty-five.
-    expect(screen.getAllByRole("button", { expanded: false })).toHaveLength(10)
+    expect(rowButtons()).toHaveLength(10)
   })
 
   it("moves between pages", async () => {
@@ -192,14 +199,14 @@ describe("paging", () => {
     await user.click(screen.getByLabelText(/Ilan bawat pahina/))
     await user.click(await screen.findByRole("option", { name: "50 / pahina" }))
 
-    expect(screen.getAllByRole("button", { expanded: false })).toHaveLength(25)
+    expect(rowButtons()).toHaveLength(25)
   })
 })
 
 describe("opening a row", () => {
   it("starts closed, so the list can be scanned", () => {
     renderBrowser()
-    for (const button of screen.getAllByRole("button", { expanded: false })) {
+    for (const button of rowButtons()) {
       expect(button).toHaveAttribute("aria-expanded", "false")
     }
   })
@@ -208,7 +215,7 @@ describe("opening a row", () => {
     const user = userEvent.setup()
     renderBrowser({ rows: [row(1, { customerEmail: "juan@example.com" })] })
 
-    await user.click(screen.getByRole("button", { expanded: false }))
+    await user.click(rowButtons()[0])
 
     // Written out plainly, so an owner reading it back on the phone reads a
     // line rather than a layout.
@@ -227,11 +234,10 @@ describe("opening a row", () => {
     const user = userEvent.setup()
     renderBrowser()
 
-    const rows = () => screen.getAllByRole("button", { name: /Suki/ })
-    await user.click(rows()[0])
+    await user.click(rowButtons()[0])
     expect(screen.getAllByText("Reference:")).toHaveLength(1)
 
-    await user.click(rows()[1])
+    await user.click(rowButtons()[1])
     expect(screen.getAllByText("Reference:")).toHaveLength(1)
   })
 
@@ -239,7 +245,7 @@ describe("opening a row", () => {
     const user = userEvent.setup()
     renderBrowser({ rows: [row(1)] })
 
-    const control = screen.getByRole("button", { expanded: false })
+    const control = rowButtons()[0]
     await user.click(control)
     expect(control).toHaveAttribute("aria-expanded", "true")
 
@@ -268,11 +274,94 @@ describe("opening a row", () => {
       fieldsByCalendar: { [CAL_A]: [field] },
     })
 
-    await user.click(screen.getByRole("button", { expanded: false }))
+    await user.click(rowButtons()[0])
 
     // The owner's own questions read the same way as everything else.
     expect(screen.getByText("Anong hairstyle:")).toBeInTheDocument()
     expect(screen.getByText("Fade po")).toBeInTheDocument()
+  })
+})
+
+describe("grouping by day", () => {
+  it("puts the day on a heading instead of on every row", () => {
+    // Both land on 11 March in Manila; one heading, not two dates.
+    renderBrowser({ rows: [row(1), row(21)] })
+
+    const heading = screen.getByRole("heading", { name: /11 March/ })
+    expect(heading).toHaveTextContent("Thursday, 11 March")
+    expect(heading).toHaveTextContent("2 bookings")
+    expect(screen.queryByText("2027-03-11")).not.toBeInTheDocument()
+  })
+
+  it("starts a new heading when the day changes", () => {
+    renderBrowser({ rows: [row(1), row(2)] })
+
+    expect(
+      screen.getByRole("heading", { name: /Thursday, 11 March/ })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("heading", { name: /Friday, 12 March/ })
+    ).toBeInTheDocument()
+  })
+
+  it("says the day in words when it is nearly here", () => {
+    // Read in the CALENDAR's zone. 02:00 UTC is the same Manila date whatever
+    // hour the test runs at.
+    const today = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Manila",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date())
+
+    renderBrowser({
+      rows: [
+        row(1, {
+          startsAt: `${today}T02:00:00.000Z`,
+          endsAt: `${today}T02:30:00.000Z`,
+        }),
+      ],
+    })
+
+    expect(screen.getByRole("heading", { name: /Ngayon/ })).toBeInTheDocument()
+  })
+
+  it("counts only the rows on this page under each heading", async () => {
+    const user = userEvent.setup()
+    // Twenty rows spread over twenty days, ten to a page.
+    renderBrowser({ rows: Array.from({ length: 20 }, (_, i) => row(i + 1)) })
+
+    expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(10)
+    await user.click(screen.getByRole("button", { name: "Pahina 2" }))
+    expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(10)
+  })
+})
+
+describe("the filters on a phone", () => {
+  it("folds away behind a toggle so the first booking is on screen", async () => {
+    const user = userEvent.setup()
+    renderBrowser({
+      rows: [row(1), row(2)],
+      calendars: [
+        { id: CAL_A, name: "Gupit" },
+        { id: CAL_B, name: "Kulay" },
+      ],
+    })
+
+    const toggle = screen.getByRole("button", { name: /Filter/ })
+    expect(toggle).toHaveAttribute("aria-expanded", "false")
+    expect(screen.getByRole("button", { name: /Filter/ })).toHaveAttribute(
+      "aria-controls",
+      "booked-filters"
+    )
+
+    await user.click(toggle)
+    expect(toggle).toHaveAttribute("aria-expanded", "true")
+  })
+
+  it("leaves the search box out where it can always be reached", () => {
+    renderBrowser()
+    expect(search()).toBeVisible()
   })
 })
 

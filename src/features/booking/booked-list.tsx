@@ -11,7 +11,6 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -54,6 +53,13 @@ export interface BookedRowCardProps {
   row: BookedRow
   fields: BookingFormFieldRow[]
   variant: "active" | "cancelled"
+  /**
+   * Whether the row has to name its calendar.
+   *
+   * With one calendar it is the same word on every row; with several it is the
+   * only thing telling two identical-looking bookings apart.
+   */
+  showCalendar?: boolean
   open: boolean
   onToggle: () => void
 }
@@ -74,6 +80,7 @@ export function BookedRowCard({
   row,
   fields,
   variant,
+  showCalendar = false,
   open,
   onToggle,
 }: BookedRowCardProps) {
@@ -126,15 +133,16 @@ export function BookedRowCard({
         className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:gap-4 sm:px-5"
       >
         {/*
-          Fixed-width on desktop so the times line up down the page and the eye
-          can run along one column instead of tracking ragged text.
+          Fixed width so the times line up down the page and the eye can run
+          along one column instead of tracking ragged text. The DAY is on the
+          heading above this row, so all a row has to say is when in the day.
         */}
-        <span className="w-20 shrink-0 sm:w-28">
+        <span className="w-[4.5rem] shrink-0 sm:w-24">
           <span className="block text-sm font-semibold tabular-nums">
             {when.time}
           </span>
           <span className="block text-xs text-muted-foreground tabular-nums">
-            {when.isoDate}
+            {`– ${until.time}`}
           </span>
         </span>
 
@@ -143,29 +151,22 @@ export function BookedRowCard({
             {row.customerName}
           </span>
           <span className="block truncate text-xs text-muted-foreground">
-            {row.calendarName}
-            {row.serviceName ? ` · ${row.serviceName}` : ""}
+            {row.serviceName ?? row.calendarName}
+            {showCalendar && row.serviceName ? ` · ${row.calendarName}` : ""}
           </span>
         </span>
 
-        {/* The detail that only fits once there is room for it. */}
-        <span className="hidden w-32 shrink-0 text-right lg:block">
-          <span className="block text-xs text-muted-foreground tabular-nums">
-            {formatDuration(row.durationMinutes)}
-          </span>
+        {/* Dropped on the narrowest phones, where the name has to win. */}
+        <span className="hidden shrink-0 text-right sm:block">
           {row.servicePriceCentavos ? (
-            <span className="block text-xs font-medium tabular-nums">
+            <span className="block text-sm font-medium tabular-nums">
               {formatPeso(row.servicePriceCentavos)}
             </span>
           ) : null}
+          <span className="block text-xs text-muted-foreground tabular-nums">
+            {formatDuration(row.durationMinutes)}
+          </span>
         </span>
-
-        <Badge
-          variant={cancelled ? "outline" : "default"}
-          className="hidden shrink-0 sm:inline-flex"
-        >
-          {cancelled ? "Cancelled" : "Booked"}
-        </Badge>
 
         <ChevronDown
           className={cn(
@@ -184,7 +185,12 @@ export function BookedRowCard({
             reads a line, not a layout — and half of these are one short word,
             which a heading above makes taller than the thing it names.
           */}
-          <dl className="space-y-1.5 text-sm">
+          {/*
+            One column on a phone, two once there is room. A single column of
+            eleven short lines down a 900px screen is mostly empty space, and
+            the eye has to travel further than the facts are worth.
+          */}
+          <dl className="grid gap-x-8 gap-y-1.5 text-sm lg:grid-cols-2">
             <Fact label="Pangalan">{row.customerName}</Fact>
 
             <Fact label="Kailan">
@@ -245,13 +251,20 @@ export function BookedRowCard({
           </dl>
 
           {answered.length > 0 ? (
-            <dl className="space-y-1.5 rounded-lg bg-muted/40 p-3 text-sm">
-              {answered.map(({ field, text }) => (
-                <Fact key={field.id} label={field.label}>
-                  {text}
-                </Fact>
-              ))}
-            </dl>
+            <div className="rounded-lg bg-muted/40 p-3">
+              {/* Said out loud, so these are not mistaken for booking fields
+                  the app invented. They are the owner's own questions. */}
+              <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                Sagot sa form mo
+              </p>
+              <dl className="space-y-1.5 text-sm">
+                {answered.map(({ field, text }) => (
+                  <Fact key={field.id} label={field.label}>
+                    {text}
+                  </Fact>
+                ))}
+              </dl>
+            </div>
           ) : null}
 
           <div className="flex justify-end">
