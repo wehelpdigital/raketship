@@ -2,7 +2,11 @@ import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { BookingFlow, type OpenRange } from "./booking-flow"
+import {
+  BookingFlow,
+  type OpenRange,
+  type PublicService,
+} from "./booking-flow"
 
 const actions = vi.hoisted(() => ({
   getAvailableSlots: vi.fn(),
@@ -30,22 +34,52 @@ const OPEN_RANGES: OpenRange[] = [
   { from: "2026-09-08T01:00:00.000Z", to: "2026-09-08T09:00:00.000Z" },
 ]
 
-function renderFlow() {
+const SERVICES: PublicService[] = [
+  {
+    id: "11111111-1111-4111-8111-111111111111",
+    name: "Gupit lang",
+    description: null,
+    priceCentavos: 15000,
+    durationMinutes: 30,
+  },
+  {
+    id: "22222222-2222-4222-8222-222222222222",
+    name: "Gupit at kulay",
+    description: "Kasama ang shampoo.",
+    priceCentavos: 90000,
+    durationMinutes: 120,
+  },
+]
+
+function renderFlow(
+  overrides: Partial<React.ComponentProps<typeof BookingFlow>> = {}
+) {
   return render(
     <BookingFlow
       calendarId="cal-1"
       calendarName="Gupit ni Nena"
       durationMinutes={30}
+      lengthMode="fixed"
+      services={[]}
       timezone="Asia/Manila"
       timezoneLabel="Manila · GMT+8"
       fields={[]}
       openRanges={OPEN_RANGES}
       horizonDays={14}
+      {...overrides}
     />
   )
 }
 
-/** The three step panels, identified by their headings. */
+/** The same flow, but selling a catalogue. */
+function renderCatalog(
+  overrides: Partial<React.ComponentProps<typeof BookingFlow>> = {}
+) {
+  return renderFlow({ lengthMode: "catalog", services: SERVICES, ...overrides })
+}
+
+/** The step panels, identified by their headings. */
+const serviceStep = () => screen.queryByText("Anong serbisyo?")
 const dateStep = () => screen.queryByText("Pumili ng petsa")
 const timeStep = () => screen.queryByText("Pumili ng oras")
 const detailStep = () => screen.queryByText("Your details")
@@ -185,5 +219,90 @@ describe("choosing a timezone", () => {
       .filter((b) => !b.hasAttribute("disabled"))
     expect(enabled.length).toBeGreaterThan(0)
     expect(enabled.length).toBeLessThan(14)
+  })
+})
+
+// -----------------------------------------------------------------------------
+// Selling a catalogue: the service comes first, because it is the length
+// -----------------------------------------------------------------------------
+
+describe("BookingFlow with a service catalogue", () => {
+  it("asks what they are booking before it asks when", async () => {
+    renderCatalog()
+
+    expect(serviceStep()).toBeInTheDocument()
+    expect(dateStep()).not.toBeInTheDocument()
+    // Four steps now, and the first one names what it is for.
+    expect(screen.getByText("Serbisyo")).toBeInTheDocument()
+  })
+
+  it("shows the price and the length on each row", async () => {
+    renderCatalog()
+
+    expect(screen.getByText("Gupit lang")).toBeInTheDocument()
+    expect(screen.getByText("₱150")).toBeInTheDocument()
+    expect(screen.getByText("30 min")).toBeInTheDocument()
+    expect(screen.getByText("₱900")).toBeInTheDocument()
+    expect(screen.getByText("2 hrs")).toBeInTheDocument()
+  })
+
+  it("moves on to the dates once a service is picked", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    renderCatalog()
+
+    await user.click(screen.getByRole("button", { name: /Gupit lang/ }))
+
+    expect(dateStep()).toBeInTheDocument()
+    expect(serviceStep()).not.toBeInTheDocument()
+  })
+
+  it("asks the server for that service's times, not the calendar's", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    renderCatalog()
+
+    await user.click(screen.getByRole("button", { name: /Gupit at kulay/ }))
+    await user.click(screen.getAllByRole("button", { name: /Mon|Tue|Wed|Thu|Fri|Sat|Sun/ })[0])
+
+    await waitFor(() => {
+      expect(actions.getAvailableSlots).toHaveBeenCalled()
+    })
+    const sent = actions.getAvailableSlots.mock.calls.at(-1)![0]
+    expect(sent.serviceId).toBe(SERVICES[1].id)
+  })
+
+  it("fetches nothing until a service is chosen", () => {
+    renderCatalog()
+    // There is no length yet, so there is nothing to ask for.
+    expect(actions.getAvailableSlots).not.toHaveBeenCalled()
+  })
+
+  it("still starts at the date when there is no catalogue", () => {
+    renderFlow()
+    expect(serviceStep()).not.toBeInTheDocument()
+    expect(dateStep()).toBeInTheDocument()
+  })
+
+  it("falls back to the date step when the catalogue is empty", () => {
+    // The owner switched to a catalogue and removed every service. Stranding
+    // the customer on a step with nothing to tap would be worse than the
+    // calendar's own length.
+    renderFlow({ lengthMode: "catalog", services: [] })
+    expect(serviceStep()).not.toBeInTheDocument()
+    expect(dateStep()).toBeInTheDocument()
+  })
+
+  it("sends the zone the dates were cut in", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    renderFlow()
+
+    await user.click(screen.getAllByRole("button", { name: /Mon|Tue|Wed|Thu|Fri|Sat|Sun/ })[0])
+
+    await waitFor(() => {
+      expect(actions.getAvailableSlots).toHaveBeenCalled()
+    })
+    // Without this the server reads the date as one of the SHOP's days and
+    // hands back a different day's times to anyone in another zone.
+    const sent = actions.getAvailableSlots.mock.calls.at(-1)![0]
+    expect(sent.viewerZone).toBe("Asia/Manila")
   })
 })

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import {
   BUFFERS,
-  DURATIONS,
+  HORIZONS,
   NOTICES,
   minuteLabel,
   noticeLabel,
@@ -46,7 +46,7 @@ describe("minuteLabel", () => {
   })
 
   it("labels every preset without falling through to a blank", () => {
-    for (const value of [...DURATIONS, ...BUFFERS]) {
+    for (const value of [...BUFFERS, ...HORIZONS]) {
       expect(minuteLabel(value).length).toBeGreaterThan(0)
     }
   })
@@ -80,20 +80,19 @@ describe("noticeLabel", () => {
 
 describe("withCurrent", () => {
   it("leaves the presets alone when the stored value is one of them", () => {
-    expect(withCurrent(DURATIONS, 30)).toEqual(DURATIONS)
+    expect(withCurrent(BUFFERS, 15)).toEqual(BUFFERS)
   })
 
   it("keeps a stored value that is not a preset, in its right place", () => {
     // Without this, a calendar saved at 20 minutes would open on a select with
     // no matching item — and the first save would silently move it.
-    expect(withCurrent(DURATIONS, 20)).toEqual([15, 20, 30, 45, 60, 90])
     expect(withCurrent(BUFFERS, 45)).toEqual([0, 5, 10, 15, 30, 45])
     expect(withCurrent(NOTICES, 72)).toEqual([0, 1, 2, 4, 12, 24, 48, 72])
   })
 
   it("does not mutate the shared preset arrays", () => {
-    const before = [...DURATIONS]
-    withCurrent(DURATIONS, 20)
-    expect(DURATIONS).toEqual(before)
+    const before = [...BUFFERS]
+    withCurrent(BUFFERS, 45)
+    expect(BUFFERS).toEqual(before)
   })
 })

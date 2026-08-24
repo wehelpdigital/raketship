@@ -444,3 +444,60 @@ export function summariseAvailability(
     .map(([day, ranges]) => `${WEEKDAY_SHORT[day]} ${ranges.join(", ")}`)
     .join(" · ")
 }
+
+// -----------------------------------------------------------------------------
+// Lengths
+// -----------------------------------------------------------------------------
+
+/** Minutes chosen in ten-minute steps, which is how people describe a job. */
+export const MINUTE_STEPS = [0, 10, 20, 30, 40, 50] as const
+
+/** Hours a single appointment can plausibly run to. */
+export const HOUR_STEPS = [0, 1, 2, 3, 4, 5, 6, 7, 8] as const
+
+/** The shortest and longest the database will accept, mirrored here. */
+export const MIN_DURATION = 5
+export const MAX_DURATION = 480
+
+export interface HoursAndMinutes {
+  hours: number
+  minutes: number
+}
+
+export function splitDuration(totalMinutes: number): HoursAndMinutes {
+  const safe = Math.max(0, Math.round(totalMinutes))
+  return { hours: Math.floor(safe / 60), minutes: safe % 60 }
+}
+
+export function joinDuration({ hours, minutes }: HoursAndMinutes): number {
+  return Math.max(0, hours) * 60 + Math.max(0, minutes)
+}
+
+/**
+ * "1 hr 30 min", "45 min", "2 hrs".
+ *
+ * Written out rather than "1:30" because a length is not a time of day, and
+ * the two are easy to confuse on a page full of clock times.
+ */
+export function formatDuration(totalMinutes: number): string {
+  const { hours, minutes } = splitDuration(totalMinutes)
+  if (hours === 0 && minutes === 0) return "0 min"
+  const parts: string[] = []
+  if (hours > 0) parts.push(`${hours} ${hours === 1 ? "hr" : "hrs"}`)
+  if (minutes > 0) parts.push(`${minutes} min`)
+  return parts.join(" ")
+}
+
+/** Returns an error message, or null when the length is usable. */
+export function validateDuration(totalMinutes: number): string | null {
+  if (!Number.isFinite(totalMinutes) || !Number.isInteger(totalMinutes)) {
+    return "Pick a length."
+  }
+  if (totalMinutes < MIN_DURATION) {
+    return `A booking has to be at least ${MIN_DURATION} minutes.`
+  }
+  if (totalMinutes > MAX_DURATION) {
+    return "A booking can be at most 8 hours."
+  }
+  return null
+}

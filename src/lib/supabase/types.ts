@@ -154,6 +154,9 @@ export type BookingFieldType =
 
 export type BookingStatus = "confirmed" | "cancelled"
 
+/** fixed = one length for everything; catalog = the chosen service decides. */
+export type BookingLengthMode = "fixed" | "catalog"
+
 export type BookingCalendarRow = {
   id: string
   user_id: string
@@ -167,6 +170,7 @@ export type BookingCalendarRow = {
   notice_hours: number
   /** How many days ahead the public page offers, today counting as day 1. */
   booking_horizon_days: number
+  length_mode: BookingLengthMode
   is_published: boolean
   created_at: string
   updated_at: string
@@ -207,6 +211,20 @@ export type BookingFormFieldRow = {
   updated_at: string
 }
 
+export type BookingServiceRow = {
+  id: string
+  calendar_id: string
+  user_id: string
+  name: string
+  description: string | null
+  price_centavos: number
+  duration_minutes: number
+  position: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export type BookingRow = {
   id: string
   calendar_id: string
@@ -218,6 +236,10 @@ export type BookingRow = {
   customer_phone: string | null
   answers: Record<string, Json>
   status: BookingStatus
+  /** Null once the service is deleted; the snapshot below still stands. */
+  service_id: string | null
+  service_name: string | null
+  service_price_centavos: number | null
   created_at: string
 }
 
@@ -307,6 +329,11 @@ export type Database = {
         "calendar_id" | "user_id" | "label",
         [Relationship<"calendar_id", "booking_calendars">]
       >
+      booking_services: Table<
+        BookingServiceRow,
+        "calendar_id" | "user_id" | "name",
+        [Relationship<"calendar_id", "booking_calendars">]
+      >
       bookings: Table<
         BookingRow,
         | "calendar_id"
@@ -314,7 +341,10 @@ export type Database = {
         | "starts_at"
         | "ends_at"
         | "customer_name",
-        [Relationship<"calendar_id", "booking_calendars">]
+        [
+          Relationship<"calendar_id", "booking_calendars">,
+          Relationship<"service_id", "booking_services">,
+        ]
       >
       flow_edges: Table<
         FlowEdgeRow,

@@ -4,7 +4,12 @@ import {
   buildSlots,
   calendarDatesTouching,
   dayWindowInZone,
+  formatDuration,
   formatTimeLabel,
+  joinDuration,
+  MINUTE_STEPS,
+  splitDuration,
+  validateDuration,
   groupAvailabilityByDay,
   instantInZone,
   withinWindow,
@@ -418,5 +423,34 @@ describe("a viewer's day versus the calendar's day", () => {
     // previous date rather than forward.
     const w = dayWindowInZone("2026-09-07", "Pacific/Auckland")
     expect(calendarDatesTouching(w, MANILA)).toEqual(["2026-09-06", "2026-09-07"])
+  })
+})
+
+describe("lengths", () => {
+  it("splits and rejoins without drift", () => {
+    expect(splitDuration(90)).toEqual({ hours: 1, minutes: 30 })
+    expect(joinDuration({ hours: 1, minutes: 30 })).toBe(90)
+    expect(joinDuration(splitDuration(455))).toBe(455)
+  })
+
+  it("writes a length out rather than as a clock time", () => {
+    // "1:30" on a page full of clock times reads as half past one.
+    expect(formatDuration(90)).toBe("1 hr 30 min")
+    expect(formatDuration(45)).toBe("45 min")
+    expect(formatDuration(120)).toBe("2 hrs")
+    expect(formatDuration(60)).toBe("1 hr")
+    expect(formatDuration(0)).toBe("0 min")
+  })
+
+  it("mirrors the bounds the database enforces", () => {
+    expect(validateDuration(30)).toBeNull()
+    expect(validateDuration(0)).toMatch(/at least/)
+    expect(validateDuration(4)).toMatch(/at least/)
+    expect(validateDuration(481)).toMatch(/at most/)
+    expect(validateDuration(1.5)).toMatch(/Pick a length/)
+  })
+
+  it("offers minutes in tens, which is how people describe a job", () => {
+    expect([...MINUTE_STEPS]).toEqual([0, 10, 20, 30, 40, 50])
   })
 })

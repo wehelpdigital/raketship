@@ -75,8 +75,9 @@ npm run verify   # typecheck + lint + test
 
 ## Booking module
 
-Five tables (`supabase/migrations/0004_booking_module.sql`): `booking_calendars`,
-`booking_availability`, `booking_blackouts`, `booking_form_fields`, `bookings`.
+Six tables: `booking_calendars`, `booking_availability`, `booking_blackouts`,
+`booking_form_fields`, `bookings` (`0004_booking_module.sql`) and
+`booking_services` (`0006_booking_services.sql`).
 
 **Routing:** `/modules/booking` is a static segment and deliberately shadows the
 dynamic `/modules/[moduleId]`. Booking gets a bespoke home; every other module
@@ -87,6 +88,28 @@ means nothing without the calendar's `timezone`. Weekday 0 = Sunday, matching JS
 `getDay()`. Never interpret those minutes in the server's or the browser's zone.
 Zone maths lives in `src/lib/booking/slots.ts` and goes through `Intl` — there is
 no date library to keep current with tzdata.
+
+**How long a booking runs** has two answers, chosen by
+`booking_calendars.length_mode`:
+
+- `fixed` — `duration_minutes` applies to everything. Picked as hours plus
+  minutes in tens (`MINUTE_STEPS` in `slots.ts`); a stored value that predates
+  the picker is kept in the list rather than rounded away.
+- `catalog` — `booking_services` rows each carry their own price and length,
+  and **the customer's choice decides the length**. That is why the service step
+  comes before the date on the public page: without a length there are no slots
+  to compute at all. The owner's weekly hours still bound everything — a
+  two-hour service simply finds no room in a one-hour window.
+
+Never trust a length or a price from the browser. `resolveService()` in
+`public-actions.ts` reads both off the stored row; `bookings` then **snapshots**
+`service_name` and `service_price_centavos` so renaming or deleting a service
+cannot rewrite what someone already agreed to (`service_id` is
+`on delete set null`, the snapshot survives).
+
+Switching to `catalog` with an empty list is refused server-side, and deleting
+the last service falls the calendar back to `fixed` — a live page must never be
+left with nothing to offer and no way forward.
 
 **The public surface.** `/book/[slug]` is unauthenticated and outside the app
 shell, so RLS is the only guard. Verified against the live database:
@@ -100,6 +123,9 @@ shell, so RLS is the only guard. Verified against the live database:
 | Book the same slot twice | `409` |
 | Book an unpublished calendar | `401` |
 | Book under a forged `user_id` | `401` |
+| Read services of a draft calendar | `[]` |
+| Read them once published | visible |
+| Insert a service | `401` |
 
 The forged-owner case is why the insert policy matches `c.user_id = bookings.user_id`
 — without it anyone could file bookings into someone else's account. `public-actions.ts`

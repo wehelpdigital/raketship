@@ -9,6 +9,7 @@ import type {
   BookingCalendarRow,
   BookingFormFieldRow,
   BookingRow,
+  BookingServiceRow,
 } from "@/lib/supabase/types"
 
 export interface CalendarDetail {
@@ -16,6 +17,8 @@ export interface CalendarDetail {
   availability: BookingAvailabilityRow[]
   blackouts: BookingBlackoutRow[]
   fields: BookingFormFieldRow[]
+  /** Only meaningful when length_mode is 'catalog'. Active ones, in order. */
+  services: BookingServiceRow[]
 }
 
 export interface CalendarSummary extends BookingCalendarRow {
@@ -24,6 +27,8 @@ export interface CalendarSummary extends BookingCalendarRow {
     "weekday" | "start_minute" | "end_minute"
   >[]
   bookingCount: number
+  /** Active services. Zero unless this calendar sells a catalogue. */
+  serviceCount: number
 }
 
 /** Every calendar the user owns, for the module's index. */
@@ -33,7 +38,7 @@ export const listCalendars = cache(async function listCalendars(
   const supabase = await getSupabaseServerClient()
   if (!supabase) return []
 
-  const [calRes, availRes, bookingRes] = await Promise.all([
+  const [calRes, availRes, bookingRes, serviceRes] = await Promise.all([
     supabase
       .from("booking_calendars")
       .select("*")
@@ -48,6 +53,11 @@ export const listCalendars = cache(async function listCalendars(
       .select("calendar_id")
       .eq("user_id", userId)
       .eq("status", "confirmed"),
+    supabase
+      .from("booking_services")
+      .select("calendar_id")
+      .eq("user_id", userId)
+      .eq("is_active", true),
   ])
 
   const calendars = (calRes.data as BookingCalendarRow[] | null) ?? []
@@ -55,6 +65,7 @@ export const listCalendars = cache(async function listCalendars(
     (availRes.data as (BookingAvailabilityRow & { calendar_id: string })[] | null) ??
     []
   const bookings = (bookingRes.data as { calendar_id: string }[] | null) ?? []
+  const services = (serviceRes.data as { calendar_id: string }[] | null) ?? []
 
   return calendars.map((calendar) => ({
     ...calendar,
@@ -66,6 +77,7 @@ export const listCalendars = cache(async function listCalendars(
         end_minute,
       })),
     bookingCount: bookings.filter((b) => b.calendar_id === calendar.id).length,
+    serviceCount: services.filter((s) => s.calendar_id === calendar.id).length,
   }))
 })
 
@@ -117,10 +129,10 @@ async function loadChildren(
 ): Promise<CalendarDetail> {
   const supabase = await getSupabaseServerClient()
   if (!supabase) {
-    return { calendar, availability: [], blackouts: [], fields: [] }
+    return { calendar, availability: [], blackouts: [], fields: [], services: [] }
   }
 
-  const [availRes, blackRes, fieldRes] = await Promise.all([
+  const [availRes, blackRes, fieldRes, serviceRes] = await Promise.all([
     supabase
       .from("booking_availability")
       .select("*")
@@ -137,6 +149,12 @@ async function loadChildren(
       .select("*")
       .eq("calendar_id", calendar.id)
       .order("position", { ascending: true }),
+    supabase
+      .from("booking_services")
+      .select("*")
+      .eq("calendar_id", calendar.id)
+      .eq("is_active", true)
+      .order("position", { ascending: true }),
   ])
 
   return {
@@ -144,6 +162,7 @@ async function loadChildren(
     availability: (availRes.data as BookingAvailabilityRow[] | null) ?? [],
     blackouts: (blackRes.data as BookingBlackoutRow[] | null) ?? [],
     fields: (fieldRes.data as BookingFormFieldRow[] | null) ?? [],
+    services: (serviceRes.data as BookingServiceRow[] | null) ?? [],
   }
 }
 

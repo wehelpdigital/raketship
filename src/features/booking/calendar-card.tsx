@@ -7,11 +7,14 @@ import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { formatDuration } from "@/lib/booking/slots"
 import type { BookingCalendarRow } from "@/lib/supabase/types"
 
 export interface CalendarCardProps {
   calendar: BookingCalendarRow
   bookingCount: number
+  /** How many services this calendar sells. Only read in catalogue mode. */
+  serviceCount?: number
   /** Absolute public URL, built on the server so it matches on hydration. */
   publicUrl: string
 }
@@ -21,12 +24,20 @@ function bookingLabel(count: number): string {
   return count === 1 ? "1 booking" : `${count} bookings`
 }
 
-function durationLabel(minutes: number): string {
-  if (minutes < 60) return `${minutes} min`
-  const hours = Math.floor(minutes / 60)
-  const rest = minutes % 60
-  const hourWord = hours === 1 ? "1 hr" : `${hours} hrs`
-  return rest === 0 ? hourWord : `${hourWord} ${rest} min`
+/**
+ * What to say about how long a booking runs.
+ *
+ * A calendar selling a catalogue has no single answer — stating the stored
+ * duration_minutes there would name a length nothing is actually booked at.
+ */
+function lengthLabel(
+  calendar: BookingCalendarRow,
+  serviceCount: number | undefined
+): string {
+  if (calendar.length_mode === "catalog" && (serviceCount ?? 0) > 0) {
+    return serviceCount === 1 ? "1 service" : `${serviceCount} services`
+  }
+  return `${formatDuration(calendar.duration_minutes)} per booking`
 }
 
 function Meta({
@@ -54,6 +65,7 @@ function Meta({
 export function CalendarCard({
   calendar,
   bookingCount,
+  serviceCount,
   publicUrl,
 }: CalendarCardProps) {
   const [copied, setCopied] = React.useState(false)
@@ -110,8 +122,7 @@ export function CalendarCard({
 
       <div className="space-y-1.5">
         <Meta icon={Timer}>
-          {durationLabel(calendar.duration_minutes)} per booking ·{" "}
-          {calendar.timezone}
+          {lengthLabel(calendar, serviceCount)} · {calendar.timezone}
         </Meta>
         <Meta icon={CalendarCheck}>{bookingLabel(bookingCount)}</Meta>
       </div>

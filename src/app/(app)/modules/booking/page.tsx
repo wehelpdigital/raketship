@@ -209,6 +209,7 @@ export default async function BookingModulePage() {
                   key={calendar.id}
                   calendar={calendar}
                   bookingCount={calendar.bookingCount}
+                  serviceCount={calendar.serviceCount}
                   publicUrl={bookingUrl(calendar.slug, env.siteUrl)}
                 />
               ))}

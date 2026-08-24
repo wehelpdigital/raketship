@@ -6,9 +6,14 @@ import {
   Globe,
   ShieldCheck,
 } from "lucide-react"
-import { BookingFlow, type OpenRange } from "@/features/booking/booking-flow"
+import {
+  BookingFlow,
+  type OpenRange,
+  type PublicService,
+} from "@/features/booking/booking-flow"
 import {
   buildSlots,
+  formatDuration,
   isoDateInZone,
   upcomingDates,
   zoneOffsetMinutes,
@@ -59,7 +64,9 @@ export async function generateMetadata({
   const { calendar } = detail
   const description =
     calendar.description?.trim() ||
-    `Pumili ng oras para sa ${calendar.name}. ${calendar.duration_minutes} minutes bawat booking.`
+    (detail.services.length > 0 && calendar.length_mode === "catalog"
+      ? `Pumili ng serbisyo at oras para sa ${calendar.name}.`
+      : `Pumili ng oras para sa ${calendar.name}. ${calendar.duration_minutes} minutes bawat booking.`)
   const url = bookingUrl(calendar.slug, env.siteUrl)
   const social = `Book with ${calendar.name}`
   return {
@@ -87,11 +94,36 @@ export default async function PublicBookingPage({ params }: PageProps) {
   // here because a draft leaking onto the open web is the one failure this
   // page must not have.
   if (!detail || !detail.calendar.is_published) notFound()
-  const { calendar, availability, blackouts, fields } = detail
+  const { calendar, availability, blackouts, fields, services } = detail
+
+  /*
+    Trimmed to what the page actually renders. The stored rows carry the
+    owner's id and timestamps, and this markup goes to anyone with the link.
+  */
+  const publicServices: PublicService[] = services.map((service) => ({
+    id: service.id,
+    name: service.name,
+    description: service.description,
+    priceCentavos: service.price_centavos,
+    durationMinutes: service.duration_minutes,
+  }))
+
+  const catalog = calendar.length_mode === "catalog" && publicServices.length > 0
+
+  /*
+    Which days to grey out is decided before anyone has picked a service, so
+    the shortest one is used: a day where only a quick trim still fits is open,
+    and greying it out would hide a bookable slot. This over-approximates by
+    design — tapping a day refetches with the real length, and that is what
+    actually decides.
+  */
+  const rangeDuration = catalog
+    ? Math.min(...publicServices.map((service) => service.durationMinutes))
+    : calendar.duration_minutes
   const now = new Date()
   const rules: SlotRules = {
     timezone: calendar.timezone,
-    durationMinutes: calendar.duration_minutes,
+    durationMinutes: rangeDuration,
     bufferMinutes: calendar.buffer_minutes,
     noticeHours: calendar.notice_hours,
   }
@@ -172,7 +204,11 @@ export default async function PublicBookingPage({ params }: PageProps) {
             <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
               <span className="inline-flex items-center gap-1.5">
                 <Clock className="size-4 shrink-0" aria-hidden />
-                {calendar.duration_minutes} minutes
+                {catalog
+                  ? publicServices.length === 1
+                    ? formatDuration(publicServices[0].durationMinutes)
+                    : `${publicServices.length} serbisyo`
+                  : formatDuration(calendar.duration_minutes)}
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <Globe className="size-4 shrink-0" aria-hidden />
@@ -192,6 +228,8 @@ export default async function PublicBookingPage({ params }: PageProps) {
           calendarId={calendar.id}
           calendarName={calendar.name}
           durationMinutes={calendar.duration_minutes}
+          lengthMode={calendar.length_mode}
+          services={publicServices}
           timezone={calendar.timezone}
           timezoneLabel={timezoneLabel}
           fields={fields}

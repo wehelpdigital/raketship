@@ -39,6 +39,7 @@ import type {
   BookingBlackoutRow,
   BookingCalendarRow,
   BookingFormFieldRow,
+  BookingServiceRow,
 } from "@/lib/supabase/types"
 
 const UUID_RE =
@@ -62,6 +63,7 @@ const NOT_LIVE =
   "This booking link is not taking bookings right now. Pakitanong po ang may-ari."
 const NO_DB = "Bookings are not connected yet, so nothing can be saved."
 const OUT_OF_RANGE = "That date is not open for booking. Pumili po ng ibang araw."
+const PICK_SERVICE = "Pumili po muna ng serbisyo."
 
 // -----------------------------------------------------------------------------
 // Input shapes
@@ -73,6 +75,8 @@ const SlotsInput = z.object({
   // Optional: an older client, or one whose runtime hid the zone, simply gets
   // the shop's own days.
   viewerZone: z.string().max(64).optional(),
+  // Required only when the calendar sells a catalogue; its length cuts the slots.
+  serviceId: z.string().regex(UUID_RE).optional(),
 })
 
 const AnswerInput = z.union([
@@ -85,6 +89,7 @@ const AnswerInput = z.union([
 
 const SubmitInput = z.object({
   calendarId: z.string().regex(UUID_RE),
+  serviceId: z.string().regex(UUID_RE).optional(),
   startsAt: z.string().min(1).max(64),
   customerName: z
     .string()
@@ -130,6 +135,8 @@ export interface SubmitBookingResult {
 
 export interface SubmitBookingInput {
   calendarId: string
+  /** Required when the calendar sells a catalogue. */
+  serviceId?: string
   startsAt: string
   customerName: string
   customerEmail?: string | null
@@ -150,15 +157,53 @@ interface PublicCalendar {
   availability: BookingAvailabilityRow[]
   blackouts: BookingBlackoutRow[]
   fields: BookingFormFieldRow[]
+  /** Active services, in the owner's order. Empty unless length_mode is 'catalog'. */
+  services: BookingServiceRow[]
 }
 
-function rulesOf(calendar: BookingCalendarRow): SlotRules {
+function rulesOf(
+  calendar: BookingCalendarRow,
+  /** The chosen service's length, when the calendar sells a catalogue. */
+  durationMinutes: number = calendar.duration_minutes
+): SlotRules {
   return {
     timezone: calendar.timezone,
-    durationMinutes: calendar.duration_minutes,
+    durationMinutes,
     bufferMinutes: calendar.buffer_minutes,
     noticeHours: calendar.notice_hours,
   }
+}
+
+/**
+ * How long this booking runs, and what it was sold as.
+ *
+ * In catalogue mode the length is not a property of the calendar at all — it
+ * belongs to whichever service the customer picked, so it is resolved from the
+ * stored row rather than from anything the browser sent. A price arriving in
+ * the request would be a price the customer chose for themselves.
+ */
+function resolveService(
+  bundle: PublicCalendar,
+  serviceId: string | undefined
+):
+  | { ok: true; minutes: number; service: BookingServiceRow | null }
+  | { ok: false; message: string } {
+  if (bundle.calendar.length_mode !== "catalog") {
+    return { ok: true, minutes: bundle.calendar.duration_minutes, service: null }
+  }
+
+  if (bundle.services.length === 0) {
+    // The owner switched to a catalogue and emptied it. Nothing bookable.
+    return { ok: false, message: NOT_LIVE }
+  }
+
+  const service = serviceId
+    ? bundle.services.find((row) => row.id === serviceId)
+    : undefined
+
+  if (!service) return { ok: false, message: PICK_SERVICE }
+
+  return { ok: true, minutes: service.duration_minutes, service }
 }
 
 /**
@@ -183,7 +228,7 @@ async function loadPublished(
   const calendar = data as BookingCalendarRow | null
   if (!calendar || calendar.is_published !== true) return null
 
-  const [availRes, blackRes, fieldRes] = await Promise.all([
+  const [availRes, blackRes, fieldRes, serviceRes] = await Promise.all([
     supabase
       .from("booking_availability")
       .select("*")
@@ -199,6 +244,12 @@ async function loadPublished(
       .select("*")
       .eq("calendar_id", calendar.id)
       .order("position", { ascending: true }),
+    supabase
+      .from("booking_services")
+      .select("*")
+      .eq("calendar_id", calendar.id)
+      .eq("is_active", true)
+      .order("position", { ascending: true }),
   ])
 
   return {
@@ -206,6 +257,7 @@ async function loadPublished(
     availability: (availRes.data as BookingAvailabilityRow[] | null) ?? [],
     blackouts: (blackRes.data as BookingBlackoutRow[] | null) ?? [],
     fields: (fieldRes.data as BookingFormFieldRow[] | null) ?? [],
+    services: (serviceRes.data as BookingServiceRow[] | null) ?? [],
   }
 }
 
@@ -275,7 +327,9 @@ function withinHorizon(
 function emptyReason(
   bundle: PublicCalendar,
   isoDate: string,
-  taken: { startsAt: string; endsAt: string }[]
+  taken: { startsAt: string; endsAt: string }[],
+  /** The same rules the empty list was built with. */
+  rules: SlotRules
 ): EmptyReason {
   const { calendar, availability, blackouts } = bundle
   if (blackouts.some((b) => b.date === isoDate)) return "blacked_out"
@@ -290,7 +344,7 @@ function emptyReason(
 
   const ignoringBookings = buildSlots({
     isoDate,
-    rules: rulesOf(calendar),
+    rules,
     availability,
     blackouts,
     taken: [],
@@ -309,6 +363,8 @@ export async function getAvailableSlots(input: {
   isoDate: string
   /** The zone that date is written in. Defaults to the calendar's own. */
   viewerZone?: string
+  /** Which service is being booked, when the calendar sells a catalogue. */
+  serviceId?: string
 }): Promise<AvailableSlotsResult> {
   const parsed = SlotsInput.safeParse(input)
   if (!parsed.success) {
@@ -353,7 +409,17 @@ export async function getAvailableSlots(input: {
   const window = dayWindowInZone(isoDate, viewerZone)
   const sourceDates = calendarDatesTouching(window, calendarZone)
 
-  const rules = rulesOf(bundle.calendar)
+  const length = resolveService(bundle, parsed.data.serviceId)
+  if (!length.ok) {
+    return {
+      ok: false,
+      slots: [],
+      timezone: calendarZone,
+      message: length.message,
+    }
+  }
+
+  const rules = rulesOf(bundle.calendar, length.minutes)
   const taken = await takenAround(bundle.calendar, sourceDates[0], sourceDates.at(-1))
 
   const slots = sourceDates
@@ -377,7 +443,7 @@ export async function getAvailableSlots(input: {
     // window, which is the one a customer would recognise as "that day".
     reason:
       slots.length === 0
-        ? emptyReason(bundle, sourceDates[0], taken)
+        ? emptyReason(bundle, sourceDates[0], taken, rules)
         : undefined,
   }
 }
@@ -411,6 +477,12 @@ export async function submitBooking(
 
   const { calendar, availability, blackouts, fields } = bundle
 
+  // --- what is being booked -------------------------------------------------
+  const length = resolveService(bundle, parsed.data.serviceId)
+  if (!length.ok) {
+    return { ok: false, retry: true, message: length.message }
+  }
+
   // --- the time -------------------------------------------------------------
   const start = new Date(parsed.data.startsAt)
   if (Number.isNaN(start.getTime())) {
@@ -431,7 +503,7 @@ export async function submitBooking(
 
   const slots = buildSlots({
     isoDate,
-    rules: rulesOf(calendar),
+    rules: rulesOf(calendar, length.minutes),
     availability,
     blackouts,
     taken,
@@ -512,6 +584,12 @@ export async function submitBooking(
     customer_phone: phone || null,
     answers,
     status: "confirmed",
+    // The name and price are copied, not merely referenced: renaming or
+    // repricing a service next month must not rewrite what this person agreed
+    // to, and deleting it must not erase what the booking was for.
+    service_id: length.service?.id ?? null,
+    service_name: length.service?.name ?? null,
+    service_price_centavos: length.service?.price_centavos ?? null,
   })
 
   if (error) {

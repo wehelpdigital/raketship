@@ -89,6 +89,7 @@ function calendarRow(overrides: Record<string, unknown> = {}) {
     buffer_minutes: 0,
     notice_hours: 2,
     booking_horizon_days: 60,
+    length_mode: "fixed" as const,
     is_published: true,
     created_at: "2026-01-01T00:00:00.000Z",
     updated_at: "2026-01-01T00:00:00.000Z",
@@ -108,6 +109,27 @@ const MONDAY_MORNING = [
     created_at: "2026-01-01T00:00:00.000Z",
   },
 ]
+
+const SERVICE_ID = "44444444-4444-4444-8444-444444444444"
+const OTHER_SERVICE_ID = "55555555-5555-4555-8555-555555555555"
+
+/** An hour long, so it fits the 9–10 window exactly once. */
+function serviceRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: SERVICE_ID,
+    calendar_id: CALENDAR_ID,
+    user_id: OWNER_ID,
+    name: "Gupit at kulay",
+    description: null,
+    price_centavos: 90000,
+    duration_minutes: 60,
+    position: 0,
+    is_active: true,
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+    ...overrides,
+  }
+}
 
 function requiredChoiceField() {
   return {
@@ -131,6 +153,7 @@ interface ClientOptions {
   availability?: unknown[]
   blackouts?: unknown[]
   fields?: unknown[]
+  services?: unknown[]
   insertResult?: QueryResult
 }
 
@@ -149,6 +172,8 @@ function stubClient(options: ClientOptions = {}) {
         return makeQuery({ data: options.blackouts ?? [], error: null })
       case "booking_form_fields":
         return makeQuery({ data: options.fields ?? [], error: null })
+      case "booking_services":
+        return makeQuery({ data: options.services ?? [], error: null })
       case "bookings":
         return makeQuery(
           options.insertResult ?? { data: { id: "booking-1" }, error: null },
@@ -548,5 +573,156 @@ describe("the booking horizon", () => {
     })
 
     expect(result.slots).toEqual([])
+  })
+})
+
+// -----------------------------------------------------------------------------
+// A catalogue: the length is the service's, and it is resolved server-side
+// -----------------------------------------------------------------------------
+
+describe("a calendar that sells a catalogue", () => {
+  const catalogCalendar = () => calendarRow({ length_mode: "catalog" })
+
+  it("will not offer times until a service is chosen", async () => {
+    // Without a length there are no slots to compute — this is why the service
+    // step comes before the date on the public page.
+    stubClient({ calendar: catalogCalendar(), services: [serviceRow()] })
+
+    const result = await getAvailableSlots({
+      calendarId: CALENDAR_ID,
+      isoDate: MONDAY,
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.slots).toEqual([])
+    expect(result.message).toMatch(/serbisyo/i)
+  })
+
+  it("refuses a service id that is not on this calendar", async () => {
+    stubClient({ calendar: catalogCalendar(), services: [serviceRow()] })
+
+    const result = await getAvailableSlots({
+      calendarId: CALENDAR_ID,
+      isoDate: MONDAY,
+      serviceId: OTHER_SERVICE_ID,
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.slots).toEqual([])
+  })
+
+  it("cuts the slots to the chosen service, not the calendar's length", async () => {
+    // The calendar says 30 minutes; the service says 60. A 9–10 window holds
+    // two 30-minute slots but only one 60-minute one.
+    stubClient({ calendar: catalogCalendar(), services: [serviceRow()] })
+
+    const result = await getAvailableSlots({
+      calendarId: CALENDAR_ID,
+      isoDate: MONDAY,
+      serviceId: SERVICE_ID,
+    })
+
+    expect(result.ok).toBe(true)
+    expect(result.slots).toHaveLength(1)
+    expect(result.slots[0].startsAt).toBe(NINE_AM)
+    expect(
+      new Date(result.slots[0].endsAt).getTime() -
+        new Date(result.slots[0].startsAt).getTime()
+    ).toBe(60 * 60_000)
+  })
+
+  it("still keeps the owner's hours — a long service that does not fit gets nothing", async () => {
+    stubClient({
+      calendar: catalogCalendar(),
+      services: [serviceRow({ duration_minutes: 90 })],
+    })
+
+    const result = await getAvailableSlots({
+      calendarId: CALENDAR_ID,
+      isoDate: MONDAY,
+      serviceId: SERVICE_ID,
+    })
+
+    // 90 minutes does not fit a 60-minute window, whatever the customer picked.
+    expect(result.ok).toBe(true)
+    expect(result.slots).toEqual([])
+  })
+
+  it("ignores a service id sent to a fixed-length calendar", async () => {
+    stubClient({ services: [serviceRow()] })
+
+    const result = await getAvailableSlots({
+      calendarId: CALENDAR_ID,
+      isoDate: MONDAY,
+      serviceId: SERVICE_ID,
+    })
+
+    // Still the calendar's own 30 minutes, so still two slots.
+    expect(result.ok).toBe(true)
+    expect(result.slots).toHaveLength(2)
+  })
+
+  it("stores the name and price as they were, not just a reference", async () => {
+    // A service renamed or repriced next month must not rewrite what this
+    // person agreed to, and deleting it must not erase what they booked.
+    const { insert } = stubClient({
+      calendar: catalogCalendar(),
+      services: [serviceRow()],
+    })
+
+    const result = await submitBooking(
+      validSubmission({ serviceId: SERVICE_ID })
+    )
+
+    expect(result.ok).toBe(true)
+    const row = insert.mock.calls[0][0] as Record<string, unknown>
+    expect(row.service_id).toBe(SERVICE_ID)
+    expect(row.service_name).toBe("Gupit at kulay")
+    expect(row.service_price_centavos).toBe(90000)
+    // The end is the service's hour, not the calendar's half hour.
+    expect(row.ends_at).toBe("2027-03-01T02:00:00.000Z")
+  })
+
+  it("refuses a booking with no service on it", async () => {
+    const { insert } = stubClient({
+      calendar: catalogCalendar(),
+      services: [serviceRow()],
+    })
+
+    const result = await submitBooking(validSubmission())
+
+    expect(result.ok).toBe(false)
+    expect(insert).not.toHaveBeenCalled()
+  })
+
+  it("refuses a price sent by the customer — it reads the stored one", async () => {
+    const { insert } = stubClient({
+      calendar: catalogCalendar(),
+      services: [serviceRow()],
+    })
+
+    await submitBooking(
+      validSubmission({
+        serviceId: SERVICE_ID,
+        // Nothing in the payload can set a price; this rides along and dies.
+        service_price_centavos: 1,
+        serviceName: "Libre",
+      })
+    )
+
+    const row = insert.mock.calls[0][0] as Record<string, unknown>
+    expect(row.service_price_centavos).toBe(90000)
+    expect(row.service_name).toBe("Gupit at kulay")
+  })
+
+  it("leaves the snapshot columns empty on a fixed-length calendar", async () => {
+    const { insert } = stubClient()
+
+    await submitBooking(validSubmission())
+
+    const row = insert.mock.calls[0][0] as Record<string, unknown>
+    expect(row.service_id).toBeNull()
+    expect(row.service_name).toBeNull()
+    expect(row.service_price_centavos).toBeNull()
   })
 })

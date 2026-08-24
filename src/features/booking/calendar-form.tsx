@@ -39,12 +39,8 @@ import { cn } from "@/lib/utils"
  * the same way the availability editor's pure helpers are — rendering a Base UI
  * popover in jsdom proves nothing these do not.
  *
- * How long one booking runs. Kept to the lengths a small business actually
- * sells — a free-text minutes box invites 37-minute haircuts and gives the
- * slot grid ragged edges for no gain.
+ * Breathing room after each booking: clean up, travel, catch your breath.
  */
-export const DURATIONS = [15, 30, 45, 60, 90]
-/** Breathing room after each booking: clean up, travel, catch your breath. */
 export const BUFFERS = [0, 5, 10, 15, 30]
 /** How far ahead a suki must book, in hours. */
 export const NOTICES = [0, 1, 2, 4, 12, 24, 48]
@@ -169,9 +165,6 @@ export function CalendarForm({
   const [description, setDescription] = React.useState(
     calendar?.description ?? ""
   )
-  const [duration, setDuration] = React.useState(
-    calendar?.duration_minutes ?? 30
-  )
   const [buffer, setBuffer] = React.useState(calendar?.buffer_minutes ?? 0)
   const [notice, setNotice] = React.useState(calendar?.notice_hours ?? 2)
   const [horizon, setHorizon] = React.useState(
@@ -190,7 +183,6 @@ export function CalendarForm({
           const payload = new FormData()
           payload.set("name", name)
           payload.set("description", description)
-          payload.set("durationMinutes", String(duration))
           payload.set("bufferMinutes", String(buffer))
           payload.set("noticeHours", String(notice))
           payload.set("horizonDays", String(horizon))
@@ -211,7 +203,6 @@ export function CalendarForm({
           calendarId: calendar.id,
           name,
           description,
-          durationMinutes: duration,
           bufferMinutes: buffer,
           noticeHours: notice,
         })
@@ -232,7 +223,6 @@ export function CalendarForm({
 
   const nameId = `${uid}-name`
   const descriptionId = `${uid}-description`
-  const durationId = `${uid}-duration`
   const bufferId = `${uid}-buffer`
   const noticeId = `${uid}-notice`
   const horizonId = `${uid}-horizon`
@@ -277,21 +267,10 @@ export function CalendarForm({
         </div>
 
         {/* Three short numeric answers: stacked on a phone so every control
-            keeps its 44px target, side by side the moment there is room. */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="space-y-1.5">
-            <Label htmlFor={durationId}>Length</Label>
-            <NumberSelect
-              id={durationId}
-              value={duration}
-              choices={withCurrent(DURATIONS, duration)}
-              label={minuteLabel}
-              disabled={saving}
-              onChange={setDuration}
-            />
-            <p className="text-xs text-muted-foreground">One booking</p>
-          </div>
-
+            keeps its 44px target, side by side the moment there is room.
+            How long a booking runs lives under its own tab — it grew a second
+            mode and a whole catalogue, which no longer fits beside these. */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div className="space-y-1.5">
             <Label htmlFor={bufferId}>Break after</Label>
             <NumberSelect

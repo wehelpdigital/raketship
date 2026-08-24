@@ -35,6 +35,7 @@ function makeCalendar(
     buffer_minutes: 0,
     notice_hours: 2,
     booking_horizon_days: 14,
+    length_mode: "fixed" as const,
     is_published: false,
     created_at: "2026-08-01T00:00:00.000Z",
     updated_at: "2026-08-01T00:00:00.000Z",
@@ -144,5 +145,56 @@ describe("CalendarCard", () => {
 
     expect(screen.queryByText("Wash, cut and blow-dry.")).toBeNull()
     expect(screen.getByText("Haircut with Aling Nena")).toBeInTheDocument()
+  })
+})
+
+describe("what the card says about length", () => {
+  it("states the length when there is only one", () => {
+    render(
+      <CalendarCard
+        calendar={makeCalendar({ duration_minutes: 90 })}
+        bookingCount={0}
+        publicUrl="https://raketship.ph/book/gupit"
+      />
+    )
+    expect(screen.getByText(/1 hr 30 min per booking/)).toBeInTheDocument()
+  })
+
+  it("counts the services instead when there is a catalogue", () => {
+    // Naming duration_minutes here would state a length nothing is booked at.
+    render(
+      <CalendarCard
+        calendar={makeCalendar({ length_mode: "catalog", duration_minutes: 30 })}
+        bookingCount={0}
+        serviceCount={3}
+        publicUrl="https://raketship.ph/book/gupit"
+      />
+    )
+    expect(screen.getByText(/3 services/)).toBeInTheDocument()
+    expect(screen.queryByText(/per booking/)).not.toBeInTheDocument()
+  })
+
+  it("counts one service without the plural", () => {
+    render(
+      <CalendarCard
+        calendar={makeCalendar({ length_mode: "catalog" })}
+        bookingCount={0}
+        serviceCount={1}
+        publicUrl="https://raketship.ph/book/gupit"
+      />
+    )
+    expect(screen.getByText(/1 service ·/)).toBeInTheDocument()
+  })
+
+  it("falls back to the length when the catalogue is empty", () => {
+    render(
+      <CalendarCard
+        calendar={makeCalendar({ length_mode: "catalog", duration_minutes: 45 })}
+        bookingCount={0}
+        serviceCount={0}
+        publicUrl="https://raketship.ph/book/gupit"
+      />
+    )
+    expect(screen.getByText(/45 min per booking/)).toBeInTheDocument()
   })
 })

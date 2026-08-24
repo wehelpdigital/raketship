@@ -12,7 +12,15 @@
  */
 
 import * as React from "react"
-import { CalendarCheck, CalendarOff, Check, ChevronLeft, Clock, Globe } from "lucide-react"
+import {
+  CalendarCheck,
+  CalendarOff,
+  Check,
+  ChevronLeft,
+  Clock,
+  Globe,
+  Tag,
+} from "lucide-react"
 
 import { Spinner } from "@/components/shell/loader"
 import { Button } from "@/components/ui/button"
@@ -35,6 +43,7 @@ import {
 import { validateAnswers, type AnswerValue } from "@/lib/booking/fields"
 import {
   dayWindowInZone,
+  formatDuration,
   instantInZone,
   upcomingDates,
   WEEKDAY_LABELS,
@@ -42,9 +51,12 @@ import {
   type Slot,
 } from "@/lib/booking/slots"
 import { timezoneChoices, zoneCity } from "@/lib/booking/timezones"
-import type { BookingFormFieldRow } from "@/lib/supabase/types"
+import type {
+  BookingFormFieldRow,
+  BookingLengthMode,
+} from "@/lib/supabase/types"
 import { useViewerTimezone } from "@/lib/hooks/client"
-import { cn } from "@/lib/utils"
+import { cn, formatPeso } from "@/lib/utils"
 
 // -----------------------------------------------------------------------------
 // Dates, formatted from their parts so nothing depends on the viewer's locale
@@ -144,10 +156,28 @@ export interface OpenRange {
   to: string
 }
 
+/**
+ * One thing on offer. Trimmed down from the stored row on the server: the
+ * public page has no business shipping the owner's id or timestamps to every
+ * stranger who opens the link.
+ */
+export interface PublicService {
+  id: string
+  name: string
+  description: string | null
+  priceCentavos: number
+  durationMinutes: number
+}
+
 export interface BookingFlowProps {
   calendarId: string
   calendarName: string
+  /** The fixed length. Ignored once a service is picked. */
   durationMinutes: number
+  /** When "catalog", the customer picks a service before anything else. */
+  lengthMode: BookingLengthMode
+  /** Empty unless this calendar sells a catalogue. */
+  services: PublicService[]
   /** IANA zone the labels are written in, e.g. "Asia/Manila". */
   timezone: string
   /** "Manila · GMT+8", built server-side. */
@@ -182,6 +212,9 @@ interface Confirmation {
   bookingId?: string
   isoDate: string
   slot: Slot
+  /** What it was sold as, for the receipt. Null on a fixed-length calendar. */
+  service: PublicService | null
+  durationMinutes: number
 }
 
 /**
@@ -202,12 +235,24 @@ export function BookingFlow({
   calendarId,
   calendarName,
   durationMinutes,
+  lengthMode,
+  services,
   timezone,
   timezoneLabel,
   fields,
   openRanges,
   horizonDays,
 }: BookingFlowProps) {
+  /*
+    A catalogue turns the length into a choice, and the length decides which
+    slots exist at all — so the service is picked before the date, not after.
+    An empty catalogue falls back to the fixed length rather than stranding the
+    customer on a step with nothing to tap.
+  */
+  const catalog = lengthMode === "catalog" && services.length > 0
+  const [selectedService, setSelectedService] =
+    React.useState<PublicService | null>(null)
+
   const [selectedDate, setSelectedDate] = React.useState<string | null>(null)
   const [loaded, setLoaded] = React.useState<LoadedSlots>({ status: "empty" })
   const [selectedSlot, setSelectedSlot] = React.useState<Slot | null>(null)
@@ -233,6 +278,7 @@ export function BookingFlow({
   const [confirmed, setConfirmed] = React.useState<Confirmation | null>(null)
 
   const [stepIndex, setStepIndex] = React.useState(0)
+  const datesRef = React.useRef<HTMLDivElement>(null)
   const timesRef = React.useRef<HTMLDivElement>(null)
   const formRef = React.useRef<HTMLDivElement>(null)
   const requestRef = React.useRef(0)
@@ -291,7 +337,9 @@ export function BookingFlow({
     setSelectedDate(null)
     setSelectedSlot(null)
     setFormError(null)
-    setStepIndex(0)
+    // Back to the date, not to the service: which day a slot falls on is what
+    // the zone changed, and the service is unaffected by it.
+    setStepIndex(first)
   }
 
   const slotState: SlotState = React.useMemo(() => {
@@ -307,12 +355,22 @@ export function BookingFlow({
   // --- slots ----------------------------------------------------------------
   React.useEffect(() => {
     if (!selectedDate) return
+    // Without a service there is no length, so there is nothing to ask for.
+    if (catalog && !selectedService) return
 
     const isoDate = selectedDate
     const ticket = ++requestRef.current
     let cancelled = false
 
-    getAvailableSlots({ calendarId, isoDate })
+    getAvailableSlots({
+      calendarId,
+      isoDate,
+      // The date above is the VIEWER's, cut in the zone they are reading. Left
+      // out, the server would read it as one of the shop's dates and hand back
+      // a different day's times.
+      viewerZone: shownZone,
+      serviceId: selectedService?.id,
+    })
       .then((result) => {
         if (cancelled || ticket !== requestRef.current) return
         if (!result.ok) {
@@ -342,7 +400,14 @@ export function BookingFlow({
     return () => {
       cancelled = true
     }
-  }, [calendarId, selectedDate, reloadToken, shownZone])
+  }, [
+    calendarId,
+    selectedDate,
+    reloadToken,
+    shownZone,
+    catalog,
+    selectedService,
+  ])
 
   /** Phone only — desktop already shows every step at once. */
   function revealOnPhone(target: React.RefObject<HTMLDivElement | null>) {
@@ -353,18 +418,31 @@ export function BookingFlow({
     })
   }
 
+  /*
+    A different service is a different length, which cuts different slots — so
+    the date and time already chosen no longer mean what they meant.
+  */
+  function pickService(service: PublicService) {
+    setSelectedService(service)
+    setSelectedDate(null)
+    setSelectedSlot(null)
+    setFormError(null)
+    setStepIndex(1)
+    revealOnPhone(datesRef)
+  }
+
   function pickDate(iso: string) {
     setSelectedDate(iso)
     setSelectedSlot(null)
     setFormError(null)
-    setStepIndex(1)
+    setStepIndex(first + 1)
     revealOnPhone(timesRef)
   }
 
   function pickSlot(slot: Slot) {
     setSelectedSlot(slot)
     setFormError(null)
-    setStepIndex(2)
+    setStepIndex(first + 2)
     revealOnPhone(formRef)
   }
 
@@ -412,6 +490,7 @@ export function BookingFlow({
     try {
       const result = await submitBooking({
         calendarId,
+        serviceId: selectedService?.id,
         startsAt: selectedSlot.startsAt,
         customerName: name.trim(),
         customerEmail: email.trim() || null,
@@ -440,6 +519,8 @@ export function BookingFlow({
         bookingId: result.bookingId,
         isoDate: selectedDate,
         slot: selectedSlot,
+        service: selectedService,
+        durationMinutes: selectedService?.durationMinutes ?? durationMinutes,
       })
     } catch {
       setFormError("Something went wrong. Pakisubukan ulit in a moment.")
@@ -456,7 +537,6 @@ export function BookingFlow({
       <Confirmed
         calendarName={calendarName}
         confirmation={confirmed}
-        durationMinutes={durationMinutes}
         timezoneLabel={timezoneLabel}
         viewerZone={viewerZone}
       />
@@ -466,13 +546,22 @@ export function BookingFlow({
   // A wizard needs to go back without losing a choice, so the step is state.
   // Clamping it against what has actually been picked means it can never sit
   // ahead of the data — no effect has to chase it back into range.
-  const furthest = selectedSlot ? 2 : selectedDate ? 1 : 0
+  // The catalogue adds a step at the front, so every later step shifts by one.
+  const steps = catalog ? CATALOG_STEPS : STEPS
+  const first = catalog ? 1 : 0
+  const reached = selectedSlot ? 2 : selectedDate ? 1 : 0
+  const furthest = catalog && !selectedService ? 0 : reached + first
   const step = Math.min(stepIndex, furthest)
   const offered = withoutRefused(slotState, gone)
 
   return (
     <div className="space-y-4 lg:space-y-5">
-      <Stepper current={step} furthest={furthest} onGoTo={goToStep} />
+      <Stepper
+        steps={steps}
+        current={step}
+        furthest={furthest}
+        onGoTo={goToStep}
+      />
 
       {/*
         A wizard: exactly one step on screen. Only the step being worked on is
@@ -480,9 +569,33 @@ export function BookingFlow({
         person is never looking at a choice they have not reached.
       */}
       <div className="space-y-4">
-        {step === 0 ? (
-          <div key="step-date" className="step-enter">
-            {/* --- 1. the day ---------------------------------------------- */}
+        {catalog && step === 0 ? (
+          <div key="step-service" className="step-enter">
+            {/* --- 1. what they are booking -------------------------------- */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <Tag className="size-4 text-primary" aria-hidden />
+                  Anong serbisyo?
+                </CardTitle>
+                <CardDescription>
+                  Ang haba nito ang magtatakda ng mga oras na mapipili mo.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ServicePicker
+                  services={services}
+                  selected={selectedService}
+                  onPick={pickService}
+                />
+              </CardContent>
+            </Card>
+          </div>
+        ) : null}
+
+        {step === first ? (
+          <div key="step-date" ref={datesRef} className="step-enter scroll-mt-20">
+            {/* --- the day ------------------------------------------------- */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-sm">
@@ -518,10 +631,13 @@ export function BookingFlow({
             </CardContent>
           </Card>
 
+            {catalog ? (
+              <BackRow onBack={goBack} label="Ibang serbisyo" />
+            ) : null}
           </div>
         ) : null}
 
-        {step === 1 ? (
+        {step === first + 1 ? (
           <div key="step-time" ref={timesRef} className="step-enter scroll-mt-20">
             {selectedDate ? (
               <Card>
@@ -553,7 +669,7 @@ export function BookingFlow({
           </div>
         ) : null}
 
-        {step === 2 ? (
+        {step === first + 2 ? (
           <div key="step-details" ref={formRef} className="step-enter scroll-mt-20">
             {selectedSlot && selectedDate ? (
             <Card>
@@ -567,9 +683,12 @@ export function BookingFlow({
               <CardContent className="space-y-4">
                 <BookingSummary
                   calendarName={calendarName}
+                  service={selectedService}
                   isoDate={selectedDate}
                   slot={selectedSlot}
-                  durationMinutes={durationMinutes}
+                  durationMinutes={
+                    selectedService?.durationMinutes ?? durationMinutes
+                  }
                   timezoneLabel={timezoneLabel}
                   viewerZone={viewerZone}
                   shownZone={shownZone}
@@ -722,12 +841,15 @@ function BackRow({ onBack, label }: { onBack: () => void; label: string }) {
 // -----------------------------------------------------------------------------
 
 const STEPS = ["Petsa", "Oras", "Detalye"] as const
+const CATALOG_STEPS = ["Serbisyo", "Petsa", "Oras", "Detalye"] as const
 
 function Stepper({
+  steps,
   current,
   furthest,
   onGoTo,
 }: {
+  steps: readonly string[]
   current: number
   furthest: number
   onGoTo: (index: number) => void
@@ -737,7 +859,7 @@ function Stepper({
       aria-label="Booking steps"
       className="flex items-center gap-2 rounded-xl bg-card px-3 py-2.5 ring-1 ring-border sm:gap-3 sm:px-4"
     >
-      {STEPS.map((label, index) => {
+      {steps.map((label, index) => {
         const state: StepState =
           index < current ? "done" : index === current ? "current" : "todo"
         // A finished step is a way back to a decision already made. A step
@@ -779,7 +901,7 @@ function Stepper({
             >
               {label}
             </span>
-            {index < STEPS.length - 1 ? (
+            {index < steps.length - 1 ? (
               <span
                 aria-hidden
                 className="h-px min-w-2 flex-1 bg-border sm:min-w-4"
@@ -1004,9 +1126,85 @@ function TimePicker({
   )
 }
 
+/**
+ * The catalogue, as a list of taps.
+ *
+ * Price and length sit on the row rather than behind a disclosure: they are the
+ * two things that decide which service someone picks, and a customer who has to
+ * open each one to compare them mostly picks the first.
+ */
+function ServicePicker({
+  services,
+  selected,
+  onPick,
+}: {
+  services: PublicService[]
+  selected: PublicService | null
+  onPick: (service: PublicService) => void
+}) {
+  return (
+    <ul className="space-y-2">
+      {services.map((service) => {
+        const active = selected?.id === service.id
+        return (
+          <li key={service.id}>
+            <button
+              type="button"
+              onClick={() => onPick(service)}
+              aria-pressed={active}
+              className={cn(
+                "flex w-full items-start gap-3 rounded-xl p-3 text-left transition-colors",
+                "outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "active:scale-[0.99] motion-reduce:active:scale-100",
+                active
+                  ? "bg-primary/10 ring-2 ring-primary"
+                  : "bg-card ring-1 ring-border hover:bg-muted/50"
+              )}
+            >
+              <span className="min-w-0 flex-1 space-y-1">
+                <span className="block text-sm font-medium text-pretty">
+                  {service.name}
+                </span>
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Clock className="size-3.5 shrink-0" aria-hidden />
+                  {formatDuration(service.durationMinutes)}
+                </span>
+                {service.description ? (
+                  <span className="block text-xs text-pretty text-muted-foreground">
+                    {service.description}
+                  </span>
+                ) : null}
+              </span>
+
+              <span className="shrink-0 text-right">
+                <span
+                  className={cn(
+                    "block text-sm font-semibold tabular-nums",
+                    active ? "text-primary" : "text-foreground"
+                  )}
+                >
+                  {service.priceCentavos > 0
+                    ? formatPeso(service.priceCentavos)
+                    : "Tanong"}
+                </span>
+                {service.priceCentavos === 0 ? (
+                  <span className="block text-[11px] text-muted-foreground">
+                    presyo
+                  </span>
+                ) : null}
+              </span>
+            </button>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
 /** What they are about to book, restated before the button that commits it. */
 function BookingSummary({
   calendarName,
+  service,
   isoDate,
   slot,
   durationMinutes,
@@ -1016,6 +1214,7 @@ function BookingSummary({
   calendarZone,
 }: {
   calendarName: string
+  service: PublicService | null
   isoDate: string
   slot: Slot
   durationMinutes: number
@@ -1033,13 +1232,23 @@ function BookingSummary({
 
   return (
     <div className="space-y-1 rounded-lg bg-primary/8 p-3 ring-1 ring-primary/20">
-      <p className="text-sm font-semibold text-balance">{calendarName}</p>
+      <p className="text-sm font-semibold text-balance">
+        {service ? service.name : calendarName}
+      </p>
+      {service ? (
+        <p className="text-xs text-muted-foreground">
+          {calendarName}
+          {service.priceCentavos > 0
+            ? ` · ${formatPeso(service.priceCentavos)}`
+            : ""}
+        </p>
+      ) : null}
       <p className="text-sm">
         {longDate(local.isoDate || isoDate)} ·{" "}
         <span className="font-medium">{local.time || slot.label}</span>
       </p>
       <p className="text-xs text-muted-foreground">
-        {durationMinutes} minutes ·{" "}
+        {formatDuration(durationMinutes)} ·{" "}
         {inOwnersZone ? timezoneLabel : zoneCity(shownZone)}
       </p>
       {owners ? (
@@ -1090,13 +1299,11 @@ function LocalTimeNote({
 function Confirmed({
   calendarName,
   confirmation,
-  durationMinutes,
   timezoneLabel,
   viewerZone,
 }: {
   calendarName: string
   confirmation: Confirmation
-  durationMinutes: number
   timezoneLabel: string
   viewerZone: string | null
 }) {
@@ -1123,8 +1330,16 @@ function Confirmed({
             {longDate(confirmation.isoDate)}
           </p>
           <p className="text-sm font-medium">{confirmation.slot.label}</p>
+          {confirmation.service ? (
+            <p className="text-sm text-pretty">
+              {confirmation.service.name}
+              {confirmation.service.priceCentavos > 0
+                ? ` · ${formatPeso(confirmation.service.priceCentavos)}`
+                : ""}
+            </p>
+          ) : null}
           <p className="text-xs text-muted-foreground">
-            {durationMinutes} minutes · {timezoneLabel}
+            {formatDuration(confirmation.durationMinutes)} · {timezoneLabel}
           </p>
           <LocalTimeNote
             startsAt={confirmation.slot.startsAt}

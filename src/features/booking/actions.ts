@@ -918,3 +918,268 @@ export async function reorderFields(input: {
   refresh()
   return done("Order saved.", calendar.id)
 }
+
+// -----------------------------------------------------------------------------
+// Length: one fixed length, or a catalogue of services
+// -----------------------------------------------------------------------------
+
+const lengthModeSchema = z.enum(["fixed", "catalog"], {
+  message: "Pick either one fixed length or a service list.",
+})
+
+const priceSchema = z
+  .number()
+  .int("Prices are whole centavos.")
+  .min(0, "A price cannot be negative.")
+  .max(100_000_000, "That price is too large.")
+
+const serviceSchema = z.object({
+  name: z
+    .string()
+    .min(2, "Give this service a name, at least 2 characters.")
+    .max(80, "Keep the name under 80 characters."),
+  description: z.string().max(300, "Keep the description under 300 characters."),
+  priceCentavos: priceSchema,
+  // Same bounds as a fixed length: a service IS the length once it is chosen.
+  durationMinutes: durationSchema,
+})
+
+export interface SaveServiceInput {
+  calendarId: string
+  /** Omit to add a new service; pass it to edit one in place. */
+  serviceId?: string
+  name: string
+  description?: string
+  priceCentavos: number
+  durationMinutes: number
+  isActive?: boolean
+}
+
+/**
+ * Switches between one length for everything and a list of services.
+ *
+ * Turning on the catalogue while it is empty would leave the public page with
+ * nothing to offer and no way to reach a date, so that is refused here rather
+ * than discovered by a customer.
+ */
+export async function setLengthMode(input: {
+  calendarId: string
+  mode: string
+}): Promise<BookingActionResult> {
+  const session = await requireSession()
+  if ("error" in session) return session.error
+  const { db, userId } = session
+
+  const calendar = await loadCalendar(db, userId, input?.calendarId)
+  if (!calendar) return fail(CALENDAR_NOT_FOUND)
+
+  const parsed = lengthModeSchema.safeParse(input?.mode)
+  if (!parsed.success) return fail(firstIssue(parsed.error))
+  const mode = parsed.data
+
+  if (mode === "catalog") {
+    const { count } = await db
+      .from("booking_services")
+      .select("id", { count: "exact", head: true })
+      .eq("calendar_id", calendar.id)
+      .eq("user_id", userId)
+      .eq("is_active", true)
+
+    if ((count ?? 0) === 0) {
+      return fail("Add at least one service before switching to a service list.")
+    }
+  }
+
+  const patch: Patch<"booking_calendars"> = { length_mode: mode }
+  const { error } = await db
+    .from("booking_calendars")
+    .update(patch)
+    .eq("id", calendar.id)
+    .eq("user_id", userId)
+
+  if (error) return fail(TRY_AGAIN)
+
+  refresh()
+  return done(
+    mode === "catalog"
+      ? "Your suki picks a service first."
+      : "Every booking now runs the same length.",
+    calendar.id
+  )
+}
+
+/** Adds a service, or edits one in place when serviceId is passed. */
+export async function saveService(
+  input: SaveServiceInput
+): Promise<BookingActionResult> {
+  const session = await requireSession()
+  if ("error" in session) return session.error
+  const { db, userId } = session
+
+  const calendar = await loadCalendar(db, userId, input?.calendarId)
+  if (!calendar) return fail(CALENDAR_NOT_FOUND)
+
+  const parsed = serviceSchema.safeParse({
+    name: (input?.name ?? "").trim(),
+    description: (input?.description ?? "").trim(),
+    priceCentavos: input?.priceCentavos ?? 0,
+    durationMinutes: input?.durationMinutes ?? 0,
+  })
+  if (!parsed.success) return fail(firstIssue(parsed.error))
+
+  const { name, description, priceCentavos, durationMinutes } = parsed.data
+  const isActive = input?.isActive ?? true
+
+  if (typeof input?.serviceId === "string" && input.serviceId.length > 0) {
+    const patch: Patch<"booking_services"> = {
+      name,
+      description: description.length > 0 ? description : null,
+      price_centavos: priceCentavos,
+      duration_minutes: durationMinutes,
+      is_active: isActive,
+    }
+    const { error } = await db
+      .from("booking_services")
+      .update(patch)
+      .eq("id", input.serviceId)
+      .eq("calendar_id", calendar.id)
+      .eq("user_id", userId)
+
+    if (error) return fail("We could not save that service. Please try again.")
+
+    refresh()
+    return done("Service saved.", input.serviceId)
+  }
+
+  // New services land at the end of the list.
+  const { data: last } = await db
+    .from("booking_services")
+    .select("position")
+    .eq("calendar_id", calendar.id)
+    .eq("user_id", userId)
+    .order("position", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const position = ((last as { position: number } | null)?.position ?? -1) + 1
+
+  const row: Insert<"booking_services"> = {
+    calendar_id: calendar.id,
+    user_id: userId,
+    name,
+    description: description.length > 0 ? description : null,
+    price_centavos: priceCentavos,
+    duration_minutes: durationMinutes,
+    position,
+    is_active: isActive,
+  }
+
+  const { data, error } = await db
+    .from("booking_services")
+    .insert(row)
+    .select("id")
+    .single()
+
+  if (error) return fail("We could not add that service. Please try again.")
+
+  refresh()
+  return done("Service added.", (data as { id: string } | null)?.id)
+}
+
+/**
+ * Removes a service. Bookings already taken on it keep the name and price they
+ * were sold at — the database nulls only the reference, never the snapshot.
+ *
+ * Deleting the last one falls the calendar back to a single fixed length, so a
+ * live page is never left with an empty list and no way forward.
+ */
+export async function deleteService(
+  serviceId: string
+): Promise<BookingActionResult> {
+  const session = await requireSession()
+  if ("error" in session) return session.error
+  const { db, userId } = session
+
+  if (typeof serviceId !== "string" || serviceId.length === 0) {
+    return fail("We could not find that service.")
+  }
+
+  const { data: existing } = await db
+    .from("booking_services")
+    .select("calendar_id")
+    .eq("id", serviceId)
+    .eq("user_id", userId)
+    .maybeSingle()
+
+  const calendarId = (existing as { calendar_id: string } | null)?.calendar_id
+  if (!calendarId) return fail("We could not find that service.")
+
+  const { error } = await db
+    .from("booking_services")
+    .delete()
+    .eq("id", serviceId)
+    .eq("user_id", userId)
+
+  if (error) return fail("We could not remove that service. Please try again.")
+
+  const { count } = await db
+    .from("booking_services")
+    .select("id", { count: "exact", head: true })
+    .eq("calendar_id", calendarId)
+    .eq("user_id", userId)
+    .eq("is_active", true)
+
+  if ((count ?? 0) === 0) {
+    const patch: Patch<"booking_calendars"> = { length_mode: "fixed" }
+    await db
+      .from("booking_calendars")
+      .update(patch)
+      .eq("id", calendarId)
+      .eq("user_id", userId)
+  }
+
+  refresh()
+  return done("Service removed.")
+}
+
+/** Writes the order the catalogue ended up with. Foreign ids are dropped. */
+export async function reorderServices(input: {
+  calendarId: string
+  orderedIds: string[]
+}): Promise<BookingActionResult> {
+  const session = await requireSession()
+  if ("error" in session) return session.error
+  const { db, userId } = session
+
+  const calendar = await loadCalendar(db, userId, input?.calendarId)
+  if (!calendar) return fail(CALENDAR_NOT_FOUND)
+
+  const requested = Array.isArray(input?.orderedIds) ? input.orderedIds : []
+  if (requested.length === 0) return done("Nothing to reorder.", calendar.id)
+
+  const { data } = await db
+    .from("booking_services")
+    .select("id")
+    .eq("calendar_id", calendar.id)
+    .eq("user_id", userId)
+
+  const mine = new Set(
+    ((data as { id: string }[] | null) ?? []).map((row) => row.id)
+  )
+  const ordered = requested.filter((id) => mine.has(id))
+  if (ordered.length === 0) return fail("Those services are no longer here.")
+
+  for (let index = 0; index < ordered.length; index++) {
+    const patch: Patch<"booking_services"> = { position: index }
+    const { error } = await db
+      .from("booking_services")
+      .update(patch)
+      .eq("id", ordered[index])
+      .eq("calendar_id", calendar.id)
+      .eq("user_id", userId)
+    if (error) return fail("We could not save that order. Please try again.")
+  }
+
+  refresh()
+  return done("Order saved.", calendar.id)
+}
