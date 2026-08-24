@@ -115,8 +115,27 @@ describe("ZonePicker", () => {
     expect(await screen.findByText("oras ng shop")).toBeInTheDocument()
   })
 
-  it("says the times are adjusted when reading another zone", () => {
+  it("labels itself on the tag, without a caption above or below it", () => {
     renderPicker({ value: "Europe/London", calendarZone: "Asia/Manila" })
-    expect(screen.getByText(/Naka-adjust sa London/)).toBeInTheDocument()
+    const tag = screen.getByRole("button", { name: /London/ })
+    // The tag says what it is, so the surrounding label and helper line that
+    // repeated it are gone.
+    expect(tag).toHaveTextContent("Ang iyong timezone")
+    expect(tag).toHaveTextContent("London")
+    expect(screen.queryByText("Oras na ipinapakita")).not.toBeInTheDocument()
+    expect(screen.queryByText(/Sa oras ng shop/)).not.toBeInTheDocument()
+  })
+
+  it("keeps the shop's own zone findable in the dialog copy", async () => {
+    const user = userEvent.setup()
+    renderPicker({ value: "Europe/London", calendarZone: "Asia/Manila" })
+
+    await user.click(screen.getByRole("button", { name: /London/ }))
+    // Removed from the page, but a customer comparing zones can still see it.
+    // Matched with a substring rather than a regex: "GMT+8" contains a plus,
+    // which a regex would read as a quantifier.
+    expect(
+      await screen.findByText((text) => text.includes("Manila · GMT+8"))
+    ).toBeInTheDocument()
   })
 })

@@ -54,8 +54,6 @@ export function ZonePicker({
   const [open, setOpen] = React.useState(false)
   const [query, setQuery] = React.useState("")
 
-  const showingOwners = value === calendarZone
-
   const matches = React.useMemo(() => {
     const hits = options.filter((zone) => zoneMatches(zone, query))
     // The shop's zone first, then the one already chosen: the two anyone is
@@ -77,11 +75,7 @@ export function ZonePicker({
   }
 
   return (
-    <div className="space-y-1.5">
-      <p className="text-xs font-medium text-muted-foreground">
-        Oras na ipinapakita
-      </p>
-
+    <div>
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -92,6 +86,9 @@ export function ZonePicker({
         )}
       >
         <Globe className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+        <span className="shrink-0 font-normal text-muted-foreground">
+          Ang iyong timezone
+        </span>
         <span className="min-w-0 truncate">{zoneCity(value)}</span>
         <span className="shrink-0 rounded-full bg-background/70 px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground tabular-nums">
           {zoneOffsetLabel(value)}
@@ -99,18 +96,12 @@ export function ZonePicker({
         <span className="sr-only">Baguhin ang timezone</span>
       </button>
 
-      <p className="text-xs text-pretty text-muted-foreground">
-        {showingOwners
-          ? `Sa oras ng shop (${calendarLabel}).`
-          : `Naka-adjust sa ${zoneCity(value)}. Sa shop ito ay ${calendarLabel}.`}
-      </p>
-
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="flex max-h-[85dvh] flex-col gap-0 p-0 sm:max-w-md">
           <DialogHeader className="space-y-1 px-4 pt-4 pb-3 sm:px-5">
             <DialogTitle className="text-base">Piliin ang timezone</DialogTitle>
-            <DialogDescription className="text-xs">
-              Ang mga oras sa page na ito ay ipapakita sa zone na pipiliin mo.
+            <DialogDescription className="text-xs text-pretty">
+              {`Ang mga oras dito ay ipapakita sa zone na pipiliin mo. Ang shop ay nasa ${calendarLabel}.`}
             </DialogDescription>
           </DialogHeader>
 

@@ -149,12 +149,17 @@ describe("choosing a timezone", () => {
     // The zone decides which day a slot falls on, so it cannot come second:
     // picking it later would silently change what an already-chosen date meant.
     expect(dateStep()).toBeInTheDocument()
-    expect(screen.getByText("Oras na ipinapakita")).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: /Ang iyong timezone/ })
+    ).toBeInTheDocument()
   })
 
-  it("keeps the shop's own zone reachable and labelled", () => {
+  it("shows the chosen zone on the tag itself", () => {
     renderFlow()
-    expect(screen.getByText(/oras ng shop/)).toBeInTheDocument()
+    // What is inside the picker's dialog is its own file's business; here it
+    // only matters that the flow surfaces the current zone.
+    const tag = screen.getByRole("button", { name: /Ang iyong timezone/ })
+    expect(tag).toHaveTextContent("Manila")
   })
 
   it("names the shop's zone on the times step once a date is chosen", async () => {
