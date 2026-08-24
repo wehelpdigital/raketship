@@ -4,8 +4,9 @@ import { Rocket } from "lucide-react"
 
 import { PageContainer } from "@/components/shell/page-container"
 import { SetupNotice } from "@/components/shell/setup-notice"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { supabaseConfigured } from "@/lib/env"
+import { cn } from "@/lib/utils"
 import { rowToCanvasEdge, rowToCanvasNode } from "@/lib/flow/mappers"
 import {
   getRaketCanvas,
@@ -74,9 +75,12 @@ export default async function RaketPage() {
         title="Build your Raket"
         body="Sign in and we will open your canvas — your modules, wired together the way your business actually runs."
         action={
-          <Button className="h-11 w-full" render={<Link href="/login" />}>
+          <Link
+            href="/login"
+            className={cn(buttonVariants(), "h-11 w-full")}
+          >
             Sign in
-          </Button>
+          </Link>
         }
       />
     ) : (

@@ -22,7 +22,7 @@ import { toast } from "sonner"
 
 import { Spinner } from "@/components/shell/loader"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -369,14 +369,18 @@ export function SharePanel({ calendar }: SharePanelProps) {
               )}
             </Button>
 
-            <Button
-              variant="outline"
-              className="h-11 flex-1 sm:flex-none sm:px-4"
-              render={<a href={url} target="_blank" rel="noopener noreferrer" />}
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                buttonVariants({ variant: "outline" }),
+                "h-11 flex-1 sm:flex-none sm:px-4"
+              )}
             >
               <ExternalLink aria-hidden />
               Open link
-            </Button>
+            </a>
 
             {canShare ? (
               <Button

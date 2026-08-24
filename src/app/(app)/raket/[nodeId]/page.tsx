@@ -165,12 +165,15 @@ export default async function ModuleCanvasPage({ params }: PageProps) {
             Your modules and the steps inside them live with your account.
           </p>
           {supabaseConfigured ? (
-            <Button
-              className="mt-6 h-11 w-full lg:mx-auto lg:max-w-xs"
-              render={<Link href="/login" />}
+            <Link
+              href="/login"
+              className={cn(
+                buttonVariants(),
+                "mt-6 h-11 w-full lg:mx-auto lg:max-w-xs"
+              )}
             >
               Sign in
-            </Button>
+            </Link>
           ) : null}
         </div>
 
@@ -217,13 +220,15 @@ export default async function ModuleCanvasPage({ params }: PageProps) {
               Head back to your raket and run the setup — we will create this
               module&apos;s canvas with its first steps already wired.
             </p>
-            <Button
-              variant="outline"
-              className="mt-6 h-11 w-full lg:mx-auto lg:max-w-xs"
-              render={<Link href="/raket" />}
+            <Link
+              href="/raket"
+              className={cn(
+                buttonVariants({ variant: "outline" }),
+                "mt-6 h-11 w-full lg:mx-auto lg:max-w-xs"
+              )}
             >
               Back to your raket
-            </Button>
+            </Link>
           </div>
         </BuilderLayout>
       </PageContainer>
