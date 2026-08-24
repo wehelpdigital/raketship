@@ -1259,3 +1259,96 @@ on conflict (user_id) do update set
     public.business_profiles.business_name,
     excluded.business_name
   );
+
+-- =============================================================================
+-- RaketShip — trimming Your Business back
+-- =============================================================================
+-- Business type, open hours and the whole payment block are gone. Every box on
+-- this form is another thing to fill in on a phone, and these four were the
+-- ones a raketero could skip without the page losing anything:
+--
+--   business_type  — nothing read it yet; it was a promise, not a feature.
+--   hours_note     — booking_availability is the real answer to "kailan",
+--                    and two answers to one question is worse than one.
+--   gcash/maya/payment_name/payment_note — money belongs to the Payments
+--                    module, not to an identity form.
+--
+-- Verified empty across every row before dropping, so nothing was discarded.
+-- =============================================================================
+
+-- The length constraint names two of the columns below, so it has to go first
+-- or the drops fail.
+alter table public.business_profiles
+  drop constraint if exists business_profiles_lengths;
+
+alter table public.business_profiles drop column if exists business_type;
+alter table public.business_profiles drop column if exists hours_note;
+alter table public.business_profiles drop column if exists gcash_number;
+alter table public.business_profiles drop column if exists maya_number;
+alter table public.business_profiles drop column if exists payment_name;
+alter table public.business_profiles drop column if exists payment_note;
+
+-- Landmark became a textarea in the form: "katapat ng Mercury Drug, tapat ng
+-- barangay hall, kulay dilaw na gate" is how directions are actually given
+-- here, and that does not fit on one line.
+do $mig$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'business_profiles_lengths'
+  ) then
+    alter table public.business_profiles
+      add constraint business_profiles_lengths
+      check (
+        coalesce(length(tagline), 0) <= 60
+        and coalesce(length(description), 0) <= 600
+        and coalesce(length(landmark), 0) <= 300
+        and coalesce(array_length(chat_apps, 1), 0) <= 8
+      );
+  end if;
+end;
+$mig$;
+
+-- =============================================================================
+-- RaketShip — where the logo sits inside its circle
+-- =============================================================================
+-- The logo is masked to a circle everywhere it appears. A photo taken on a
+-- phone is rarely square and almost never centred on the thing that matters,
+-- so the owner gets to say which part shows: pan to a point, zoom in on it.
+--
+-- Three numbers is the whole model:
+--
+--   logo_x / logo_y  the point of the image to keep in view, as a percentage
+--                    of its width and height. This is CSS object-position.
+--   logo_zoom        how far to magnify, anchored on that same point.
+--
+-- Stored rather than baked into the file: the original is never re-encoded, so
+-- the framing stays adjustable and a mistake costs nothing.
+-- =============================================================================
+
+alter table public.business_profiles
+  add column if not exists logo_zoom real not null default 1;
+alter table public.business_profiles
+  add column if not exists logo_x smallint not null default 50;
+alter table public.business_profiles
+  add column if not exists logo_y smallint not null default 50;
+
+do $mig$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'business_profiles_logo_crop'
+  ) then
+    alter table public.business_profiles
+      add constraint business_profiles_logo_crop
+      check (
+        logo_zoom >= 1 and logo_zoom <= 4
+        and logo_x between 0 and 100
+        and logo_y between 0 and 100
+      );
+  end if;
+end;
+$mig$;
+
+comment on column public.business_profiles.logo_zoom is
+  'CSS transform scale, 1 to 4. Anchored on (logo_x, logo_y) so zooming keeps the chosen point in view.';
+comment on column public.business_profiles.logo_x is
+  'CSS object-position X, 0-100. The mask is always filled because the image is object-fit: cover and the scale never goes below 1.';

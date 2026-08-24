@@ -1,13 +1,4 @@
-import {
-  AtSign,
-  Clock3,
-  Globe,
-  MapPin,
-  MessageCircle,
-  Phone,
-  Users,
-  Wallet,
-} from "lucide-react"
+import { AtSign, Globe, MapPin, MessageCircle, Phone, Users } from "lucide-react"
 
 import { toInternational } from "@/lib/business/contact"
 import type { BusinessProfileRow } from "@/lib/supabase/types"
@@ -17,8 +8,8 @@ export interface BusinessFooterProps {
 }
 
 /**
- * How to reach the shop, how to pay it, and where it is — under the wizard
- * rather than above it, because the booking is what the visitor came for.
+ * How to reach the shop and where it is — under the wizard rather than above
+ * it, because the booking is what the visitor came for.
  *
  * Everything here is optional and the whole block disappears when nothing has
  * been filled in.
@@ -29,14 +20,22 @@ export function BusinessFooter({ business }: BusinessFooterProps) {
   const chat = business.chat_apps ?? []
   const mobile = business.mobile_number?.trim() || null
   const address = addressLine(business)
+  /*
+    The landmark is gated on the SAME setting as the address, not shown beside
+    it. "Katapat ng Mercury Drug, kulay dilaw na gate" locates a house as
+    precisely as a street number does — printing it while the address is hidden
+    would defeat the setting for the exact person it exists to protect.
+  */
+  const landmark =
+    business.address_visibility === "hidden"
+      ? null
+      : business.landmark?.trim() || null
 
   const hasContact =
     mobile || business.facebook_url || business.instagram_handle || business.website_url
-  const hasPayment =
-    business.gcash_number || business.maya_number || business.payment_note
-  const hasPlace = address || business.landmark || business.hours_note
+  const hasPlace = address || landmark
 
-  if (!hasContact && !hasPayment && !hasPlace) return null
+  if (!hasContact && !hasPlace) return null
 
   return (
     <div className="mt-6 space-y-3">
@@ -92,47 +91,20 @@ export function BusinessFooter({ business }: BusinessFooterProps) {
         </Panel>
       ) : null}
 
-      {hasPayment ? (
-        <Panel title="Bayad">
-          <dl className="space-y-1.5 text-sm">
-            {business.gcash_number ? (
-              <Row icon={Wallet} label="GCash">
-                <span className="tabular-nums">{business.gcash_number}</span>
-                {business.payment_name ? ` · ${business.payment_name}` : ""}
-              </Row>
-            ) : null}
-            {business.maya_number ? (
-              <Row icon={Wallet} label="Maya">
-                <span className="tabular-nums">{business.maya_number}</span>
-                {business.payment_name ? ` · ${business.payment_name}` : ""}
-              </Row>
-            ) : null}
-            {business.payment_note ? (
-              <p className="text-pretty text-muted-foreground">
-                {business.payment_note}
-              </p>
-            ) : null}
-          </dl>
-        </Panel>
-      ) : null}
-
       {hasPlace ? (
-        <Panel title="Saan at kailan">
+        <Panel title="Saan kayo">
           <div className="space-y-1.5 text-sm">
             {address ? (
               <Row icon={MapPin} label="Address">
                 {address}
               </Row>
             ) : null}
-            {business.landmark ? (
-              <p className="text-pretty text-muted-foreground">
-                {business.landmark}
+            {landmark ? (
+              // Directions run to a sentence here, so this keeps its own line
+              // and its line breaks rather than being folded into the address.
+              <p className="whitespace-pre-line text-pretty text-muted-foreground">
+                {landmark}
               </p>
-            ) : null}
-            {business.hours_note ? (
-              <Row icon={Clock3} label="Bukas">
-                {business.hours_note}
-              </Row>
             ) : null}
           </div>
         </Panel>

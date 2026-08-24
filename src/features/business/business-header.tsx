@@ -1,4 +1,5 @@
-import { initialsOf, mediaUrl } from "@/lib/business/media"
+import { LogoMask } from "@/features/business/logo-mask"
+import { mediaUrl } from "@/lib/business/media"
 import type { BusinessProfileRow } from "@/lib/supabase/types"
 
 export interface BusinessHeaderProps {
@@ -37,17 +38,17 @@ export function BusinessHeader({ business, fallbackName }: BusinessHeaderProps) 
       ) : null}
 
       <div className="flex items-center gap-3 p-4 sm:gap-4 sm:p-5">
-        <span
-          aria-hidden
-          className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-primary/10 text-base font-semibold text-primary ring-1 ring-primary/15 sm:size-14 sm:text-lg"
-        >
-          {logo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={logo} alt="" className="size-full object-contain p-1.5" />
-          ) : (
-            initialsOf(name ?? fallbackName)
-          )}
-        </span>
+        <LogoMask
+          url={logo}
+          name={name ?? fallbackName}
+          crop={{
+            zoom: business?.logo_zoom ?? 1,
+            x: business?.logo_x ?? 50,
+            y: business?.logo_y ?? 50,
+          }}
+          className="size-12 text-base sm:size-14 sm:text-lg"
+          textClassName="text-base sm:text-lg"
+        />
 
         <div className="min-w-0 flex-1 space-y-0.5">
           <p className="truncate text-base font-semibold tracking-tight sm:text-lg">

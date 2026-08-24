@@ -20,18 +20,6 @@ import { saveBusinessProfile } from "@/features/business/actions"
 import type { BusinessProfileRow } from "@/lib/supabase/types"
 import { cn } from "@/lib/utils"
 
-/** The kinds of raket this app is actually for. */
-export const BUSINESS_TYPES = [
-  { value: "sari-sari", label: "Sari-sari store" },
-  { value: "food", label: "Food or drinks" },
-  { value: "beauty", label: "Salon or beauty" },
-  { value: "printing", label: "Printing or photo" },
-  { value: "online", label: "Online seller" },
-  { value: "service", label: "Service or freelance" },
-  { value: "repair", label: "Repair or trades" },
-  { value: "other", label: "Iba pa" },
-]
-
 /** Where the same mobile number can also be reached. */
 export const CHAT_APPS = [
   { value: "viber", label: "Viber" },
@@ -55,23 +43,17 @@ interface Values {
   businessName: string
   tagline: string
   description: string
-  businessType: string
   mobileNumber: string
   chatApps: string[]
   facebookUrl: string
   instagramHandle: string
   websiteUrl: string
-  gcashNumber: string
-  mayaNumber: string
-  paymentName: string
-  paymentNote: string
   streetAddress: string
   barangay: string
   city: string
   province: string
   landmark: string
   addressVisibility: string
-  hoursNote: string
 }
 
 function initial(
@@ -82,23 +64,17 @@ function initial(
     businessName: businessName ?? "",
     tagline: profile?.tagline ?? "",
     description: profile?.description ?? "",
-    businessType: profile?.business_type ?? "",
     mobileNumber: profile?.mobile_number ?? "",
     chatApps: profile?.chat_apps ?? [],
     facebookUrl: profile?.facebook_url ?? "",
     instagramHandle: profile?.instagram_handle ?? "",
     websiteUrl: profile?.website_url ?? "",
-    gcashNumber: profile?.gcash_number ?? "",
-    mayaNumber: profile?.maya_number ?? "",
-    paymentName: profile?.payment_name ?? "",
-    paymentNote: profile?.payment_note ?? "",
     streetAddress: profile?.street_address ?? "",
     barangay: profile?.barangay ?? "",
     city: profile?.city ?? "",
     province: profile?.province ?? "",
     landmark: profile?.landmark ?? "",
     addressVisibility: profile?.address_visibility ?? "area",
-    hoursNote: profile?.hours_note ?? "",
   }
 }
 
@@ -107,9 +83,8 @@ function initial(
  * on their own because their effect is visible immediately.
  *
  * Grouped into the questions a suki actually asks — sino ka, paano kita
- * makokontak, paano ako magbabayad, saan ka — rather than into whatever order
- * the columns happen to sit in. An online seller can legitimately skip two
- * whole sections.
+ * makokontak, saan ka — rather than into whatever order the columns happen to
+ * sit in. An online seller can legitimately skip the last section entirely.
  */
 export function BusinessForm({
   businessName,
@@ -178,7 +153,13 @@ export function BusinessForm({
     })
   }
 
-  const showAddress = values.addressVisibility !== "hidden"
+  /** What the visibility choice actually means, said in full under the select. */
+  const visibilityHint =
+    values.addressVisibility === "full"
+      ? "Makikita ng suki ang buong address."
+      : values.addressVisibility === "area"
+        ? "Barangay, city at province lang ang makikita. Itatago ang street at landmark."
+        : "Walang address na lalabas sa booking page. Sa iyo pa rin ang nakatago dito."
 
   return (
     <form onSubmit={submit} className="space-y-6" noValidate>
@@ -219,30 +200,6 @@ export function BusinessForm({
         </Field>
 
         <Field
-          id="business-type"
-          label="Business type"
-          hint="Nakakatulong ito para mas bagay ang mga mungkahi namin."
-        >
-          <Select
-            items={BUSINESS_TYPES}
-            value={values.businessType || null}
-            disabled={saving || readOnly}
-            onValueChange={(next) => set("businessType", (next as string) ?? "")}
-          >
-            <SelectTrigger id="business-type" className="h-11! w-full">
-              <SelectValue placeholder="Pumili" />
-            </SelectTrigger>
-            <SelectContent>
-              {BUSINESS_TYPES.map((item) => (
-                <SelectItem key={item.value} value={item.value}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-
-        <Field
           id="description"
           label="Description"
           hint="Ano ang ginagawa niyo, ano ang dalhin, tumatanggap ba ng walk-in."
@@ -257,22 +214,6 @@ export function BusinessForm({
             placeholder="Gupit, kulay at rebond. Walk-in welcome kung may bakante."
             className="min-h-28"
             onChange={(event) => set("description", event.target.value)}
-          />
-        </Field>
-
-        <Field
-          id="hours-note"
-          label="Open hours"
-          hint="Para sa mga walang booking calendar. Hindi ito ang basehan ng mga slot."
-        >
-          <Input
-            id="hours-note"
-            value={values.hoursNote}
-            maxLength={120}
-            disabled={saving || readOnly}
-            placeholder="Lunes–Sabado, 8am–7pm"
-            className="h-11"
-            onChange={(event) => set("hoursNote", event.target.value)}
           />
         </Field>
       </Section>
@@ -390,81 +331,11 @@ export function BusinessForm({
         </div>
       </Section>
 
-      <Section
-        title="Paano kayo babayaran"
-        hint="Para hindi na magtanong ang suki kung saan ipapadala."
-      >
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field id="gcash" label="GCash number" error={errors.gcashNumber}>
-            <Input
-              id="gcash"
-              value={values.gcashNumber}
-              type="tel"
-              inputMode="tel"
-              maxLength={40}
-              disabled={saving || readOnly}
-              placeholder="0917 000 0000"
-              className="h-11 tabular-nums"
-              aria-invalid={errors.gcashNumber ? true : undefined}
-              onChange={(event) => set("gcashNumber", event.target.value)}
-            />
-          </Field>
-
-          <Field id="maya" label="Maya number" error={errors.mayaNumber}>
-            <Input
-              id="maya"
-              value={values.mayaNumber}
-              type="tel"
-              inputMode="tel"
-              maxLength={40}
-              disabled={saving || readOnly}
-              placeholder="0918 000 0000"
-              className="h-11 tabular-nums"
-              aria-invalid={errors.mayaNumber ? true : undefined}
-              onChange={(event) => set("mayaNumber", event.target.value)}
-            />
-          </Field>
-        </div>
-
-        <Field
-          id="payment-name"
-          label="Account name"
-          hint="Kadalasan ang personal na pangalan — para hindi mag-alinlangan ang magpapadala."
-        >
-          <Input
-            id="payment-name"
-            value={values.paymentName}
-            maxLength={80}
-            disabled={saving || readOnly}
-            placeholder="Nena D."
-            className="h-11"
-            onChange={(event) => set("paymentName", event.target.value)}
-          />
-        </Field>
-
-        <Field
-          id="payment-note"
-          label="Payment note"
-          hint="Downpayment, COD, bank details — kahit ano pang paalala."
-        >
-          <Textarea
-            id="payment-note"
-            value={values.paymentNote}
-            maxLength={300}
-            rows={2}
-            disabled={saving || readOnly}
-            placeholder="50% downpayment, balance cash pagdating."
-            className="min-h-20"
-            onChange={(event) => set("paymentNote", event.target.value)}
-          />
-        </Field>
-      </Section>
-
       <Section title="Saan kayo">
         <Field
           id="address-visibility"
           label="Show address"
-          hint="Kung nasa bahay ang raket mo, barangay at city lang ang ligtas."
+          hint={visibilityHint}
         >
           <Select
             items={VISIBILITIES}
@@ -487,24 +358,20 @@ export function BusinessForm({
           </Select>
         </Field>
 
-        {showAddress ? (
-          <>
-            {values.addressVisibility === "full" ? (
-              <Field id="street" label="Street and house no.">
-                <Input
-                  id="street"
-                  value={values.streetAddress}
-                  maxLength={120}
-                  disabled={saving || readOnly}
-                  autoComplete="address-line1"
-                  placeholder="Blk 4 Lot 12 Sampaguita St."
-                  className="h-11"
-                  onChange={(event) => set("streetAddress", event.target.value)}
-                />
-              </Field>
-            ) : null}
+        <Field id="street" label="Street and house no.">
+          <Input
+            id="street"
+            value={values.streetAddress}
+            maxLength={120}
+            disabled={saving || readOnly}
+            autoComplete="address-line1"
+            placeholder="Blk 4 Lot 12 Sampaguita St."
+            className="h-11"
+            onChange={(event) => set("streetAddress", event.target.value)}
+          />
+        </Field>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
               <Field id="barangay" label="Barangay">
                 <Input
                   id="barangay"
@@ -531,7 +398,7 @@ export function BusinessForm({
               </Field>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4">
               <Field id="province" label="Province">
                 <Input
                   id="province"
@@ -545,24 +412,26 @@ export function BusinessForm({
                 />
               </Field>
 
-              <Field
-                id="landmark"
-                label="Landmark"
-                hint="Ganito talaga magturo ng direksyon dito."
-              >
-                <Input
-                  id="landmark"
-                  value={values.landmark}
-                  maxLength={120}
-                  disabled={saving || readOnly}
-                  placeholder="Katapat ng Mercury Drug"
-                  className="h-11"
-                  onChange={(event) => set("landmark", event.target.value)}
-                />
-              </Field>
             </div>
-          </>
-        ) : null}
+
+        {/* Its own row rather than half of one: directions here run to a
+            sentence, not a phrase. */}
+        <Field
+          id="landmark"
+          label="Landmark"
+          hint="Ganito talaga magturo ng direksyon dito. Kasama ito sa itinatago kapag hindi buong address ang pinili mo."
+        >
+          <Textarea
+            id="landmark"
+            value={values.landmark}
+            maxLength={300}
+            rows={2}
+            disabled={saving || readOnly}
+            placeholder="Katapat ng Mercury Drug, kulay dilaw na gate. Tumawag na lang kapag nasa gate na."
+            className="min-h-20"
+            onChange={(event) => set("landmark", event.target.value)}
+          />
+        </Field>
       </Section>
 
       {formError ? (

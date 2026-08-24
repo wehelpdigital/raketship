@@ -13,8 +13,10 @@ function business(
     business_name: null,
     tagline: null,
     description: null,
-    business_type: null,
     logo_path: null,
+    logo_zoom: 1,
+    logo_x: 50,
+    logo_y: 50,
     cover_path: null,
     theme_preset: "pula",
     mobile_number: null,
@@ -22,17 +24,12 @@ function business(
     facebook_url: null,
     instagram_handle: null,
     website_url: null,
-    gcash_number: null,
-    maya_number: null,
-    payment_name: null,
-    payment_note: null,
     street_address: null,
     barangay: null,
     city: null,
     province: null,
     landmark: null,
     address_visibility: "area",
-    hours_note: null,
     created_at: "2026-01-01T00:00:00.000Z",
     updated_at: "2026-01-01T00:00:00.000Z",
     ...overrides,
@@ -200,5 +197,35 @@ describe("BusinessHeader", () => {
       />
     )
     expect(screen.getByText("SN")).toBeInTheDocument()
+  })
+})
+
+describe("the landmark, now that it is a paragraph", () => {
+  it("keeps the line breaks the owner typed", () => {
+    render(
+      <BusinessFooter
+        business={business({
+          barangay: "Concepcion Uno",
+          landmark: "Katapat ng Mercury Drug.\nKulay dilaw na gate.",
+        })}
+      />
+    )
+    const shown = screen.getByText(/Katapat ng Mercury Drug/)
+    expect(shown).toHaveClass("whitespace-pre-line")
+  })
+
+  it("is still withheld along with the rest when the address is hidden", () => {
+    // The landmark names the place as precisely as the street does, so hiding
+    // the address and printing "kulay dilaw na gate" would defeat the setting.
+    render(
+      <BusinessFooter
+        business={business({
+          address_visibility: "hidden",
+          barangay: "Concepcion Uno",
+          landmark: "Katapat ng Mercury Drug",
+        })}
+      />
+    )
+    expect(screen.queryByText(/Mercury Drug/)).not.toBeInTheDocument()
   })
 })

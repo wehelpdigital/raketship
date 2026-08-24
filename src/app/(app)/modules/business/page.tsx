@@ -13,7 +13,8 @@ import {
 import { BusinessForm } from "@/features/business/business-form"
 import { ImageField } from "@/features/business/image-field"
 import { PalettePicker } from "@/features/business/palette-picker"
-import { initialsOf, mediaUrl } from "@/lib/business/media"
+import { LogoMask } from "@/features/business/logo-mask"
+import { mediaUrl } from "@/lib/business/media"
 import { supabaseConfigured } from "@/lib/env"
 import { getBusinessProfile } from "@/lib/queries/business"
 import { getWorkspace } from "@/lib/queries/workspace"
@@ -107,8 +108,14 @@ export default async function BusinessModulePage() {
               <ImageField
                 kind="logo"
                 label="Logo"
-                hint="Square"
+                hint="Bilog ang hugis"
                 url={logoUrl}
+                name={businessName}
+                crop={{
+                  zoom: profile?.logo_zoom ?? 1,
+                  x: profile?.logo_x ?? 50,
+                  y: profile?.logo_y ?? 50,
+                }}
               />
               <ImageField
                 kind="cover"
@@ -134,18 +141,16 @@ export default async function BusinessModulePage() {
                     ) : null}
                   </div>
                   <div className="flex items-center gap-3 p-3">
-                    <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary/10 text-sm font-semibold text-primary ring-1 ring-primary/15">
-                      {logoUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={logoUrl}
-                          alt=""
-                          className="size-full object-contain p-1"
-                        />
-                      ) : (
-                        initialsOf(businessName)
-                      )}
-                    </span>
+                    <LogoMask
+                      url={logoUrl}
+                      name={businessName}
+                      crop={{
+                        zoom: profile?.logo_zoom ?? 1,
+                        x: profile?.logo_x ?? 50,
+                        y: profile?.logo_y ?? 50,
+                      }}
+                      className="size-10 text-sm"
+                    />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold">
                         {businessName || "Ang raket mo"}

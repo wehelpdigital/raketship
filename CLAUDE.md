@@ -88,9 +88,19 @@ and also holds the email and the admin flag, and RLS grants access by ROW rather
 than by column — so opening it to the anonymous booking page would hand out the
 email with the shop name. `saveBusinessProfile()` writes both copies in one call.
 
-**Address visibility defaults to `area`**, which drops the street. The same table
-serves a stall that wants to be found and a freelancer working from a bedroom, so
-filling the address in must never publish a home by accident.
+**Address visibility defaults to `area`**, which drops the street **and the
+landmark** — "katapat ng Mercury Drug, kulay dilaw na gate" locates a house as
+precisely as a street number, so gating one without the other defeats the
+setting for exactly the person it protects. It governs the PUBLIC PAGE only;
+the form always shows every address box, because hiding an input someone has
+already typed into reads as data loss.
+
+**The logo is always a circle.** `LogoMask` is the single component for every
+place one appears, and `lib/business/logo.ts` holds the framing: `object-fit:
+cover` guarantees the mask is filled whatever the aspect ratio, `object-position`
+picks which part shows, and `transform-origin` tracks it so zooming stays on the
+chosen point. Three numbers, no clamping invariant to get wrong, and no crop can
+leave a gap. The original file is never re-encoded, so framing stays adjustable.
 
 **Colour themes.** `src/lib/theme/palettes.ts` is generated and then reviewed.
 Every pair is measured, never eyeballed: `primaryForeground` clears 4.5:1 on

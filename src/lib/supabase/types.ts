@@ -264,9 +264,12 @@ export type BusinessProfileRow = {
   business_name: string | null
   tagline: string | null
   description: string | null
-  business_type: string | null
   /** Storage object path in the 'business-media' bucket, not a URL. */
   logo_path: string | null
+  /** Which part of the logo its circular mask shows. See lib/business/logo.ts. */
+  logo_zoom: number
+  logo_x: number
+  logo_y: number
   cover_path: string | null
   /** A key into src/lib/theme/palettes.ts. Unknown keys fall back to the brand. */
   theme_preset: string
@@ -275,17 +278,12 @@ export type BusinessProfileRow = {
   facebook_url: string | null
   instagram_handle: string | null
   website_url: string | null
-  gcash_number: string | null
-  maya_number: string | null
-  payment_name: string | null
-  payment_note: string | null
   street_address: string | null
   barangay: string | null
   city: string | null
   province: string | null
   landmark: string | null
   address_visibility: AddressVisibility
-  hours_note: string | null
   created_at: string
   updated_at: string
 }

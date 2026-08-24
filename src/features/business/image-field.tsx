@@ -2,10 +2,13 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { ImagePlus, Loader2, Trash2 } from "lucide-react"
+import { Crop, ImagePlus, Loader2, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import { LogoEditor } from "@/features/business/logo-editor"
+import { LogoMask } from "@/features/business/logo-mask"
+import { normaliseCrop, type LogoCrop } from "@/lib/business/logo"
 import {
   removeBusinessImage,
   uploadBusinessImage,
@@ -19,6 +22,10 @@ export interface ImageFieldProps {
   hint: string
   /** Public URL of what is stored now, or null. */
   url: string | null
+  /** Logo only: which part of it the circle shows. */
+  crop?: Partial<LogoCrop> | null
+  /** Logo only: the business name, for the initials fallback. */
+  name?: string | null
   disabled?: boolean
 }
 
@@ -35,12 +42,15 @@ export function ImageField({
   label,
   hint,
   url,
+  crop,
+  name = null,
   disabled = false,
 }: ImageFieldProps) {
   const router = useRouter()
   const inputRef = React.useRef<HTMLInputElement>(null)
   const [preview, setPreview] = React.useState<string | null>(null)
   const [busy, setBusy] = React.useState(false)
+  const [framing, setFraming] = React.useState(false)
 
   React.useEffect(() => {
     return () => {
@@ -122,42 +132,65 @@ export function ImageField({
       <div className="flex items-baseline justify-between gap-2">
         <span className="text-sm font-medium">{label}</span>
         {shown ? (
-          <Button
-            type="button"
-            variant="ghost"
-            className="h-8 gap-1.5 px-2 text-xs text-muted-foreground hover:text-destructive"
-            disabled={busy || disabled}
-            onClick={clear}
-          >
-            <Trash2 className="size-3.5" aria-hidden="true" />
-            Tanggalin
-          </Button>
+          <span className="flex items-center gap-1">
+            {/* Only the logo is masked to a circle, so only the logo has a
+                part of itself to choose. A blob: preview has not been stored
+                yet, so there is nothing to reframe until the upload lands. */}
+            {isLogo && url ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-8 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
+                disabled={busy || disabled}
+                onClick={() => setFraming(true)}
+              >
+                <Crop className="size-3.5" aria-hidden="true" />
+                Ayusin
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-8 gap-1.5 px-2 text-xs text-muted-foreground hover:text-destructive"
+              disabled={busy || disabled}
+              onClick={clear}
+            >
+              <Trash2 className="size-3.5" aria-hidden="true" />
+              Tanggalin
+            </Button>
+          </span>
         ) : null}
       </div>
 
       <label
         className={cn(
-          "relative flex cursor-pointer items-center justify-center overflow-hidden rounded-xl border border-dashed border-input bg-muted/40 transition-colors",
+          "relative flex cursor-pointer items-center justify-center overflow-hidden border border-dashed border-input bg-muted/40 transition-colors",
           "hover:border-ring has-focus-visible:border-ring has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
-          // A logo is square and small; a cover is a wide banner. Showing both
-          // at their real proportion is the only way the owner can tell what
-          // will actually be cropped.
-          isLogo ? "size-24 sm:size-28" : "aspect-[3/1] w-full",
+          // The logo is masked to a circle everywhere it appears, so it is
+          // shown as one here too — a square preview of a round thing tells
+          // the owner nothing about what will be cut off.
+          isLogo
+            ? "size-24 rounded-full sm:size-28"
+            : "aspect-[3/1] w-full rounded-xl",
           (busy || disabled) && "pointer-events-none opacity-60"
         )}
       >
         {shown ? (
-          /* A blob: URL has no intrinsic size to hand next/image, and the
-             bucket already caps these at 5MB. */
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={shown}
-            alt=""
-            className={cn(
-              "size-full",
-              isLogo ? "object-contain p-2" : "object-cover"
-            )}
-          />
+          isLogo ? (
+            <LogoMask
+              url={shown}
+              name={name}
+              // A freshly chosen file has not been framed yet, so it previews
+              // centred; the stored crop applies once the upload lands.
+              crop={preview ? undefined : normaliseCrop(crop)}
+              className="size-full ring-0"
+            />
+          ) : (
+            /* A blob: URL has no intrinsic size to hand next/image, and the
+               bucket already caps these at 5MB. */
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={shown} alt="" className="size-full object-cover" />
+          )
         ) : (
           <span className="flex flex-col items-center gap-1 px-3 text-center text-muted-foreground">
             <ImagePlus className="size-5" aria-hidden="true" />
@@ -189,6 +222,15 @@ export function ImageField({
         />
         <span className="sr-only">{label}</span>
       </label>
+
+      {isLogo && url ? (
+        <LogoEditor
+          url={url}
+          crop={normaliseCrop(crop)}
+          open={framing}
+          onOpenChange={setFraming}
+        />
+      ) : null}
     </div>
   )
 }

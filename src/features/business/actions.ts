@@ -16,6 +16,7 @@ import {
   tidyHandle,
   tidyUrl,
 } from "@/lib/business/contact"
+import { normaliseCrop, type LogoCrop } from "@/lib/business/logo"
 import {
   IMAGE_TYPES,
   MAX_IMAGE_BYTES,
@@ -82,24 +83,20 @@ const profileSchema = z.object({
     .max(80, "Keep the business name under 80 characters."),
   tagline: text(60).describe("tagline"),
   description: text(600),
-  businessType: text(40),
   themePreset: z.string().trim().max(40),
   mobileNumber: text(40),
   chatApps: z.array(z.enum(CHAT_APPS)).max(8),
   facebookUrl: text(300),
   instagramHandle: text(120),
   websiteUrl: text(300),
-  gcashNumber: text(40),
-  mayaNumber: text(40),
-  paymentName: text(80),
-  paymentNote: text(300),
   streetAddress: text(120),
   barangay: text(80),
   city: text(80),
   province: text(80),
-  landmark: text(120),
+  // A textarea now: "katapat ng Mercury Drug, kulay dilaw na gate" is how
+  // directions are actually given here, and that does not fit on one line.
+  landmark: text(300),
   addressVisibility: z.enum(VISIBILITY),
-  hoursNote: text(120),
 })
 
 export type SaveBusinessInput = z.input<typeof profileSchema>
@@ -140,16 +137,6 @@ export async function saveBusinessProfile(
     mobile = normalisePhMobile(v.mobileNumber)
     if (!mobile) fieldErrors.mobileNumber = "That mobile number does not look right."
   }
-  let gcash: string | null = null
-  if (v.gcashNumber) {
-    gcash = normalisePhMobile(v.gcashNumber)
-    if (!gcash) fieldErrors.gcashNumber = "A GCash number is an 09xx mobile number."
-  }
-  let maya: string | null = null
-  if (v.mayaNumber) {
-    maya = normalisePhMobile(v.mayaNumber)
-    if (!maya) fieldErrors.mayaNumber = "A Maya number is an 09xx mobile number."
-  }
 
   let facebook: string | null = null
   if (v.facebookUrl) {
@@ -181,24 +168,18 @@ export async function saveBusinessProfile(
     business_name: orNull(v.businessName),
     tagline: orNull(v.tagline),
     description: orNull(v.description),
-    business_type: orNull(v.businessType),
     theme_preset: preset,
     mobile_number: mobile,
     chat_apps: v.chatApps,
     facebook_url: facebook,
     instagram_handle: instagram,
     website_url: website,
-    gcash_number: gcash,
-    maya_number: maya,
-    payment_name: orNull(v.paymentName),
-    payment_note: orNull(v.paymentNote),
     street_address: orNull(v.streetAddress),
     barangay: orNull(v.barangay),
     city: orNull(v.city),
     province: orNull(v.province),
     landmark: orNull(v.landmark),
     address_visibility: v.addressVisibility,
-    hours_note: orNull(v.hoursNote),
   }
 
   const { error } = await db
@@ -246,6 +227,38 @@ export async function setThemePreset(preset: string): Promise<BusinessActionResu
 
   refresh()
   return { ok: true, message: "Kulay saved." }
+}
+
+/**
+ * Where the logo sits inside its circle.
+ *
+ * Normalised rather than validated: this is three numbers driving a style
+ * attribute, and clamping a bad one into range is strictly better for the
+ * owner than refusing the save. The database check constraint is the backstop.
+ */
+export async function setLogoCrop(
+  crop: Partial<LogoCrop>
+): Promise<BusinessActionResult> {
+  const session = await requireSession()
+  if ("error" in session) return session.error
+  const { db, userId } = session
+
+  const { zoom, x, y } = normaliseCrop(crop)
+
+  const row: Insert<"business_profiles"> = {
+    user_id: userId,
+    logo_zoom: zoom,
+    logo_x: x,
+    logo_y: y,
+  }
+  const { error } = await db
+    .from("business_profiles")
+    .upsert(row, { onConflict: "user_id" })
+
+  if (error) return fail(TRY_AGAIN)
+
+  refresh()
+  return { ok: true, message: "Naayos na ang logo." }
 }
 
 // -----------------------------------------------------------------------------
@@ -300,9 +313,12 @@ export async function uploadBusinessImage(
 
   const previous = await currentPath(db, userId, kind)
 
+  // A new logo is a new picture, so last picture's framing means nothing —
+  // keeping it would show a corner of the new one for no reason anyone could
+  // work out.
   const patch: Insert<"business_profiles"> =
     kind === "logo"
-      ? { user_id: userId, logo_path: path }
+      ? { user_id: userId, logo_path: path, logo_zoom: 1, logo_x: 50, logo_y: 50 }
       : { user_id: userId, cover_path: path }
 
   const { error } = await db
