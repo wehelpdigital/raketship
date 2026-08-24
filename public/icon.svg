@@ -1,28 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="RaketShip">
   <defs>
     <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ffb163"/>
-      <stop offset="1" stop-color="#e2620d"/>
+      <stop offset="0" stop-color="#f5555a"/>
+      <stop offset="1" stop-color="#c00d17"/>
     </linearGradient>
     <linearGradient id="flame" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ffe08a"/>
-      <stop offset="1" stop-color="#ff9a3c"/>
+      <stop offset="0" stop-color="#ffd9a0"/>
+      <stop offset="1" stop-color="#ff8a4c"/>
     </linearGradient>
   </defs>
 
-  <rect width="512" height="512" rx="112" fill="#241a12"/>
+  <!-- A white tile: the brand is red ON white, so the mark should say so. -->
+  <rect width="512" height="512" rx="112" fill="#ffffff"/>
+  <rect x="6" y="6" width="500" height="500" rx="106" fill="none" stroke="#f0dcdc" stroke-width="4"/>
 
   <!-- exhaust -->
   <path d="M256 404c-26 0-44-20-44-44 0-26 18-44 44-72 26 28 44 46 44 72 0 24-18 44-44 44z" fill="url(#flame)"/>
 
   <!-- fins -->
-  <path d="M186 300c-26 12-40 34-42 66 30-8 50-20 62-38z" fill="#a8410a"/>
-  <path d="M326 300c26 12 40 34 42 66-30-8-50-20-62-38z" fill="#a8410a"/>
+  <path d="M186 300c-26 12-40 34-42 66 30-8 50-20 62-38z" fill="#8f0a12"/>
+  <path d="M326 300c26 12 40 34 42 66-30-8-50-20-62-38z" fill="#8f0a12"/>
 
   <!-- body -->
   <path d="M256 84c50 44 78 106 78 172 0 34-8 62-20 84h-116c-12-22-20-50-20-84 0-66 28-128 78-172z" fill="url(#body)"/>
 
   <!-- window -->
-  <circle cx="256" cy="216" r="36" fill="#241a12"/>
-  <circle cx="256" cy="216" r="24" fill="#8fdcc4"/>
+  <circle cx="256" cy="216" r="36" fill="#ffffff"/>
+  <circle cx="256" cy="216" r="24" fill="#d32526"/>
 </svg>

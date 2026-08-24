@@ -1,8 +1,13 @@
-import type { ReactNode } from "react"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { CalendarCheck, Clock, Globe, ShieldCheck } from "lucide-react"
-
+import {
+  CalendarCheck,
+  CalendarOff,
+  ChevronDown,
+  Clock,
+  Globe,
+  ShieldCheck,
+} from "lucide-react"
 import { BookingFlow, type OpenRange } from "@/features/booking/booking-flow"
 import {
   buildSlots,
@@ -17,11 +22,9 @@ import { bookingUrl } from "@/lib/booking/slug"
 import { env } from "@/lib/env"
 import { getPublishedCalendar, getTakenSlots } from "@/lib/queries/booking"
 import { cn } from "@/lib/utils"
-
 interface PageProps {
   params: Promise<{ slug: string }>
 }
-
 /** "GMT+8", or "GMT+5:30" where the zone needs the minutes. */
 function gmtLabel(at: Date, timeZone: string): string {
   const offset = zoneOffsetMinutes(at, timeZone)
@@ -31,7 +34,6 @@ function gmtLabel(at: Date, timeZone: string): string {
   const minutes = absolute % 60
   return `GMT${sign}${hours}${minutes ? `:${String(minutes).padStart(2, "0")}` : ""}`
 }
-
 function initialsOf(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean)
   if (parts.length === 0) return "R"
@@ -41,7 +43,6 @@ function initialsOf(name: string): string {
     .join("")
     .toUpperCase()
 }
-
 /**
  * These links travel by being pasted — into Messenger, Viber, a Facebook page
  * bio. The preview card those apps unfurl IS the first impression, so the name
@@ -52,7 +53,6 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   const { slug } = await params
   const detail = await getPublishedCalendar(slug)
-
   if (!detail) {
     return {
       title: "Booking link not found",
@@ -60,14 +60,12 @@ export async function generateMetadata({
       robots: { index: false, follow: false },
     }
   }
-
   const { calendar } = detail
   const description =
     calendar.description?.trim() ||
     `Pumili ng oras para sa ${calendar.name}. ${calendar.duration_minutes} minutes bawat booking.`
   const url = bookingUrl(calendar.slug, env.siteUrl)
   const social = `Book with ${calendar.name}`
-
   return {
     title: calendar.name,
     description,
@@ -86,16 +84,13 @@ export async function generateMetadata({
     },
   }
 }
-
 export default async function PublicBookingPage({ params }: PageProps) {
   const { slug } = await params
   const detail = await getPublishedCalendar(slug)
-
   // getPublishedCalendar already filters on is_published; the second check is
   // here because a draft leaking onto the open web is the one failure this
   // page must not have.
   if (!detail || !detail.calendar.is_published) notFound()
-
   const { calendar, availability, blackouts, fields } = detail
   const now = new Date()
   const rules: SlotRules = {
@@ -104,7 +99,6 @@ export default async function PublicBookingPage({ params }: PageProps) {
     bufferMinutes: calendar.buffer_minutes,
     noticeHours: calendar.notice_hours,
   }
-
   // How far ahead this calendar accepts bookings is the owner's decision.
   // getAvailableSlots re-derives the same bound, so a hand-typed date beyond it
   // is refused rather than merely unclickable.
@@ -115,7 +109,6 @@ export default async function PublicBookingPage({ params }: PageProps) {
   )
   const firstDate = dates[0] ?? isoDateInZone(now, calendar.timezone)
   const lastDate = dates[dates.length - 1] ?? firstDate
-
   // One read for the whole fortnight. Reaching back a day catches a long
   // booking made yesterday evening that still overlaps this morning.
   const taken = await getTakenSlots(
@@ -125,13 +118,11 @@ export default async function PublicBookingPage({ params }: PageProps) {
     ).toISOString(),
     zonedTimeToInstant(lastDate, 1440, calendar.timezone).toISOString()
   )
-
   /*
     The server cannot know the visitor's timezone, and their day is not the
     shop's: a Manila shop's Monday is Sunday evening in New York. So instead of
     deciding which DAYS are open, it sends the open stretches as absolute
     instants and lets the browser group them by whatever zone the visitor picks.
-
     First and last instant per shop-day is enough to grey out the picker — it
     over-approximates across a lunch break, and the fetch on tapping a day is
     what actually decides. A handful of numbers travels; a year of slots does not.
@@ -153,160 +144,161 @@ export default async function PublicBookingPage({ params }: PageProps) {
       }
     })
     .filter((range): range is OpenRange => range !== null)
-
   const city =
     calendar.timezone.split("/").pop()?.replace(/_/g, " ") ?? calendar.timezone
   const timezoneLabel = `${city} · ${gmtLabel(now, calendar.timezone)}`
   const openDays = openRanges.length
-
+  const hasTimes = availability.length > 0 && openDays > 0
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6 md:max-w-3xl lg:max-w-5xl lg:px-8 lg:py-10 xl:max-w-6xl">
+    <div className="mx-auto w-full max-w-xl px-4 py-6 sm:px-6 lg:max-w-5xl lg:px-8 lg:py-10">
       {/*
-        Phone: identity first, then the picker, one column. From `lg` the
-        identity moves into a sticky third of the width and stays readable while
-        the customer scrolls the times — which is when they most want to check
-        they are on the right page.
+        Action first. The old layout put the identity, a meta card, a seven-row
+        opening-hours table and a privacy note above the wizard, so a phone
+        scrolled through four boxes before the customer could tap anything —
+        and that table only repeats what the greyed-out date picker shows.
+        Now: a compact header, then the booking, then the detail for whoever
+        wants it. Desktop gets the detail as a column instead of a disclosure.
       */}
-      <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
-        <aside className="space-y-4 lg:sticky lg:top-8 lg:col-span-1 lg:self-start">
-          <div className="flex items-start gap-3">
-            <span
-              aria-hidden
-              className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-base font-semibold text-primary lg:size-14 lg:text-lg"
-            >
-              {initialsOf(calendar.name)}
-            </span>
-            <div className="min-w-0 space-y-1">
-              <h1 className="text-xl font-semibold tracking-tight text-balance lg:text-2xl xl:text-3xl">
-                {calendar.name}
-              </h1>
-              <p className="text-xs font-medium text-muted-foreground">
-                Booking page
+      <header className="mb-6 lg:mb-8">
+        <div className="flex items-start gap-3 sm:gap-4">
+          <span
+            aria-hidden
+            className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-base font-semibold text-primary ring-1 ring-primary/15 sm:size-14 sm:text-lg"
+          >
+            {initialsOf(calendar.name)}
+          </span>
+          <div className="min-w-0 flex-1 space-y-1">
+            <h1 className="text-xl font-semibold tracking-tight text-balance sm:text-2xl lg:text-3xl">
+              {calendar.name}
+            </h1>
+            {/* Duration and zone ride in the header: they are the two facts
+                that decide whether someone books at all. */}
+            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <Clock className="size-4 shrink-0" aria-hidden />
+                {calendar.duration_minutes} minutes
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Globe className="size-4 shrink-0" aria-hidden />
+                {timezoneLabel}
+              </span>
+            </p>
+          </div>
+        </div>
+        {calendar.description ? (
+          <p className="mt-3 max-w-prose text-sm text-pretty text-muted-foreground sm:mt-4 sm:text-base">
+            {calendar.description}
+          </p>
+        ) : null}
+      </header>
+      <div className="grid gap-6 lg:grid-cols-5 lg:items-start lg:gap-10">
+        {/* The booking gets the wider share; it is the only thing on this page
+            with a job to do. */}
+        <main className="lg:col-span-3">
+          {hasTimes ? (
+            <BookingFlow
+              calendarId={calendar.id}
+              calendarName={calendar.name}
+              durationMinutes={calendar.duration_minutes}
+              timezone={calendar.timezone}
+              timezoneLabel={timezoneLabel}
+              fields={fields}
+              openRanges={openRanges}
+              horizonDays={calendar.booking_horizon_days}
+            />
+          ) : (
+            <div className="rounded-2xl bg-card p-6 text-center ring-1 ring-border">
+              <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <CalendarOff className="size-6" aria-hidden />
+              </span>
+              <p className="mt-3 font-medium">Walang bukás na oras sa ngayon</p>
+              <p className="mx-auto mt-1 max-w-sm text-sm text-pretty text-muted-foreground">
+                Wala pang bakante sa mga susunod na araw. Pakibalikan po ito
+                mamaya, o mag-message na lang muna kayo.
               </p>
             </div>
-          </div>
-
-          {calendar.description ? (
-            <p className="text-sm text-pretty text-muted-foreground">
-              {calendar.description}
-            </p>
-          ) : null}
-
-          <dl className="space-y-3 rounded-xl bg-card p-4 ring-1 ring-border">
-            <MetaRow
-              icon={<Clock className="size-4" aria-hidden />}
-              label="Haba ng booking"
-              value={`${calendar.duration_minutes} minutes`}
-            />
-            {/*
-              The single biggest source of confusion on a booking page, so it is
-              stated outright rather than implied by the times themselves.
-            */}
-            <MetaRow
-              icon={<Globe className="size-4" aria-hidden />}
-              label="Oras na ipinapakita"
-              value={timezoneLabel}
-              hint={`Lahat ng oras dito ay sa ${calendar.timezone}.`}
-            />
-          </dl>
-
-          {/* One row per day. Joined into a single string the whole week runs
-              together and a suki cannot tell Tuesday from Thursday. */}
-          <div className="space-y-2 rounded-xl bg-card p-4 ring-1 ring-border">
-            <p className="flex items-center gap-2 text-xs text-muted-foreground">
-              <CalendarCheck className="size-4 shrink-0" aria-hidden />
+          )}
+        </main>
+        {/* Phone: folded under the booking, because nobody opens a booking link
+            wanting to read a timetable. Desktop: simply shown. */}
+        <aside className="lg:col-span-2 lg:sticky lg:top-10">
+          <details className="group rounded-2xl bg-card ring-1 ring-border lg:hidden">
+            <summary className="flex h-12 cursor-pointer list-none items-center gap-2 px-4 text-sm font-medium">
+              <CalendarCheck
+                className="size-4 shrink-0 text-muted-foreground"
+                aria-hidden
+              />
+              Bukás na araw
+              <ChevronDown
+                className="ml-auto size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
+                aria-hidden
+              />
+            </summary>
+            <div className="border-t px-4 py-3">
+              <WeeklyHours availability={availability} />
+            </div>
+          </details>
+          <div className="hidden lg:block">
+            <p className="mb-2 flex items-center gap-2 text-sm font-medium">
+              <CalendarCheck
+                className="size-4 shrink-0 text-muted-foreground"
+                aria-hidden
+              />
               Bukás na araw
             </p>
-            <dl className="overflow-hidden rounded-lg ring-1 ring-border/70">
-              {groupAvailabilityByDay(availability).map((day) => (
-                <div
-                  key={day.weekday}
-                  className="flex items-baseline gap-3 border-b border-border/50 px-3 py-1.5 last:border-b-0 odd:bg-muted/25"
-                >
-                  <dt className="w-9 shrink-0 text-xs font-medium">
-                    <abbr title={day.long} className="no-underline">
-                      {day.short}
-                    </abbr>
-                  </dt>
-                  <dd
-                    className={cn(
-                      "min-w-0 flex-1 text-right text-xs tabular-nums",
-                      day.ranges.length === 0
-                        ? "text-muted-foreground/60"
-                        : "text-foreground"
-                    )}
-                  >
-                    {day.ranges.length === 0 ? (
-                      "Sarado"
-                    ) : (
-                      <span className="flex flex-col items-end gap-0.5">
-                        {day.ranges.map((range) => (
-                          <span key={range}>{range}</span>
-                        ))}
-                      </span>
-                    )}
-                  </dd>
-                </div>
-              ))}
-            </dl>
+            <div className="rounded-2xl bg-card p-3 ring-1 ring-border">
+              <WeeklyHours availability={availability} />
+            </div>
           </div>
-
-          <p className="flex items-start gap-2 text-xs text-muted-foreground">
+          <p className="mt-4 flex items-start gap-2 text-xs text-muted-foreground">
             <ShieldCheck className="mt-0.5 size-3.5 shrink-0" aria-hidden />
             <span className="text-pretty">
               Ang mga detalyeng ibibigay mo ay para lang sa booking na ito.
             </span>
           </p>
         </aside>
-
-        <div className="lg:col-span-2">
-          {availability.length === 0 || openDays === 0 ? (
-            <div className="mb-4 rounded-xl bg-card px-4 py-3 text-sm ring-1 ring-border">
-              <p className="font-medium">Walang bukás na oras sa ngayon</p>
-              <p className="mt-0.5 text-pretty text-muted-foreground">
-                Wala pang bakante sa susunod na dalawang linggo. Pakibalikan po
-                ito mamaya, o mag-message na lang muna kayo.
-              </p>
-            </div>
-          ) : null}
-
-          <BookingFlow
-            calendarId={calendar.id}
-            calendarName={calendar.name}
-            durationMinutes={calendar.duration_minutes}
-            timezone={calendar.timezone}
-            timezoneLabel={timezoneLabel}
-            fields={fields}
-            openRanges={openRanges}
-            horizonDays={calendar.booking_horizon_days}
-          />
-        </div>
       </div>
     </div>
   )
 }
-
-function MetaRow({
-  icon,
-  label,
-  value,
-  hint,
+/** The week, one row per day — shared by the phone disclosure and the column. */
+function WeeklyHours({
+  availability,
 }: {
-  icon: ReactNode
-  label: string
-  value: string
-  hint?: string
+  availability: Parameters<typeof groupAvailabilityByDay>[0]
 }) {
   return (
-    <div className="flex items-start gap-3">
-      <span className="mt-0.5 shrink-0 text-muted-foreground">{icon}</span>
-      <div className="min-w-0 space-y-0.5">
-        <dt className="text-xs text-muted-foreground">{label}</dt>
-        <dd className="text-sm font-medium text-pretty">{value}</dd>
-        {hint ? (
-          <dd className="text-xs text-pretty text-muted-foreground">{hint}</dd>
-        ) : null}
-      </div>
-    </div>
+    <dl className="divide-y divide-border/60">
+      {groupAvailabilityByDay(availability).map((day) => (
+        <div
+          key={day.weekday}
+          className="flex items-baseline gap-3 py-1.5 first:pt-0 last:pb-0"
+        >
+          <dt className="w-9 shrink-0 text-xs font-medium">
+            <abbr title={day.long} className="no-underline">
+              {day.short}
+            </abbr>
+          </dt>
+          <dd
+            className={cn(
+              "min-w-0 flex-1 text-right text-xs tabular-nums",
+              day.ranges.length === 0
+                ? "text-muted-foreground/60"
+                : "text-foreground"
+            )}
+          >
+            {day.ranges.length === 0 ? (
+              "Sarado"
+            ) : (
+              <span className="flex flex-col items-end gap-0.5">
+                {day.ranges.map((range) => (
+                  <span key={range}>{range}</span>
+                ))}
+              </span>
+            )}
+          </dd>
+        </div>
+      ))}
+    </dl>
   )
 }

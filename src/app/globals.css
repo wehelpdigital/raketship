@@ -4,110 +4,109 @@
 
 /* ---------------------------------------------------------------------------
    RaketShip design tokens
-   Brand: an energetic orange primary. Because it owns the warm end of the
-   scale, `destructive`, `warning` and the chart hues are all spaced away from
-   it deliberately — see the notes on each.
+   Brand: red on white.
+
+   Red is also the colour of an error, and the two cannot be told apart by hue —
+   measured, the furthest a plausible crimson sits from the brand red is about
+   1.3:1, which reads as the same colour. So they are separated by TREATMENT
+   instead: primary is a solid fill with light text, destructive is a soft tint
+   with dark red text (see button.tsx). Anything destructive should also carry
+   an icon or explicit wording; colour alone will not carry it here.
 --------------------------------------------------------------------------- */
 :root {
   --radius: 0.75rem;
 
-  /* Neutrals carry a faint warm cast so they sit under the orange rather than
-     fighting it — a cool grey next to orange reads as dirty. */
-  --background: oklch(0.994 0.003 65);
-  --foreground: oklch(0.185 0.016 55);
+  /* Barely off-white, so a pure-white card lifts off it without a border doing
+     all the work. Still reads as a white theme. */
+  --background: oklch(0.985 0.002 25);
+  --foreground: oklch(0.2 0.012 25);
 
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.185 0.016 55);
+  --card-foreground: oklch(0.2 0.012 25);
 
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.185 0.016 55);
+  --popover-foreground: oklch(0.2 0.012 25);
 
-  --primary: oklch(0.638 0.187 47);
-  /* Deep warm brown, not white. White on this orange measures 3.56:1 — under
-     the 4.5:1 AA needs for the small text that sits on primary buttons — and
-     dulling the orange enough to fix that turns it brown. Dark text keeps the
-     colour vivid at 4.7:1, and matches what dark mode already does. */
-  --primary-foreground: oklch(0.215 0.028 50);
+  /* 5.2:1 against white text — comfortably past AA for the small text that
+     sits on a primary button, without dulling the red. */
+  --primary: oklch(0.56 0.208 27);
+  --primary-foreground: oklch(0.99 0.004 25);
 
-  --secondary: oklch(0.965 0.009 65);
-  --secondary-foreground: oklch(0.245 0.022 55);
+  --secondary: oklch(0.965 0.005 25);
+  --secondary-foreground: oklch(0.245 0.016 25);
 
-  --muted: oklch(0.967 0.007 65);
-  --muted-foreground: oklch(0.522 0.019 55);
+  --muted: oklch(0.967 0.004 25);
+  --muted-foreground: oklch(0.52 0.014 25);
 
-  --accent: oklch(0.955 0.028 60);
-  --accent-foreground: oklch(0.26 0.045 50);
+  --accent: oklch(0.955 0.022 25);
+  --accent-foreground: oklch(0.26 0.04 25);
 
-  /* Held at a true red: orange sits only ~20 hue steps away, so destructive
-     needs the extra chroma to stay unmistakably a warning, not a brand tint. */
-  --destructive: oklch(0.567 0.248 26);
-  --destructive-foreground: oklch(0.995 0.006 65);
+  /* Deeper and cooler than the brand. It will never be unmistakable by hue —
+     the treatment is what separates them. */
+  --destructive: oklch(0.485 0.205 14);
+  --destructive-foreground: oklch(0.99 0.004 25);
 
-  --success: oklch(0.596 0.145 152);
+  --success: oklch(0.58 0.145 152);
   --success-foreground: oklch(0.99 0.005 152);
 
-  /* Pushed to yellow. At its old amber the warning colour was practically the
-     primary, which is the one thing a warning must never look like. */
   --warning: oklch(0.79 0.15 92);
   --warning-foreground: oklch(0.26 0.05 92);
 
-  --border: oklch(0.912 0.008 65);
-  --input: oklch(0.912 0.008 65);
-  --ring: oklch(0.638 0.187 47);
+  --border: oklch(0.915 0.004 25);
+  --input: oklch(0.915 0.004 25);
+  --ring: oklch(0.56 0.208 27);
 
-  /* Flow-builder node hues — one per element category, spaced far enough apart
-     to stay distinguishable now that the brand owns the orange end. */
-  --chart-1: oklch(0.638 0.187 47);  /* trigger  — orange */
+  /* Flow-builder node hues. The brand owns red, so the rest keep their
+     distance — nothing else sits in the 0-60 range. */
+  --chart-1: oklch(0.56 0.208 27);   /* trigger  — red    */
   --chart-2: oklch(0.79 0.15 92);    /* delay    — yellow */
-  --chart-3: oklch(0.596 0.145 152); /* action   — green  */
+  --chart-3: oklch(0.58 0.145 152);  /* action   — green  */
   --chart-4: oklch(0.575 0.196 300); /* decision — violet */
-  --chart-5: oklch(0.62 0.124 226);  /* data     — blue   */
+  --chart-5: oklch(0.6 0.13 235);    /* data     — blue   */
 }
 
 .dark {
-  /* A warm-leaning near-black. A blue-grey dark under orange reads cold and
-     makes the brand look like it is glowing on the wrong surface. */
-  --background: oklch(0.163 0.011 55);
-  --foreground: oklch(0.972 0.004 65);
+  /* A neutral near-black. Any warmth here turns the red muddy. */
+  --background: oklch(0.16 0.008 25);
+  --foreground: oklch(0.972 0.003 25);
 
-  --card: oklch(0.208 0.013 55);
-  --card-foreground: oklch(0.972 0.004 65);
+  --card: oklch(0.207 0.01 25);
+  --card-foreground: oklch(0.972 0.003 25);
 
-  --popover: oklch(0.218 0.013 55);
-  --popover-foreground: oklch(0.972 0.004 65);
+  --popover: oklch(0.217 0.01 25);
+  --popover-foreground: oklch(0.972 0.003 25);
 
-  /* Lifted and slightly desaturated against the light theme: full-chroma
-     orange on a dark ground vibrates. */
-  --primary: oklch(0.712 0.172 51);
-  --primary-foreground: oklch(0.17 0.022 50);
+  /* Lifted for a dark ground; full-chroma red on near-black vibrates. */
+  --primary: oklch(0.66 0.19 27);
+  --primary-foreground: oklch(0.17 0.02 25);
 
-  --secondary: oklch(0.268 0.015 55);
-  --secondary-foreground: oklch(0.972 0.004 65);
+  --secondary: oklch(0.268 0.012 25);
+  --secondary-foreground: oklch(0.972 0.003 25);
 
-  --muted: oklch(0.268 0.015 55);
-  --muted-foreground: oklch(0.712 0.015 65);
+  --muted: oklch(0.268 0.012 25);
+  --muted-foreground: oklch(0.715 0.012 25);
 
-  --accent: oklch(0.308 0.03 55);
-  --accent-foreground: oklch(0.972 0.004 65);
+  --accent: oklch(0.305 0.028 25);
+  --accent-foreground: oklch(0.972 0.003 25);
 
-  --destructive: oklch(0.704 0.196 24);
-  --destructive-foreground: oklch(0.17 0.022 50);
+  --destructive: oklch(0.62 0.2 14);
+  --destructive-foreground: oklch(0.99 0.004 25);
 
   --success: oklch(0.696 0.147 152);
-  --success-foreground: oklch(0.17 0.022 152);
+  --success-foreground: oklch(0.17 0.02 152);
 
   --warning: oklch(0.842 0.148 94);
   --warning-foreground: oklch(0.21 0.05 94);
 
   --border: oklch(1 0 0 / 11%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.712 0.172 51);
+  --ring: oklch(0.66 0.19 27);
 
-  --chart-1: oklch(0.712 0.172 51);
+  --chart-1: oklch(0.66 0.19 27);
   --chart-2: oklch(0.842 0.148 94);
   --chart-3: oklch(0.696 0.147 152);
   --chart-4: oklch(0.702 0.174 300);
-  --chart-5: oklch(0.706 0.122 226);
+  --chart-5: oklch(0.68 0.13 235);
 }
 
 @theme inline {
