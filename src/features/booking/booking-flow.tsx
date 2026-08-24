@@ -964,7 +964,11 @@ function DayPicker({
   while (cells.length % 7 !== 0) cells.push(null)
 
   const relative = (index: number, iso: string) =>
-    index === 0 ? "Today" : index === 1 ? "Bukas" : MONTHS[partsOf(iso).month - 1].slice(0, 3)
+    index === 0
+      ? "Ngayon"
+      : index === 1
+        ? "Bukas"
+        : MONTHS[partsOf(iso).month - 1].slice(0, 3)
 
   return (
     <>

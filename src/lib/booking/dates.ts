@@ -69,14 +69,36 @@ export function dayOffset(fromIso: string, toIso: string): number {
 }
 
 /**
- * "Ngayon", "Bukas", "Kahapon", or the day written out.
+ * How far out a relative label stays useful.
  *
- * A booking list is read relative to today far more often than absolutely —
- * an owner wants to know what is happening now, not to parse a date — so the
- * three days either side of today say so in words.
+ * Past a month "Sa 96 araw" is a number nobody counts in; the written date
+ * beside it says the same thing better. Inside a month it is the fastest read
+ * on the page.
  */
-export function relativeDayLabel(iso: string, todayIso: string): string {
-  switch (dayOffset(todayIso, iso)) {
+export const RELATIVE_DAY_LIMIT = 30
+
+/**
+ * "Ngayon", "Bukas", "Sa 5 araw", "3 araw na" — or null when the day is far
+ * enough away that counting it serves nobody.
+ *
+ * A booking list is read relative to today far more often than absolutely: an
+ * owner wants to know what is happening now, not to parse a date. This is the
+ * relative half only — it is meant to sit BESIDE the written date, never
+ * instead of it, so that "Bukas" never leaves someone wondering which day that
+ * actually is.
+ *
+ * "Sa N araw" and "N araw na" are the app's own two shapes: "Sa susunod na N
+ * araw" already ships on the public page, and "na" is how everything else here
+ * marks something done — "Tapos na", "Sarado na", "Booked na po!".
+ */
+export function relativeDayLabel(
+  iso: string,
+  todayIso: string
+): string | null {
+  const offset = dayOffset(todayIso, iso)
+  if (Math.abs(offset) > RELATIVE_DAY_LIMIT) return null
+
+  switch (offset) {
     case 0:
       return "Ngayon"
     case 1:
@@ -86,6 +108,28 @@ export function relativeDayLabel(iso: string, todayIso: string): string {
     case -1:
       return "Kahapon"
     default:
-      return longDate(iso)
+      return offset > 0 ? `Sa ${offset} araw` : `${-offset} araw na`
   }
+}
+
+/**
+ * How much attention a day deserves, for colour.
+ *
+ * Three bands, not a gradient: a colour that means "slightly more urgent than
+ * the one above it" means nothing at a glance. "now" is the window an owner
+ * cannot let slip — today and tomorrow. "soon" is the rest of the week, which
+ * wants preparing for. Everything else, in either direction, is quiet.
+ *
+ * The past is never urgent. A booking that already happened cannot be missed,
+ * and painting last Tuesday red would make the one colour that means "act"
+ * mean nothing.
+ */
+export type DayUrgency = "now" | "soon" | "later"
+
+export function dayUrgency(iso: string, todayIso: string): DayUrgency {
+  const offset = dayOffset(todayIso, iso)
+  if (offset < 0) return "later"
+  if (offset <= 1) return "now"
+  if (offset <= 6) return "soon"
+  return "later"
 }

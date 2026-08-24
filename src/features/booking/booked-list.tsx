@@ -115,11 +115,16 @@ export function BookedRowCard({
     })
   }
 
+  /*
+    A row, not a card. The day it belongs to owns the card and the hairlines
+    between its rows, so a row here paints nothing of its own except the
+    shading that says it is the one that is open.
+  */
   return (
     <article
       className={cn(
-        "overflow-hidden rounded-xl bg-card ring-1 transition-colors",
-        open ? "ring-primary/30" : "ring-border hover:ring-ring/40",
+        "transition-colors",
+        open && "bg-muted/40",
         cancelled && "opacity-75"
       )}
     >
@@ -178,7 +183,7 @@ export function BookedRowCard({
       </button>
 
       {open ? (
-        <div id={bodyId} className="space-y-4 border-t px-4 py-4 sm:px-5">
+        <div id={bodyId} className="space-y-4 border-t px-4 pt-4 pb-5 sm:px-5">
           {/*
             Written out as "Label: value" rather than a grid of headings above
             values. An owner reading a booking back to a customer on the phone

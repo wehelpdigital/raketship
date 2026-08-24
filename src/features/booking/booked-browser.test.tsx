@@ -55,6 +55,25 @@ function renderBrowser(
   )
 }
 
+/*
+  A row on a given day relative to today, in the calendar's own zone. Manila is
+  UTC+8, so 02:00Z is the same Manila date whatever hour the suite runs at.
+*/
+function rowDaysFromToday(offset: number, index = 1): BookedRow {
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date())
+  const [y, m, d] = today.split("-").map(Number)
+  const iso = new Date(Date.UTC(y, m - 1, d + offset)).toISOString().slice(0, 10)
+  return row(index, {
+    startsAt: `${iso}T02:00:00.000Z`,
+    endsAt: `${iso}T02:30:00.000Z`,
+  })
+}
+
 const search = () => screen.getByPlaceholderText(/Pangalan, number/)
 
 /*
@@ -334,6 +353,88 @@ describe("grouping by day", () => {
     expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(10)
     await user.click(screen.getByRole("button", { name: "Pahina 2" }))
     expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(10)
+  })
+})
+
+describe("how near the day is", () => {
+  const chip = (text: string | RegExp) => screen.getByText(text)
+
+  it("says it in words and still writes the date out", () => {
+    // "Bukas" on its own leaves an owner working out which day that is.
+    renderBrowser({ rows: [rowDaysFromToday(1)] })
+
+    const heading = screen.getByRole("heading", { level: 3 })
+    expect(heading).toHaveTextContent("Bukas")
+    // The written date, not just the relative word.
+    expect(heading.textContent).toMatch(
+      /[0-9]+ (January|February|March|April|May|June|July|August|September|October|November|December)/
+    )
+  })
+
+  it("paints today and tomorrow red, and nothing else", () => {
+    renderBrowser({
+      rows: [rowDaysFromToday(0, 1), rowDaysFromToday(1, 2), rowDaysFromToday(4, 3)],
+    })
+
+    expect(chip("Ngayon").className).toContain("bg-destructive")
+    expect(chip("Bukas").className).toContain("bg-destructive")
+    expect(chip("Sa 4 araw").className).not.toContain("bg-destructive")
+  })
+
+  it("warms the rest of the week and lets the far ones go quiet", () => {
+    renderBrowser({ rows: [rowDaysFromToday(4, 1), rowDaysFromToday(20, 2)] })
+
+    expect(chip("Sa 4 araw").className).toContain("bg-warning")
+    expect(chip("Sa 20 araw").className).toContain("bg-muted")
+  })
+
+  it("never paints a day that has already happened", () => {
+    // The past cannot be missed; red there would spend the colour that means
+    // "act" on something nobody can act on.
+    renderBrowser({ rows: [rowDaysFromToday(-1, 1)], variant: "cancelled" })
+
+    expect(chip("Kahapon").className).toContain("bg-muted")
+    expect(chip("Kahapon").className).not.toContain("bg-destructive")
+  })
+
+  it("drops the count once counting days stops helping", () => {
+    // row() builds 2027 dates — years out.
+    renderBrowser({ rows: [row(1)] })
+
+    const heading = screen.getByRole("heading", { level: 3 })
+    expect(heading).toHaveTextContent("March")
+    expect(heading.textContent).not.toMatch(/araw/)
+  })
+
+  it("adds the year only when it is not this one", () => {
+    renderBrowser({ rows: [row(1)] })
+    expect(screen.getByRole("heading", { level: 3 })).toHaveTextContent("2027")
+
+    renderBrowser({ rows: [rowDaysFromToday(1)] })
+    const thisYear = String(new Date().getFullYear())
+    expect(
+      screen.getAllByRole("heading", { level: 3 })[1].textContent
+    ).not.toContain(thisYear)
+  })
+})
+
+describe("the day's rows", () => {
+  it("share one card, ruled between them", () => {
+    // Separate cards spent a gap of page on every row; a schedule is a ruled
+    // list, not a stack of unrelated things.
+    const { container } = renderBrowser({ rows: [row(1), row(21)] })
+
+    const list = container.querySelector("section ul")
+    expect(list?.className).toContain("divide-y")
+    expect(list?.className).toContain("rounded-xl")
+    expect(list?.querySelectorAll("li")).toHaveLength(2)
+  })
+
+  it("no longer paints a card each", () => {
+    const { container } = renderBrowser({ rows: [row(1)] })
+    const article = container.querySelector("section ul li article")
+    expect(article?.className).not.toContain("rounded-xl")
+    expect(article?.className).not.toContain("ring-border")
   })
 })
 

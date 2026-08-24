@@ -87,6 +87,15 @@ export function withCurrent(choices: number[], current: number): number[] {
     : [...choices, current].sort((a, b) => a - b)
 }
 
+/**
+ * A number picked from a list.
+ *
+ * Renders a bare <Select>, which is a fragment — so the trigger AND the
+ * hidden input Base UI appends become children of whatever wraps this.
+ * Wrap it in `grid gap-*`, never `space-y-*`: space-y is margin-block-end
+ * on :not(:last-child), and the hidden input makes the trigger not-last,
+ * so the control ends up 6px taller than the inputs beside it.
+ */
 function NumberSelect({
   id,
   value,
@@ -282,7 +291,7 @@ export function CalendarForm({
             How long a booking runs lives under its own tab — it grew a second
             mode and a whole catalogue, which no longer fits beside these. */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="space-y-1.5">
+          <div className="grid gap-1.5">
             <Label htmlFor={bufferId}>Break after</Label>
             <NumberSelect
               id={bufferId}
@@ -295,7 +304,7 @@ export function CalendarForm({
             <p className="text-xs text-muted-foreground">Between bookings</p>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="grid gap-1.5">
             <Label htmlFor={horizonId}>Books up to</Label>
             <NumberSelect
               id={horizonId}
@@ -308,7 +317,7 @@ export function CalendarForm({
             <p className="text-xs text-muted-foreground">How far ahead</p>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="grid gap-1.5">
             <Label htmlFor={noticeId}>Advance notice</Label>
             <NumberSelect
               id={noticeId}
@@ -321,7 +330,7 @@ export function CalendarForm({
             <p className="text-xs text-muted-foreground">Minimum lead time</p>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="grid gap-1.5">
             <Label htmlFor={cancelNoticeId}>Cancellation notice</Label>
             <NumberSelect
               id={cancelNoticeId}

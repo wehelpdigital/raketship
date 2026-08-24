@@ -24,7 +24,13 @@ import {
   paginate,
   referenceOf,
 } from "@/lib/booking/booked-filter"
-import { relativeDayLabel } from "@/lib/booking/dates"
+import {
+  dayUrgency,
+  longDate,
+  longDateWithYear,
+  relativeDayLabel,
+  type DayUrgency,
+} from "@/lib/booking/dates"
 import { answerToText } from "@/lib/booking/fields"
 import { instantInZone, isoDateInZone } from "@/lib/booking/slots"
 import type { BookingFormFieldRow } from "@/lib/supabase/types"
@@ -41,6 +47,25 @@ export interface BookedBrowserProps {
 }
 
 const ALL = "__all__"
+
+/**
+ * How near a day is, said in colour.
+ *
+ * Static entries, never interpolated — the Tailwind scanner cannot see a class
+ * that is built at runtime. Every pair is measured against the page it sits on,
+ * in both modes: destructive 6.71 / 4.76, warning 8.03 / 10.92, muted 5.03 /
+ * 6.00, all clear of 4.5:1.
+ *
+ * These three tokens are deliberately the ones a palette never touches —
+ * paletteCss() writes only --primary, --primary-foreground, --ring, --accent,
+ * --accent-foreground and --chart-1 — so a shop that picks green does not end
+ * up with a green "today".
+ */
+const DAY_TONE: Record<DayUrgency, string> = {
+  now: "bg-destructive text-destructive-foreground",
+  soon: "bg-warning text-warning-foreground",
+  later: "bg-muted text-muted-foreground ring-1 ring-border",
+}
 
 /**
  * Searching, filtering and paging a list of bookings.
@@ -117,7 +142,15 @@ export function BookedBrowser({
     page. Plain loop, no useMemo — the React Compiler does that better than a
     dependency array can, and `shown` is rebuilt on every keystroke anyway.
   */
-  const groups: { key: string; label: string; rows: BookedRow[] }[] = []
+  const groups: {
+    key: string
+    /** "Bukas", "Sa 5 araw" — null once counting days stops helping. */
+    near: string | null
+    urgency: DayUrgency
+    /** Always written out, so a relative word never stands on its own. */
+    date: string
+    rows: BookedRow[]
+  }[] = []
   for (const row of shown) {
     const key = instantInZone(row.startsAt, row.timezone).isoDate
     const last = groups[groups.length - 1]
@@ -125,11 +158,19 @@ export function BookedBrowser({
       last.rows.push(row)
       continue
     }
+    // Today is read in the CALENDAR's zone, so a shop in Manila does not get
+    // told "Bukas" because the owner opened this while in London.
+    const today = isoDateInZone(new Date(), row.timezone)
     groups.push({
       key,
-      // Today is read in the CALENDAR's zone, so a shop in Manila does not get
-      // told "Bukas" because the owner opened this while in London.
-      label: relativeDayLabel(key, isoDateInZone(new Date(), row.timezone)),
+      near: relativeDayLabel(key, today),
+      urgency: dayUrgency(key, today),
+      // The year only earns its space when it is not this one — which on the
+      // finished tab it often is not.
+      date:
+        key.slice(0, 4) === today.slice(0, 4)
+          ? longDate(key)
+          : longDateWithYear(key),
       rows: [row],
     })
   }
@@ -147,7 +188,7 @@ export function BookedBrowser({
       {/* --- the toolbar --------------------------------------------------- */}
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
         <div className="flex min-w-0 flex-1 items-end gap-2">
-          <div className="min-w-0 flex-1 space-y-1.5">
+          <div className="grid min-w-0 flex-1 gap-1.5">
             <Label htmlFor="booked-search" className="sr-only">
               Maghanap ng booking
             </Label>
@@ -219,7 +260,7 @@ export function BookedBrowser({
         >
           {/* Only worth a control when there is more than one thing to pick. */}
           {calendars.length > 1 ? (
-            <div className="space-y-1.5 sm:flex-1 lg:w-56 lg:flex-none">
+            <div className="grid gap-1.5 sm:flex-1 lg:w-56 lg:flex-none">
               <Label htmlFor="booked-calendar" className="sr-only">
                 Salain ayon sa calendar
               </Label>
@@ -253,7 +294,7 @@ export function BookedBrowser({
             </div>
           ) : null}
 
-          <div className="space-y-1.5 sm:w-40 lg:w-36">
+          <div className="grid gap-1.5 sm:flex-1 lg:w-36 lg:flex-none">
             <Label htmlFor="booked-size" className="sr-only">
               Ilan bawat pahina
             </Label>
@@ -318,22 +359,41 @@ export function BookedBrowser({
           {groups.map((group) => (
             <section key={group.key} className="space-y-2">
               {/*
-                The label depends on what day it is, so a render that straddles
-                midnight can disagree with the one the server sent. It says the
-                right thing either side of that; it is not worth a warning.
+                How near the day is depends on what day it is now, so a render
+                that straddles midnight can disagree with the one the server
+                sent. It says the right thing either side of that; it is not
+                worth a warning.
               */}
               <h3
                 suppressHydrationWarning
-                className="flex flex-wrap items-baseline gap-x-2 px-1 text-sm font-semibold tracking-tight"
+                className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1"
               >
-                {group.label}
-                <span className="text-xs font-normal text-muted-foreground tabular-nums">
+                {group.near ? (
+                  <span
+                    className={cn(
+                      "rounded-full px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap",
+                      DAY_TONE[group.urgency]
+                    )}
+                  >
+                    {group.near}
+                  </span>
+                ) : null}
+                <span className="text-sm font-semibold tracking-tight">
+                  {group.date}
+                </span>
+                <span className="text-xs text-muted-foreground tabular-nums">
                   {group.rows.length}
                   {group.rows.length === 1 ? " booking" : " bookings"}
                 </span>
               </h3>
 
-              <ul className="space-y-2">
+              {/*
+                One card for the day, hairlines between its rows. Separate cards
+                per booking spent a gap of page on every row and made a busy day
+                look like a stack of unrelated things; a ruled list is what a
+                schedule looks like.
+              */}
+              <ul className="divide-y overflow-hidden rounded-xl bg-card ring-1 ring-border">
                 {group.rows.map((row) => (
                   <li key={row.id}>
                     <BookedRowCard

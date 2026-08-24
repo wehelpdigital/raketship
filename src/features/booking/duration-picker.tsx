@@ -75,7 +75,7 @@ export function DurationPicker({
   return (
     <div className={cn("space-y-2", className)}>
       <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
+        <div className="grid gap-1.5">
           <Label htmlFor={hoursId} className="text-xs text-muted-foreground">
             Hours
           </Label>
@@ -89,7 +89,7 @@ export function DurationPicker({
           />
         </div>
 
-        <div className="space-y-1.5">
+        <div className="grid gap-1.5">
           <Label htmlFor={minutesId} className="text-xs text-muted-foreground">
             Minutes
           </Label>
@@ -121,6 +121,15 @@ export function DurationPicker({
   )
 }
 
+/**
+ * One number of the pair.
+ *
+ * Renders a bare <Select>, which is a fragment — so the trigger AND the
+ * hidden input Base UI appends become children of whatever wraps this.
+ * Wrap it in `grid gap-*`, never `space-y-*`: space-y is margin-block-end
+ * on :not(:last-child), and the hidden input makes the trigger not-last,
+ * so the control ends up 6px taller than the inputs beside it.
+ */
 function Step({
   id,
   value,

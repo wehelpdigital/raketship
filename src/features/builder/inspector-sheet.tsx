@@ -86,7 +86,7 @@ function Field({
   const id = useId()
 
   return (
-    <div className="space-y-1.5">
+    <div className="grid gap-1.5">
       <Label htmlFor={id}>{field.label}</Label>
 
       {field.type === "textarea" ? (

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest"
 
 import {
   dayOffset,
+  dayUrgency,
+  RELATIVE_DAY_LIMIT,
   longDate,
   longDateWithYear,
   relativeDayLabel,
@@ -67,9 +69,31 @@ describe("relativeDayLabel", () => {
     expect(relativeDayLabel("2026-03-09", today)).toBe("Kahapon")
   })
 
-  it("writes anything further out in full", () => {
-    expect(relativeDayLabel("2026-03-20", today)).toBe("Friday, 20 March")
-    expect(relativeDayLabel("2026-03-01", today)).toBe("Sunday, 1 March")
+  it("counts the days once it runs out of words for them", () => {
+    expect(relativeDayLabel("2026-03-13", today)).toBe("Sa 3 araw")
+    expect(relativeDayLabel("2026-03-20", today)).toBe("Sa 10 araw")
+    expect(relativeDayLabel("2026-03-07", today)).toBe("3 araw na")
+    expect(relativeDayLabel("2026-02-28", today)).toBe("10 araw na")
+  })
+
+  it("marks the two directions unmistakably", () => {
+    // A booking read as past when it is coming is a missed booking, and these
+    // sit side by side on a 390px row.
+    const ahead = relativeDayLabel("2026-03-15", today)
+    const behind = relativeDayLabel("2026-03-05", today)
+    expect(ahead).not.toBe(behind)
+    expect(ahead?.startsWith("Sa ")).toBe(true)
+    expect(behind?.endsWith(" na")).toBe(true)
+  })
+
+  it("stops counting once the number stops meaning anything", () => {
+    const edge = (n: number) =>
+      new Date(Date.UTC(2026, 2, 10 + n)).toISOString().slice(0, 10)
+
+    expect(relativeDayLabel(edge(RELATIVE_DAY_LIMIT), today)).toBe("Sa 30 araw")
+    expect(relativeDayLabel(edge(RELATIVE_DAY_LIMIT + 1), today)).toBeNull()
+    expect(relativeDayLabel(edge(-RELATIVE_DAY_LIMIT), today)).toBe("30 araw na")
+    expect(relativeDayLabel(edge(-RELATIVE_DAY_LIMIT - 1), today)).toBeNull()
   })
 
   it("still works across a month boundary", () => {
@@ -77,14 +101,49 @@ describe("relativeDayLabel", () => {
     expect(relativeDayLabel("2026-02-28", "2026-03-01")).toBe("Kahapon")
   })
 
-  it("never returns an empty label", () => {
+  it("never returns an empty string — it is a word or it is nothing", () => {
     for (const iso of [
       "2026-03-10",
       "2026-03-11",
       "2026-06-15",
       "2020-01-01",
     ]) {
-      expect(relativeDayLabel(iso, today).length).toBeGreaterThan(0)
+      const label = relativeDayLabel(iso, today)
+      expect(label === null || label.length > 0).toBe(true)
     }
+  })
+})
+
+describe("dayUrgency", () => {
+  const today = "2026-03-10"
+
+  it("keeps red for the window an owner cannot let slip", () => {
+    expect(dayUrgency("2026-03-10", today)).toBe("now")
+    expect(dayUrgency("2026-03-11", today)).toBe("now")
+  })
+
+  it("warms the rest of the week", () => {
+    expect(dayUrgency("2026-03-12", today)).toBe("soon")
+    expect(dayUrgency("2026-03-16", today)).toBe("soon")
+  })
+
+  it("goes quiet once there is a week of room", () => {
+    expect(dayUrgency("2026-03-17", today)).toBe("later")
+    expect(dayUrgency("2026-06-01", today)).toBe("later")
+  })
+
+  it("never makes the past urgent", () => {
+    // A booking that already happened cannot be missed, and painting last
+    // Tuesday red would make the one colour that means "act" mean nothing.
+    for (const iso of ["2026-03-09", "2026-03-01", "2025-12-25"]) {
+      expect(dayUrgency(iso, today)).toBe("later")
+    }
+  })
+
+  it("agrees with the label about which day is which", () => {
+    expect(relativeDayLabel("2026-03-10", today)).toBe("Ngayon")
+    expect(dayUrgency("2026-03-10", today)).toBe("now")
+    expect(relativeDayLabel("2026-03-09", today)).toBe("Kahapon")
+    expect(dayUrgency("2026-03-09", today)).toBe("later")
   })
 })

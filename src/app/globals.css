@@ -90,7 +90,9 @@
   --accent-foreground: oklch(0.972 0.003 25);
 
   --destructive: oklch(0.62 0.2 14);
-  --destructive-foreground: oklch(0.99 0.004 25);
+  /* Dark, like its two siblings below: the lifted red needs dark ink to clear
+     4.5:1 (0.99 measures 3.91, this measures 4.76). */
+  --destructive-foreground: oklch(0.17 0.02 14);
 
   --success: oklch(0.696 0.147 152);
   --success-foreground: oklch(0.17 0.02 152);
