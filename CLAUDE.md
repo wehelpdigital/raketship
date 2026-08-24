@@ -124,6 +124,15 @@ first. Two details are load-bearing:
 An unknown key falls back to the brand rather than rendering nothing, so removing
 a palette cannot break the pages of everyone who chose it.
 
+**Uploads go browser -> Supabase, never through a server action.** Next caps a
+server action request body at 1MB by default and enforces it in the transport,
+so a 2MB phone photo threw before the action ran and the client could only say
+"something went wrong". The browser now uploads with its own session and sends
+only the resulting PATH to `setBusinessImage`, which re-checks that the path is
+in the caller's own folder — a path from a browser is a claim, not a fact. The
+real guards were never in our code anyway: the bucket enforces 5MB and the
+allowed MIME types, and its RLS policy enforces the folder.
+
 **Storage.** `business-media` is **public**, unlike `booking-uploads` — these
 images sit in links people paste into Facebook, and a signed URL expires long
 before the post does. Objects live under `<uid>/`, and the bucket needs a

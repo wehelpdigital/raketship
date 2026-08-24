@@ -17,11 +17,7 @@ import {
   tidyUrl,
 } from "@/lib/business/contact"
 import { normaliseCrop, type LogoCrop } from "@/lib/business/logo"
-import {
-  IMAGE_TYPES,
-  MAX_IMAGE_BYTES,
-  MEDIA_BUCKET,
-} from "@/lib/business/media"
+import { MEDIA_BUCKET, ownsMediaPath } from "@/lib/business/media"
 import { isPaletteKey } from "@/lib/theme/palettes"
 import { getCurrentUser, getSupabaseServerClient } from "@/lib/supabase/server"
 import type { BusinessProfileRow, Database } from "@/lib/supabase/types"
@@ -266,54 +262,42 @@ export async function setLogoCrop(
 // -----------------------------------------------------------------------------
 
 /**
- * Stores one image and points the row at it.
+ * Points the row at an image the BROWSER has already uploaded.
  *
- * The file arrives as FormData because that is the only way bytes cross a
- * server-action boundary without being base64'd through JSON.
+ * The bytes deliberately do not come through here. A server action's request
+ * body is capped at 1MB by default, which a photo off a phone clears without
+ * trying — and that limit is enforced by the transport, so the action never
+ * runs and never gets to explain itself: the caller just sees a thrown error.
+ * Going straight from the browser to storage also drops a hop, since the file
+ * used to travel browser -> our server -> Supabase.
  *
- * Both the type and the size are re-checked here even though the browser
- * checked them and the bucket will check them again: the browser's check is a
- * courtesy to the user, not a control, and a server action is a public endpoint.
+ * What is given up is the server's chance to inspect the bytes, so the guards
+ * move to where the real ones always were: the bucket enforces the 5MB limit
+ * and the allowed MIME types, and its RLS policy enforces that a user may only
+ * write inside their own folder. The path below is re-checked against the
+ * session, because a path arriving from a browser is a claim, not a fact.
  */
-export async function uploadBusinessImage(
-  formData: FormData
-): Promise<BusinessActionResult & { path?: string }> {
+export async function setBusinessImage(input: {
+  kind: "logo" | "cover"
+  path: string
+}): Promise<BusinessActionResult> {
   const session = await requireSession()
   if ("error" in session) return session.error
   const { db, userId } = session
 
-  const kind = formData.get("kind")
+  const kind = input?.kind
   if (kind !== "logo" && kind !== "cover") {
     return fail("We could not tell which image that was.")
   }
 
-  const file = formData.get("file")
-  if (!(file instanceof File) || file.size === 0) {
-    return fail("Pumili po ng larawan.")
+  if (!ownsMediaPath(input?.path ?? "", userId)) {
+    return fail("We could not save that image.")
   }
-  if (file.size > MAX_IMAGE_BYTES) {
-    return fail("Ang laki ng file — 5MB lang po ang kaya.")
-  }
-  if (!IMAGE_TYPES.includes(file.type)) {
-    return fail("PNG, JPG, WEBP o AVIF lang po.")
-  }
-
-  // Filed under the owner's uuid: the storage policy checks exactly that first
-  // path segment, so a name built anywhere else would be rejected by the bucket.
-  const extension = file.type.split("/")[1]?.replace("jpeg", "jpg") ?? "png"
-  // The timestamp busts the CDN cache. Overwriting one stable name would leave
-  // the old picture showing on a public page for as long as it stayed cached.
-  const path = `${userId}/${kind}-${Date.now()}.${extension}`
-
-  const { error: uploadError } = await db.storage
-    .from(MEDIA_BUCKET)
-    .upload(path, file, { contentType: file.type, upsert: true })
-
-  if (uploadError) return fail("Hindi na-upload ang larawan. Pakisubukan ulit.")
+  const path = input.path
 
   const previous = await currentPath(db, userId, kind)
 
-  // A new logo is a new picture, so last picture's framing means nothing —
+  // A new logo is a new picture, so the last one's framing means nothing —
   // keeping it would show a corner of the new one for no reason anyone could
   // work out.
   const patch: Insert<"business_profiles"> =
@@ -326,8 +310,8 @@ export async function uploadBusinessImage(
     .upsert(patch, { onConflict: "user_id" })
 
   if (error) {
-    // The row is the source of truth; an orphaned object nobody points at is
-    // worse than no object, so the upload is undone rather than left behind.
+    // The row is the source of truth; an object nobody points at is worse than
+    // no object, so the upload is undone rather than left behind.
     await db.storage.from(MEDIA_BUCKET).remove([path])
     return fail(TRY_AGAIN)
   }
@@ -337,7 +321,7 @@ export async function uploadBusinessImage(
   }
 
   refresh()
-  return { ok: true, message: kind === "logo" ? "Logo saved." : "Cover saved.", path }
+  return { ok: true, message: kind === "logo" ? "Logo saved." : "Cover saved." }
 }
 
 /** Clears one image and removes the file behind it. */

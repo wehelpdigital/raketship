@@ -11,9 +11,15 @@ import { LogoMask } from "@/features/business/logo-mask"
 import { normaliseCrop, type LogoCrop } from "@/lib/business/logo"
 import {
   removeBusinessImage,
-  uploadBusinessImage,
+  setBusinessImage,
 } from "@/features/business/actions"
-import { IMAGE_TYPES, MAX_IMAGE_BYTES } from "@/lib/business/media"
+import {
+  IMAGE_TYPES,
+  MAX_IMAGE_BYTES,
+  MEDIA_BUCKET,
+  mediaPath,
+} from "@/lib/business/media"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 
 export interface ImageFieldProps {
@@ -30,7 +36,18 @@ export interface ImageFieldProps {
 }
 
 /**
- * One image, uploaded straight to storage through a server action.
+ * One image, uploaded straight from the browser to storage.
+ *
+ * The bytes do NOT go through a server action. Next caps an action's request
+ * body at 1MB, which any photo off a phone clears without trying, and that cap
+ * is enforced by the transport — so the action never runs, never returns a
+ * failure, and the caller only sees a thrown error it cannot explain. Going
+ * direct also drops a hop the file used to make through our own server.
+ *
+ * The upload is still guarded, just not here: the bucket enforces the size
+ * limit and the allowed types, and its RLS policy allows a write only inside
+ * the signed-in user's own folder. The checks below are a courtesy so an
+ * obvious mistake costs no bandwidth.
  *
  * The preview is a blob URL held only while the upload is in flight, so the
  * picture appears the instant it is chosen rather than after a round trip. It
@@ -74,6 +91,12 @@ export function ImageField({
       return
     }
 
+    const supabase = getSupabaseBrowserClient()
+    if (!supabase) {
+      toast.error("Hindi pa nakakonekta ang RaketShip sa database nito.")
+      return
+    }
+
     const local = URL.createObjectURL(file)
     setPreview((old) => {
       if (old) URL.revokeObjectURL(old)
@@ -81,27 +104,53 @@ export function ImageField({
     })
     setBusy(true)
 
-    try {
-      const payload = new FormData()
-      payload.set("kind", kind)
-      payload.set("file", file)
-
-      const result = await uploadBusinessImage(payload)
-      if (!result.ok) {
-        setPreview((old) => {
-          if (old) URL.revokeObjectURL(old)
-          return null
-        })
-        toast.error(result.message ?? "Hindi na-upload.")
-        return
-      }
-      toast.success(result.message ?? "Saved.")
-      router.refresh()
-    } catch {
+    const forget = () =>
       setPreview((old) => {
         if (old) URL.revokeObjectURL(old)
         return null
       })
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) {
+        forget()
+        toast.error("Hindi namin masabi kung sino ka. Mag-sign in ulit.")
+        return
+      }
+
+      const path = mediaPath(user.id, kind, file.type, Date.now())
+      const { error } = await supabase.storage
+        .from(MEDIA_BUCKET)
+        .upload(path, file, { contentType: file.type, upsert: true })
+
+      if (error) {
+        forget()
+        // The bucket's own limits speak here, so a rejection says which one.
+        toast.error(
+          /exceeded|too large|maximum/i.test(error.message)
+            ? "Ang laki ng file — 5MB lang po ang kaya."
+            : "Hindi na-upload ang larawan. Pakisubukan ulit."
+        )
+        return
+      }
+
+      // Only the path crosses the action boundary, so there is nothing here
+      // that a body-size limit can refuse.
+      const result = await setBusinessImage({ kind, path })
+      if (!result.ok) {
+        forget()
+        // The row never pointed at it, so the file would be an orphan.
+        await supabase.storage.from(MEDIA_BUCKET).remove([path])
+        toast.error(result.message ?? "Hindi na-save.")
+        return
+      }
+
+      toast.success(result.message ?? "Saved.")
+      router.refresh()
+    } catch {
+      forget()
       toast.error("Something went wrong. Pakisubukan ulit.")
     } finally {
       setBusy(false)
