@@ -14,10 +14,12 @@ import {
   setBusinessImage,
 } from "@/features/business/actions"
 import {
-  IMAGE_TYPES,
+  IMAGE_ACCEPT,
+  isUnrenderablePhoto,
   MAX_IMAGE_BYTES,
   MEDIA_BUCKET,
   mediaPath,
+  normaliseImageType,
 } from "@/lib/business/media"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
@@ -86,8 +88,21 @@ export function ImageField({
       toast.error("Ang laki ng file — 5MB lang po ang kaya.")
       return
     }
-    if (!IMAGE_TYPES.includes(file.type)) {
-      toast.error("PNG, JPG, WEBP o AVIF lang po.")
+
+    /*
+      What the browser calls the file is not always what the bucket lists. A
+      .jpg is reported as image/jpg on some systems, and anything that has been
+      through a chat app often arrives with no type at all — both were refused
+      as "not an image" while being perfectly ordinary photos. The canonical
+      type is what gets checked, uploaded and stored.
+    */
+    const type = normaliseImageType(file.name, file.type)
+    if (!type) {
+      toast.error(
+        isUnrenderablePhoto(file.name, file.type)
+          ? "Hindi pa kayang ipakita ang HEIC dito. I-save muna bilang JPG."
+          : "PNG, JPG, WEBP o AVIF lang po."
+      )
       return
     }
 
@@ -120,10 +135,12 @@ export function ImageField({
         return
       }
 
-      const path = mediaPath(user.id, kind, file.type, Date.now())
+      const path = mediaPath(user.id, kind, type, Date.now())
       const { error } = await supabase.storage
         .from(MEDIA_BUCKET)
-        .upload(path, file, { contentType: file.type, upsert: true })
+        // The canonical type, not the reported one — the bucket matches its
+        // allowed list literally, so image/jpg would be turned away.
+        .upload(path, file, { contentType: type, upsert: true })
 
       if (error) {
         forget()
@@ -259,7 +276,7 @@ export function ImageField({
         <input
           ref={inputRef}
           type="file"
-          accept={IMAGE_TYPES.join(",")}
+          accept={IMAGE_ACCEPT}
           disabled={busy || disabled}
           className="sr-only"
           onChange={(event) => {

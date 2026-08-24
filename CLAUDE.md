@@ -124,6 +124,15 @@ first. Two details are load-bearing:
 An unknown key falls back to the brand rather than rendering nothing, so removing
 a palette cannot break the pages of everyone who chose it.
 
+**What the browser calls a file is not what the bucket lists.** Measured against
+the live bucket: `image/jpeg` and `image/webp` are accepted, but `image/jpg`,
+`image/pjpeg` and `application/octet-stream` are all refused with a 400 — and
+those are what a plain .jpg reports on some systems, and what anything that has
+been through a chat app reports everywhere. `normaliseImageType()` canonicalises
+from the reported type, then from the filename, before anything is checked or
+uploaded. Add a format in one place: the map there AND the bucket's
+`allowed_mime_types`, which matches literally.
+
 **Uploads go browser -> Supabase, never through a server action.** Next caps a
 server action request body at 1MB by default and enforces it in the transport,
 so a 2MB phone photo threw before the action ran and the client could only say

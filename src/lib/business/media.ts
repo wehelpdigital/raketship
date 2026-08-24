@@ -14,12 +14,113 @@ export const MEDIA_BUCKET = "business-media"
 
 /** Mirrors the bucket's own file_size_limit. The bucket is the real guard. */
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+
+/**
+ * The types the bucket's allowed_mime_types actually lists. Exactly these
+ * strings — Supabase matches them literally, so a near-miss is a rejection.
+ */
 export const IMAGE_TYPES = [
   "image/png",
   "image/jpeg",
   "image/webp",
   "image/avif",
 ]
+
+/**
+ * What a file picker should offer.
+ *
+ * Extensions as well as MIME types, because some platforms filter the dialog
+ * by extension and would otherwise grey out a perfectly good .jpg.
+ */
+export const IMAGE_ACCEPT = [
+  ...IMAGE_TYPES,
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".webp",
+  ".avif",
+].join(",")
+
+/**
+ * Spellings browsers actually send that are not the canonical type.
+ *
+ * `image/jpg` is not a registered media type but plenty of systems report it
+ * for a .jpg, and `image/pjpeg` is a legacy Windows spelling. Both were
+ * refused by the bucket — measured, not assumed — which meant a perfectly
+ * ordinary photo was rejected for the way the OS spelled it.
+ */
+const TYPE_ALIASES: Record<string, string> = {
+  "image/jpg": "image/jpeg",
+  "image/pjpeg": "image/jpeg",
+  "image/x-png": "image/png",
+}
+
+/** Canonical type -> the extension to store it under. */
+const FILE_EXTENSIONS: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+  "image/avif": "avif",
+}
+
+/** Last resort when the browser reports nothing useful at all. */
+const EXTENSION_TYPES: Record<string, string> = {
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  jfif: "image/jpeg",
+  webp: "image/webp",
+  avif: "image/avif",
+}
+
+/**
+ * The canonical type for a chosen file, or null if it is not one we take.
+ *
+ * Two things go wrong without this. A browser may report `image/jpg`, which is
+ * the same picture under a name the bucket does not list; or it may report
+ * nothing at all — an empty string, or application/octet-stream — when the OS
+ * cannot identify the file, which is common for anything that has been through
+ * a chat app. Both were rejected as "not an image". The filename is the
+ * fallback because by then it is the only evidence left.
+ *
+ * This is a courtesy, not a security control: the bucket re-checks the type it
+ * is sent, and a caller who lies about it gets refused there.
+ */
+export function normaliseImageType(
+  fileName: string,
+  reportedType: string | null | undefined
+): string | null {
+  const reported = (reportedType ?? "").trim().toLowerCase()
+
+  if (IMAGE_TYPES.includes(reported)) return reported
+  if (reported in TYPE_ALIASES) return TYPE_ALIASES[reported]
+
+  // Nothing usable was reported, so fall back to what the name says.
+  const extension = fileName.toLowerCase().split(".").pop() ?? ""
+  const fromName = EXTENSION_TYPES[extension]
+  if (fromName) return fromName
+
+  return null
+}
+
+/**
+ * True for the formats a browser cannot render in an <img> even though a phone
+ * happily produces them. Worth its own message: "not an image" is a lie, and
+ * the person is holding a photo.
+ */
+export function isUnrenderablePhoto(
+  fileName: string,
+  reportedType: string | null | undefined
+): boolean {
+  const reported = (reportedType ?? "").toLowerCase()
+  const extension = fileName.toLowerCase().split(".").pop() ?? ""
+  return (
+    reported.includes("heic") ||
+    reported.includes("heif") ||
+    extension === "heic" ||
+    extension === "heif"
+  )
+}
 
 /**
  * Where one user's image lives.
@@ -37,7 +138,9 @@ export function mediaPath(
   mimeType: string,
   now: number
 ): string {
-  const extension = mimeType.split("/")[1]?.replace("jpeg", "jpg") ?? "png"
+  // Takes a CANONICAL type — callers run normaliseImageType() first — so the
+  // stored name always agrees with the content type the bucket was sent.
+  const extension = FILE_EXTENSIONS[mimeType] ?? "png"
   return `${userId}/${kind}-${now}.${extension}`
 }
 
