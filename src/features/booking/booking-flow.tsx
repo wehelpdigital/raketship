@@ -961,10 +961,9 @@ function TimePicker({
     <div
       className={cn(
         "grid grid-cols-1 gap-2 sm:grid-cols-2",
-        // A ring is painted outside the border box, so a scroll container with
-        // padding on one side only clips it on the other three — which is what
-        // shaved the first and last rows.
-        "lg:max-h-80 lg:grid-cols-2 lg:overflow-y-auto lg:p-1"
+        // Deliberately no max-height: capping it put the afternoon behind a
+        // scroll gesture inside the card, which people miss entirely.
+        "lg:grid-cols-2"
       )}
     >
       {state.slots.map((slot) => {
@@ -1044,12 +1043,21 @@ function ZonePicker({
         Oras na ipinapakita
       </Label>
       <Select value={value} onValueChange={(next) => onChange(String(next))}>
-        <SelectTrigger id={id} className="h-11 w-full">
+        <SelectTrigger id={id} className="h-12 w-full text-base">
           <SelectValue />
         </SelectTrigger>
-        <SelectContent>
+        {/*
+          alignItemWithTrigger lines the chosen row up with the trigger, which
+          squeezes the list into whatever space is left beside it. With a few
+          hundred zones to scroll, dropping below the trigger and taking the
+          full height is far easier to use.
+        */}
+        <SelectContent
+          alignItemWithTrigger={false}
+          className="max-h-[min(26rem,60vh)]"
+        >
           {options.map((zone) => (
-            <SelectItem key={zone} value={zone}>
+            <SelectItem key={zone} value={zone} className="h-11 text-base">
               {zoneCity(zone)}
               {zone === calendarZone ? " — oras ng shop" : ""}
             </SelectItem>
