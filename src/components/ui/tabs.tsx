@@ -73,7 +73,16 @@ function TabsContent({ className, ...props }: TabsPrimitive.Panel.Props) {
   return (
     <TabsPrimitive.Panel
       data-slot="tabs-content"
-      className={cn("flex-1 text-sm outline-none", className)}
+      className={cn(
+        "flex-1 text-sm outline-none",
+        // Base UI stamps data-starting-style on a panel for the frame it
+        // appears, which is the only hook available here — a panel goes from
+        // display:none to shown, and that cannot be transitioned directly.
+        "transition-[opacity,translate] duration-200 ease-out",
+        "data-starting-style:translate-y-1 data-starting-style:opacity-0",
+        "motion-reduce:transition-none",
+        className
+      )}
       {...props}
     />
   )
