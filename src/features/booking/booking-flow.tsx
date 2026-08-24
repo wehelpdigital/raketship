@@ -830,8 +830,8 @@ function DayPicker({
   return (
     <>
       {/* Phone and tablet: a thumb-friendly rail. */}
-      <div className="no-scrollbar snap-x snap-mandatory overflow-x-auto p-1 lg:hidden">
-        <div className="flex w-max gap-2">
+      <div className="no-scrollbar snap-x snap-mandatory overflow-x-auto p-1.5 lg:hidden">
+        <div className="flex w-max gap-2.5">
           {days.map((day, index) => {
             const active = day.iso === selected
             return (
@@ -843,7 +843,7 @@ function DayPicker({
                 aria-pressed={active}
                 aria-label={`${longDate(day.iso)}${day.open ? "" : " — walang bakante"}`}
                 className={cn(
-                  "flex h-19 w-15 shrink-0 snap-start flex-col items-center justify-center gap-0.5 rounded-xl ring-1 transition-colors",
+                  "flex size-17 shrink-0 snap-start flex-col items-center justify-center gap-0.5 rounded-xl ring-1 transition-colors",
                   "outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   active
                     ? "bg-primary text-primary-foreground ring-primary"
@@ -869,15 +869,15 @@ function DayPicker({
 
       {/* Desktop: a month-shaped grid, which is what a calendar looks like. */}
       <div className="hidden lg:block">
-        <div className="mb-1 grid grid-cols-7 gap-1 text-center text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+        <div className="mb-2 grid grid-cols-7 gap-2 text-center text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
           {WEEKDAY_SHORT.map((short) => (
             <span key={short}>{short}</span>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-2">
           {cells.map((cell, index) =>
             cell === null ? (
-              <span key={`pad-${index}`} className="h-11" aria-hidden />
+              <span key={`pad-${index}`} className="aspect-square" aria-hidden />
             ) : (
               <button
                 key={cell.iso}
@@ -887,7 +887,8 @@ function DayPicker({
                 aria-pressed={cell.iso === selected}
                 aria-label={longDate(cell.iso)}
                 className={cn(
-                  "relative flex h-11 items-center justify-center rounded-lg text-sm font-medium tabular-nums ring-1 transition-colors",
+                  "relative flex aspect-square w-full items-center justify-center rounded-xl text-sm font-medium tabular-nums ring-1 transition-colors",
+                  "outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   cell.iso === selected
                     ? "bg-primary text-primary-foreground ring-primary"
                     : cell.open
@@ -899,7 +900,7 @@ function DayPicker({
                 {cell.open && cell.iso !== selected ? (
                   <span
                     aria-hidden
-                    className="absolute bottom-1.5 size-1 rounded-full bg-primary"
+                    className="absolute bottom-2 size-1 rounded-full bg-primary"
                   />
                 ) : null}
               </button>
@@ -959,16 +960,19 @@ function TimePicker({
   return (
     <div
       className={cn(
-        "grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-3",
+        "grid grid-cols-1 gap-2 sm:grid-cols-2",
         // A ring is painted outside the border box, so a scroll container with
         // padding on one side only clips it on the other three — which is what
         // shaved the first and last rows.
-        "lg:max-h-76 lg:grid-cols-2 lg:overflow-y-auto lg:p-1"
+        "lg:max-h-80 lg:grid-cols-2 lg:overflow-y-auto lg:p-1"
       )}
     >
       {state.slots.map((slot) => {
         const active = slot.startsAt === selected?.startsAt
         const local = instantInZone(slot.startsAt, shownZone)
+        // A start time alone leaves the customer working out when they are
+        // free again; the range answers it.
+        const until = instantInZone(slot.endsAt, shownZone)
         // A 9am Manila slot is the previous evening in New York. Saying only
         // "9:00 PM" there would put someone on the wrong day.
         const dayMoved =
@@ -982,7 +986,7 @@ function TimePicker({
             onClick={() => onPick(slot)}
             aria-pressed={active}
             className={cn(
-              "h-11 rounded-lg px-1 text-sm font-medium tabular-nums ring-1 transition-colors",
+              "h-11 rounded-lg px-2 text-sm font-medium tabular-nums ring-1 transition-colors",
               "outline-none focus-visible:ring-2 focus-visible:ring-ring",
               active
                 ? "bg-primary text-primary-foreground ring-primary"
@@ -990,7 +994,10 @@ function TimePicker({
             )}
           >
             <span className="flex flex-col items-center leading-tight">
-              <span>{local.time || slot.label}</span>
+              <span className="whitespace-nowrap">
+                {local.time || slot.label}
+                {until.time ? ` – ${until.time}` : ""}
+              </span>
               {dayMoved ? (
                 <span className="text-[10px] font-normal opacity-80">
                   {shortDate(local.isoDate)}

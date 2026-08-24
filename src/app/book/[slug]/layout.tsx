@@ -2,6 +2,8 @@ import type { ReactNode } from "react"
 import Link from "next/link"
 import { Rocket } from "lucide-react"
 
+import { ThemeToggle } from "@/components/shell/theme-toggle"
+
 /**
  * The public booking route runs outside the app shell — no sidebar, no tab bar,
  * no account menu. A customer arriving from a pasted Messenger link has no
@@ -16,7 +18,7 @@ export default function PublicBookingLayout({
   return (
     <div className="flex min-h-dvh flex-col bg-background">
       <header className="border-b border-border bg-background/95 pt-safe backdrop-blur">
-        <div className="mx-auto flex h-14 w-full max-w-2xl items-center px-4 sm:px-6 md:max-w-3xl lg:h-16 lg:max-w-5xl lg:px-8 xl:max-w-6xl">
+        <div className="mx-auto flex h-14 w-full max-w-xl items-center px-4 sm:px-6 lg:h-16 lg:max-w-2xl lg:px-8">
           <Link
             href="/"
             className="flex items-center gap-2 rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -28,13 +30,19 @@ export default function PublicBookingLayout({
               RaketShip
             </span>
           </Link>
+
+          {/* A customer may open this link at any hour; let them read it in
+              whichever mode suits. */}
+          <div className="ml-auto">
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
       <main className="flex-1">{children}</main>
 
       <footer className="border-t border-border pb-safe">
-        <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-1 px-4 py-6 text-center sm:px-6 md:max-w-3xl lg:max-w-5xl lg:px-8 xl:max-w-6xl">
+        <div className="mx-auto flex w-full max-w-xl flex-col items-center gap-1 px-4 py-6 text-center sm:px-6 lg:max-w-2xl lg:px-8">
           <p className="text-xs text-muted-foreground">
             Powered by{" "}
             <Link

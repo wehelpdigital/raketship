@@ -1,9 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import {
-  CalendarCheck,
   CalendarOff,
-  ChevronDown,
   Clock,
   Globe,
   ShieldCheck,
@@ -11,7 +9,6 @@ import {
 import { BookingFlow, type OpenRange } from "@/features/booking/booking-flow"
 import {
   buildSlots,
-  groupAvailabilityByDay,
   isoDateInZone,
   upcomingDates,
   zoneOffsetMinutes,
@@ -21,7 +18,6 @@ import {
 import { bookingUrl } from "@/lib/booking/slug"
 import { env } from "@/lib/env"
 import { getPublishedCalendar, getTakenSlots } from "@/lib/queries/booking"
-import { cn } from "@/lib/utils"
 interface PageProps {
   params: Promise<{ slug: string }>
 }
@@ -150,7 +146,7 @@ export default async function PublicBookingPage({ params }: PageProps) {
   const openDays = openRanges.length
   const hasTimes = availability.length > 0 && openDays > 0
   return (
-    <div className="mx-auto w-full max-w-xl px-4 py-6 sm:px-6 lg:max-w-5xl lg:px-8 lg:py-10">
+    <div className="mx-auto w-full max-w-xl px-4 py-6 sm:px-6 lg:max-w-2xl lg:px-8 lg:py-10">
       {/*
         Action first. The old layout put the identity, a meta card, a seven-row
         opening-hours table and a privacy note above the wizard, so a phone
@@ -191,114 +187,37 @@ export default async function PublicBookingPage({ params }: PageProps) {
           </p>
         ) : null}
       </header>
-      <div className="grid gap-6 lg:grid-cols-5 lg:items-start lg:gap-10">
-        {/* The booking gets the wider share; it is the only thing on this page
-            with a job to do. */}
-        <main className="lg:col-span-3">
-          {hasTimes ? (
-            <BookingFlow
-              calendarId={calendar.id}
-              calendarName={calendar.name}
-              durationMinutes={calendar.duration_minutes}
-              timezone={calendar.timezone}
-              timezoneLabel={timezoneLabel}
-              fields={fields}
-              openRanges={openRanges}
-              horizonDays={calendar.booking_horizon_days}
-            />
-          ) : (
-            <div className="rounded-2xl bg-card p-6 text-center ring-1 ring-border">
-              <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                <CalendarOff className="size-6" aria-hidden />
-              </span>
-              <p className="mt-3 font-medium">Walang bukás na oras sa ngayon</p>
-              <p className="mx-auto mt-1 max-w-sm text-sm text-pretty text-muted-foreground">
-                Wala pang bakante sa mga susunod na araw. Pakibalikan po ito
-                mamaya, o mag-message na lang muna kayo.
-              </p>
-            </div>
-          )}
-        </main>
-        {/* Phone: folded under the booking, because nobody opens a booking link
-            wanting to read a timetable. Desktop: simply shown. */}
-        <aside className="lg:col-span-2 lg:sticky lg:top-10">
-          <details className="group rounded-2xl bg-card ring-1 ring-border lg:hidden">
-            <summary className="flex h-12 cursor-pointer list-none items-center gap-2 px-4 text-sm font-medium">
-              <CalendarCheck
-                className="size-4 shrink-0 text-muted-foreground"
-                aria-hidden
-              />
-              Bukás na araw
-              <ChevronDown
-                className="ml-auto size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
-                aria-hidden
-              />
-            </summary>
-            <div className="border-t px-4 py-3">
-              <WeeklyHours availability={availability} />
-            </div>
-          </details>
-          <div className="hidden lg:block">
-            <p className="mb-2 flex items-center gap-2 text-sm font-medium">
-              <CalendarCheck
-                className="size-4 shrink-0 text-muted-foreground"
-                aria-hidden
-              />
-              Bukás na araw
-            </p>
-            <div className="rounded-2xl bg-card p-3 ring-1 ring-border">
-              <WeeklyHours availability={availability} />
-            </div>
-          </div>
-          <p className="mt-4 flex items-start gap-2 text-xs text-muted-foreground">
-            <ShieldCheck className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-            <span className="text-pretty">
-              Ang mga detalyeng ibibigay mo ay para lang sa booking na ito.
-            </span>
+      {hasTimes ? (
+        <BookingFlow
+          calendarId={calendar.id}
+          calendarName={calendar.name}
+          durationMinutes={calendar.duration_minutes}
+          timezone={calendar.timezone}
+          timezoneLabel={timezoneLabel}
+          fields={fields}
+          openRanges={openRanges}
+          horizonDays={calendar.booking_horizon_days}
+        />
+      ) : (
+        <div className="rounded-2xl bg-card p-6 text-center ring-1 ring-border">
+          <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <CalendarOff className="size-6" aria-hidden />
+          </span>
+          <p className="mt-3 font-medium">Walang bukás na oras sa ngayon</p>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-pretty text-muted-foreground">
+            Wala pang bakante sa mga susunod na araw. Pakibalikan po ito mamaya,
+            o mag-message na lang muna kayo.
           </p>
-        </aside>
-      </div>
+        </div>
+      )}
+
+      <p className="mt-6 flex items-start justify-center gap-2 text-xs text-muted-foreground">
+        <ShieldCheck className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+        <span className="text-pretty">
+          Ang mga detalyeng ibibigay mo ay para lang sa booking na ito.
+        </span>
+      </p>
     </div>
   )
 }
-/** The week, one row per day — shared by the phone disclosure and the column. */
-function WeeklyHours({
-  availability,
-}: {
-  availability: Parameters<typeof groupAvailabilityByDay>[0]
-}) {
-  return (
-    <dl className="divide-y divide-border/60">
-      {groupAvailabilityByDay(availability).map((day) => (
-        <div
-          key={day.weekday}
-          className="flex items-baseline gap-3 py-1.5 first:pt-0 last:pb-0"
-        >
-          <dt className="w-9 shrink-0 text-xs font-medium">
-            <abbr title={day.long} className="no-underline">
-              {day.short}
-            </abbr>
-          </dt>
-          <dd
-            className={cn(
-              "min-w-0 flex-1 text-right text-xs tabular-nums",
-              day.ranges.length === 0
-                ? "text-muted-foreground/60"
-                : "text-foreground"
-            )}
-          >
-            {day.ranges.length === 0 ? (
-              "Sarado"
-            ) : (
-              <span className="flex flex-col items-end gap-0.5">
-                {day.ranges.map((range) => (
-                  <span key={range}>{range}</span>
-                ))}
-              </span>
-            )}
-          </dd>
-        </div>
-      ))}
-    </dl>
-  )
-}
+

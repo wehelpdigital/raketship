@@ -115,7 +115,8 @@ describe("BookingFlow as a wizard", () => {
     )
     await waitFor(() => expect(timeStep()).toBeInTheDocument())
 
-    await user.click(await screen.findByRole("button", { name: "9:00 AM" }))
+    // Slots read as a range now, so the name is "9:00 AM – 9:30 AM".
+    await user.click(await screen.findByRole("button", { name: /9:00 AM/ }))
 
     await waitFor(() => expect(detailStep()).toBeInTheDocument())
     expect(timeStep()).not.toBeInTheDocument()
