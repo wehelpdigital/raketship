@@ -266,11 +266,14 @@ export type BusinessProfileRow = {
   description: string | null
   /** Storage object path in the 'business-media' bucket, not a URL. */
   logo_path: string | null
-  /** Which part of the logo its circular mask shows. See lib/business/logo.ts. */
+  /** Which part of each picture its frame shows. See lib/business/crop.ts. */
   logo_zoom: number
   logo_x: number
   logo_y: number
   cover_path: string | null
+  cover_zoom: number
+  cover_x: number
+  cover_y: number
   /** A key into src/lib/theme/palettes.ts. Unknown keys fall back to the brand. */
   theme_preset: string
   mobile_number: string | null

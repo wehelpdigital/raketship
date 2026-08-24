@@ -2,17 +2,25 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Crop, ImagePlus, Loader2, Trash2 } from "lucide-react"
+import { Crop, ImagePlus, Loader2, Trash2, Upload } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
-import { LogoEditor } from "@/features/business/logo-editor"
-import { LogoMask } from "@/features/business/logo-mask"
-import { normaliseCrop, type LogoCrop } from "@/lib/business/logo"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   removeBusinessImage,
   setBusinessImage,
+  setImageCrop,
 } from "@/features/business/actions"
+import { CropDialog } from "@/features/business/crop-dialog"
+import { LogoMask } from "@/features/business/logo-mask"
+import { cropStyle, normaliseCrop, type ImageCrop } from "@/lib/business/crop"
 import {
   IMAGE_ACCEPT,
   isUnrenderablePhoto,
@@ -30,31 +38,34 @@ export interface ImageFieldProps {
   hint: string
   /** Public URL of what is stored now, or null. */
   url: string | null
-  /** Logo only: which part of it the circle shows. */
-  crop?: Partial<LogoCrop> | null
-  /** Logo only: the business name, for the initials fallback. */
+  crop?: Partial<ImageCrop> | null
+  /** The business name, for the logo's initials fallback. */
   name?: string | null
   disabled?: boolean
 }
 
+/** What the field is doing. Exactly one of these at a time. */
+type Phase =
+  | { step: "idle" }
+  | { step: "manage" }
+  /** A file has been chosen and is being framed. Nothing is uploaded yet. */
+  | { step: "framing"; file: File; type: string; preview: string }
+  /** Re-framing something already stored. */
+  | { step: "reframing" }
+
 /**
- * One image, uploaded straight from the browser to storage.
+ * One picture: choose it, frame it, and only then does it upload.
  *
- * The bytes do NOT go through a server action. Next caps an action's request
- * body at 1MB, which any photo off a phone clears without trying, and that cap
- * is enforced by the transport — so the action never runs, never returns a
- * failure, and the caller only sees a thrown error it cannot explain. Going
- * direct also drops a hop the file used to make through our own server.
+ * The framing is a STEP IN THE UPLOAD rather than a thing to go back and fix.
+ * Uploading first would put the wrong crop on a public page for as long as it
+ * took to notice, and would spend a raketero's mobile data on a picture they
+ * were about to reposition anyway.
  *
- * The upload is still guarded, just not here: the bucket enforces the size
- * limit and the allowed types, and its RLS policy allows a write only inside
- * the signed-in user's own folder. The checks below are a courtesy so an
- * obvious mistake costs no bandwidth.
+ * Once there IS a picture, the picture is the control — tapping it opens the
+ * choices. That is one large target instead of a row of small buttons above
+ * it, which at 390px is the difference between hitting the right thing and not.
  *
- * The preview is a blob URL held only while the upload is in flight, so the
- * picture appears the instant it is chosen rather than after a round trip. It
- * is revoked on unmount — a blob URL that is never revoked pins the whole file
- * in memory for the life of the tab.
+ * The bytes never pass through a server action; see setBusinessImage() for why.
  */
 export function ImageField({
   kind,
@@ -67,23 +78,30 @@ export function ImageField({
 }: ImageFieldProps) {
   const router = useRouter()
   const inputRef = React.useRef<HTMLInputElement>(null)
-  const [preview, setPreview] = React.useState<string | null>(null)
+  const [phase, setPhase] = React.useState<Phase>({ step: "idle" })
   const [busy, setBusy] = React.useState(false)
-  const [framing, setFraming] = React.useState(false)
 
-  React.useEffect(() => {
-    return () => {
-      if (preview) URL.revokeObjectURL(preview)
-    }
-  }, [preview])
-
-  const shown = preview ?? url
   const isLogo = kind === "logo"
+  const stored = normaliseCrop(crop)
 
-  async function choose(file: File) {
-    // Checked here so an obvious mistake costs no upload; the action and the
-    // bucket both check again, because a browser check is a courtesy and not
-    // a control.
+  // A blob URL that is never revoked pins the whole file in memory for the life
+  // of the tab, so the one held for framing is released when it is done with.
+  const dropPreview = React.useCallback(() => {
+    setPhase((previous) => {
+      if (previous.step === "framing") URL.revokeObjectURL(previous.preview)
+      return { step: "idle" }
+    })
+  }, [])
+
+  React.useEffect(() => dropPreview, [dropPreview])
+
+  function pickFile() {
+    setPhase({ step: "idle" })
+    inputRef.current?.click()
+  }
+
+  /** Chosen, but not sent anywhere yet — framing comes first. */
+  function chosen(file: File) {
     if (file.size > MAX_IMAGE_BYTES) {
       toast.error("Ang laki ng file — 5MB lang po ang kaya.")
       return
@@ -92,9 +110,7 @@ export function ImageField({
     /*
       What the browser calls the file is not always what the bucket lists. A
       .jpg is reported as image/jpg on some systems, and anything that has been
-      through a chat app often arrives with no type at all — both were refused
-      as "not an image" while being perfectly ordinary photos. The canonical
-      type is what gets checked, uploaded and stored.
+      through a chat app often arrives with no type at all.
     */
     const type = normaliseImageType(file.name, file.type)
     if (!type) {
@@ -106,45 +122,37 @@ export function ImageField({
       return
     }
 
+    setPhase({ step: "framing", file, type, preview: URL.createObjectURL(file) })
+  }
+
+  /** The end of the framing step: now it is worth spending the upload on. */
+  async function uploadFramed(framed: ImageCrop) {
+    if (phase.step !== "framing") return
+
     const supabase = getSupabaseBrowserClient()
     if (!supabase) {
       toast.error("Hindi pa nakakonekta ang RaketShip sa database nito.")
       return
     }
 
-    const local = URL.createObjectURL(file)
-    setPreview((old) => {
-      if (old) URL.revokeObjectURL(old)
-      return local
-    })
     setBusy(true)
-
-    const forget = () =>
-      setPreview((old) => {
-        if (old) URL.revokeObjectURL(old)
-        return null
-      })
-
     try {
       const {
         data: { user },
       } = await supabase.auth.getUser()
       if (!user) {
-        forget()
         toast.error("Hindi namin masabi kung sino ka. Mag-sign in ulit.")
         return
       }
 
-      const path = mediaPath(user.id, kind, type, Date.now())
+      const path = mediaPath(user.id, kind, phase.type, Date.now())
       const { error } = await supabase.storage
         .from(MEDIA_BUCKET)
         // The canonical type, not the reported one — the bucket matches its
         // allowed list literally, so image/jpg would be turned away.
-        .upload(path, file, { contentType: type, upsert: true })
+        .upload(path, phase.file, { contentType: phase.type, upsert: true })
 
       if (error) {
-        forget()
-        // The bucket's own limits speak here, so a rejection says which one.
         toast.error(
           /exceeded|too large|maximum/i.test(error.message)
             ? "Ang laki ng file — 5MB lang po ang kaya."
@@ -153,28 +161,46 @@ export function ImageField({
         return
       }
 
-      // Only the path crosses the action boundary, so there is nothing here
-      // that a body-size limit can refuse.
-      const result = await setBusinessImage({ kind, path })
+      // Path and framing land together, so the picture is never live for a
+      // moment in a crop nobody chose.
+      const result = await setBusinessImage({ kind, path, crop: framed })
       if (!result.ok) {
-        forget()
         // The row never pointed at it, so the file would be an orphan.
         await supabase.storage.from(MEDIA_BUCKET).remove([path])
         toast.error(result.message ?? "Hindi na-save.")
         return
       }
 
+      dropPreview()
       toast.success(result.message ?? "Saved.")
       router.refresh()
     } catch {
-      forget()
       toast.error("Something went wrong. Pakisubukan ulit.")
     } finally {
       setBusy(false)
     }
   }
 
-  async function clear() {
+  /** Re-framing something already stored: no bytes move. */
+  async function saveCrop(framed: ImageCrop) {
+    setBusy(true)
+    try {
+      const result = await setImageCrop({ kind, crop: framed })
+      if (!result.ok) {
+        toast.error(result.message ?? "Hindi na-save.")
+        return
+      }
+      setPhase({ step: "idle" })
+      toast.success(result.message ?? "Saved.")
+      router.refresh()
+    } catch {
+      toast.error("Something went wrong. Pakisubukan ulit.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function remove() {
     setBusy(true)
     try {
       const result = await removeBusinessImage(kind)
@@ -182,119 +208,184 @@ export function ImageField({
         toast.error(result.message ?? "Hindi natanggal.")
         return
       }
-      setPreview((old) => {
-        if (old) URL.revokeObjectURL(old)
-        return null
-      })
+      setPhase({ step: "idle" })
       toast.success(result.message ?? "Tinanggal na.")
       router.refresh()
+    } catch {
+      toast.error("Something went wrong. Pakisubukan ulit.")
     } finally {
       setBusy(false)
     }
   }
 
+  const frameClass = isLogo
+    ? "size-24 rounded-full sm:size-28"
+    : "aspect-[3/1] w-full rounded-xl"
+
   return (
     <div className="space-y-2">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-sm font-medium">{label}</span>
-        {shown ? (
-          <span className="flex items-center gap-1">
-            {/* Only the logo is masked to a circle, so only the logo has a
-                part of itself to choose. A blob: preview has not been stored
-                yet, so there is nothing to reframe until the upload lands. */}
-            {isLogo && url ? (
-              <Button
-                type="button"
-                variant="ghost"
-                className="h-8 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
-                disabled={busy || disabled}
-                onClick={() => setFraming(true)}
-              >
-                <Crop className="size-3.5" aria-hidden="true" />
-                Ayusin
-              </Button>
-            ) : null}
-            <Button
-              type="button"
-              variant="ghost"
-              className="h-8 gap-1.5 px-2 text-xs text-muted-foreground hover:text-destructive"
-              disabled={busy || disabled}
-              onClick={clear}
-            >
-              <Trash2 className="size-3.5" aria-hidden="true" />
-              Tanggalin
-            </Button>
-          </span>
-        ) : null}
-      </div>
+      <span className="block text-sm font-medium">{label}</span>
 
-      <label
-        className={cn(
-          "relative flex cursor-pointer items-center justify-center overflow-hidden border border-dashed border-input bg-muted/40 transition-colors",
-          "hover:border-ring has-focus-visible:border-ring has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
-          // The logo is masked to a circle everywhere it appears, so it is
-          // shown as one here too — a square preview of a round thing tells
-          // the owner nothing about what will be cut off.
-          isLogo
-            ? "size-24 rounded-full sm:size-28"
-            : "aspect-[3/1] w-full rounded-xl",
-          (busy || disabled) && "pointer-events-none opacity-60"
-        )}
-      >
-        {shown ? (
-          isLogo ? (
+      {url ? (
+        <button
+          type="button"
+          disabled={busy || disabled}
+          onClick={() => setPhase({ step: "manage" })}
+          aria-label={`Baguhin ang ${label.toLowerCase()}`}
+          className={cn(
+            "relative block overflow-hidden ring-1 ring-border transition-shadow",
+            "outline-none hover:ring-2 hover:ring-ring",
+            "focus-visible:ring-2 focus-visible:ring-ring",
+            "disabled:opacity-60",
+            frameClass
+          )}
+        >
+          {isLogo ? (
             <LogoMask
-              url={shown}
+              url={url}
               name={name}
-              // A freshly chosen file has not been framed yet, so it previews
-              // centred; the stored crop applies once the upload lands.
-              crop={preview ? undefined : normaliseCrop(crop)}
+              crop={stored}
               className="size-full ring-0"
             />
           ) : (
-            /* A blob: URL has no intrinsic size to hand next/image, and the
-               bucket already caps these at 5MB. */
+            /* A storage URL with no intrinsic size to hand next/image, already
+               capped at 5MB by the bucket. */
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={shown} alt="" className="size-full object-cover" />
-          )
-        ) : (
+            <img src={url} alt="" style={cropStyle(stored)} className="size-full" />
+          )}
+
+          {busy ? (
+            <span className="absolute inset-0 flex items-center justify-center bg-background/60">
+              <Loader2
+                className="size-5 text-foreground motion-safe:animate-spin"
+                aria-hidden="true"
+              />
+            </span>
+          ) : null}
+        </button>
+      ) : (
+        <button
+          type="button"
+          disabled={busy || disabled}
+          onClick={pickFile}
+          className={cn(
+            "flex items-center justify-center border border-dashed border-input bg-muted/40 transition-colors",
+            "hover:border-ring focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+            "disabled:opacity-60",
+            frameClass
+          )}
+        >
           <span className="flex flex-col items-center gap-1 px-3 text-center text-muted-foreground">
             <ImagePlus className="size-5" aria-hidden="true" />
             <span className="text-xs text-pretty">{hint}</span>
           </span>
-        )}
+        </button>
+      )}
 
-        {busy ? (
-          <span className="absolute inset-0 flex items-center justify-center bg-background/60">
-            <Loader2
-              className="size-5 text-foreground motion-safe:animate-spin"
-              aria-hidden="true"
-            />
-          </span>
-        ) : null}
+      <input
+        ref={inputRef}
+        type="file"
+        accept={IMAGE_ACCEPT}
+        disabled={busy || disabled}
+        className="sr-only"
+        onChange={(event) => {
+          const file = event.target.files?.[0]
+          // Cleared so choosing the same file twice still fires a change.
+          event.target.value = ""
+          if (file) chosen(file)
+        }}
+      />
 
-        <input
-          ref={inputRef}
-          type="file"
-          accept={IMAGE_ACCEPT}
-          disabled={busy || disabled}
-          className="sr-only"
-          onChange={(event) => {
-            const file = event.target.files?.[0]
-            // Cleared so choosing the same file twice still fires a change.
-            event.target.value = ""
-            if (file) void choose(file)
+      {/* --- what to do with a picture that is already there ---------------- */}
+      <Dialog
+        open={phase.step === "manage"}
+        onOpenChange={(next) => {
+          if (!next && !busy) setPhase({ step: "idle" })
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{label}</DialogTitle>
+            <DialogDescription>Ano ang gusto mong gawin dito?</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="h-12 w-full justify-start gap-3"
+              disabled={busy}
+              onClick={() => setPhase({ step: "reframing" })}
+            >
+              <Crop className="size-4" aria-hidden="true" />
+              Ayusin ang pagkakalagay
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="h-12 w-full justify-start gap-3"
+              disabled={busy}
+              onClick={pickFile}
+            >
+              <Upload className="size-4" aria-hidden="true" />
+              Mag-upload ng bago
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="h-12 w-full justify-start gap-3 text-destructive hover:text-destructive"
+              disabled={busy}
+              onClick={remove}
+            >
+              {busy ? (
+                <Loader2
+                  className="size-4 motion-safe:animate-spin"
+                  aria-hidden="true"
+                />
+              ) : (
+                <Trash2 className="size-4" aria-hidden="true" />
+              )}
+              Tanggalin
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* --- framing a file that has NOT been uploaded yet ------------------- */}
+      {phase.step === "framing" ? (
+        <CropDialog
+          url={phase.preview}
+          shape={isLogo ? "circle" : "banner"}
+          title={`Ayusin ang ${label.toLowerCase()}`}
+          description="Piliin kung anong parte ang lalabas. I-a-upload ito kapag okay na."
+          confirmLabel="Okay, i-upload"
+          crop={normaliseCrop(null)}
+          open
+          busy={busy}
+          onOpenChange={(next) => {
+            if (!next && !busy) dropPreview()
           }}
+          onConfirm={uploadFramed}
         />
-        <span className="sr-only">{label}</span>
-      </label>
+      ) : null}
 
-      {isLogo && url ? (
-        <LogoEditor
+      {/* --- re-framing what is already stored ------------------------------ */}
+      {phase.step === "reframing" && url ? (
+        <CropDialog
           url={url}
-          crop={normaliseCrop(crop)}
-          open={framing}
-          onOpenChange={setFraming}
+          shape={isLogo ? "circle" : "banner"}
+          title={`Ayusin ang ${label.toLowerCase()}`}
+          description="Piliin kung anong parte ang lalabas."
+          confirmLabel="I-save"
+          crop={stored}
+          open
+          busy={busy}
+          onOpenChange={(next) => {
+            if (!next && !busy) setPhase({ step: "idle" })
+          }}
+          onConfirm={saveCrop}
         />
       ) : null}
     </div>

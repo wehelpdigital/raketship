@@ -95,12 +95,22 @@ setting for exactly the person it protects. It governs the PUBLIC PAGE only;
 the form always shows every address box, because hiding an input someone has
 already typed into reads as data loss.
 
-**The logo is always a circle.** `LogoMask` is the single component for every
-place one appears, and `lib/business/logo.ts` holds the framing: `object-fit:
-cover` guarantees the mask is filled whatever the aspect ratio, `object-position`
-picks which part shows, and `transform-origin` tracks it so zooming stays on the
-chosen point. Three numbers, no clamping invariant to get wrong, and no crop can
-leave a gap. The original file is never re-encoded, so framing stays adjustable.
+**The logo is always a circle; the cover is always a 3:1 banner.** Both throw
+away most of a phone photo, so both are framed by the owner. `lib/business/crop.ts`
+holds it: `object-fit: cover` guarantees the frame is filled whatever the aspect
+ratio, `object-position` picks which part shows, and `transform-origin` tracks it
+so zooming stays on the chosen point. Three numbers per picture, no clamping
+invariant to get wrong, and no crop can leave a gap. `dragCrop` takes width AND
+height — sharing one number made a vertical drag across the banner move three
+times as far as a horizontal one. The original file is never re-encoded.
+
+**Framing is a step in the upload, not a repair afterwards.** Choose a file ->
+frame it -> confirm, and only then does it upload, with the path and the crop
+saved in one call. Uploading first would put the wrong crop on a public page
+until someone noticed, and spend a raketero's mobile data on a picture they were
+about to move. Once a picture exists, the picture IS the control: tapping it
+opens Ayusin / Mag-upload ng bago / Tanggalin. One large target beats a row of
+small buttons at 390px.
 
 **Colour themes.** `src/lib/theme/palettes.ts` is generated and then reviewed.
 Every pair is measured, never eyeballed: `primaryForeground` clears 4.5:1 on

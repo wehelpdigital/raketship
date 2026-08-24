@@ -16,7 +16,7 @@ import {
   tidyHandle,
   tidyUrl,
 } from "@/lib/business/contact"
-import { normaliseCrop, type LogoCrop } from "@/lib/business/logo"
+import { normaliseCrop, type ImageCrop } from "@/lib/business/crop"
 import { MEDIA_BUCKET, ownsMediaPath } from "@/lib/business/media"
 import { isPaletteKey } from "@/lib/theme/palettes"
 import { getCurrentUser, getSupabaseServerClient } from "@/lib/supabase/server"
@@ -225,27 +225,40 @@ export async function setThemePreset(preset: string): Promise<BusinessActionResu
   return { ok: true, message: "Kulay saved." }
 }
 
+/** The three columns one picture's framing lives in. */
+function cropColumns(
+  kind: "logo" | "cover",
+  crop: Partial<ImageCrop> | null | undefined
+): Insert<"business_profiles"> {
+  const { zoom, x, y } = normaliseCrop(crop)
+  return kind === "logo"
+    ? { user_id: "", logo_zoom: zoom, logo_x: x, logo_y: y }
+    : { user_id: "", cover_zoom: zoom, cover_x: x, cover_y: y }
+}
+
 /**
- * Where the logo sits inside its circle.
+ * Where a picture sits inside its frame.
  *
  * Normalised rather than validated: this is three numbers driving a style
  * attribute, and clamping a bad one into range is strictly better for the
  * owner than refusing the save. The database check constraint is the backstop.
  */
-export async function setLogoCrop(
-  crop: Partial<LogoCrop>
-): Promise<BusinessActionResult> {
+export async function setImageCrop(input: {
+  kind: "logo" | "cover"
+  crop: Partial<ImageCrop>
+}): Promise<BusinessActionResult> {
   const session = await requireSession()
   if ("error" in session) return session.error
   const { db, userId } = session
 
-  const { zoom, x, y } = normaliseCrop(crop)
+  const kind = input?.kind
+  if (kind !== "logo" && kind !== "cover") {
+    return fail("We could not tell which image that was.")
+  }
 
   const row: Insert<"business_profiles"> = {
+    ...cropColumns(kind, input?.crop),
     user_id: userId,
-    logo_zoom: zoom,
-    logo_x: x,
-    logo_y: y,
   }
   const { error } = await db
     .from("business_profiles")
@@ -254,7 +267,7 @@ export async function setLogoCrop(
   if (error) return fail(TRY_AGAIN)
 
   refresh()
-  return { ok: true, message: "Naayos na ang logo." }
+  return { ok: true, message: "Naayos na." }
 }
 
 // -----------------------------------------------------------------------------
@@ -280,6 +293,8 @@ export async function setLogoCrop(
 export async function setBusinessImage(input: {
   kind: "logo" | "cover"
   path: string
+  /** Chosen before the upload, so the picture is never live in the wrong crop. */
+  crop?: Partial<ImageCrop>
 }): Promise<BusinessActionResult> {
   const session = await requireSession()
   if ("error" in session) return session.error
@@ -297,13 +312,14 @@ export async function setBusinessImage(input: {
 
   const previous = await currentPath(db, userId, kind)
 
-  // A new logo is a new picture, so the last one's framing means nothing —
-  // keeping it would show a corner of the new one for no reason anyone could
-  // work out.
-  const patch: Insert<"business_profiles"> =
-    kind === "logo"
-      ? { user_id: userId, logo_path: path, logo_zoom: 1, logo_x: 50, logo_y: 50 }
-      : { user_id: userId, cover_path: path }
+  // The framing arrives with the path because it was chosen before the file
+  // was sent. Absent, it resets — a new picture inheriting the last one's crop
+  // would show a corner of itself for no reason anyone could work out.
+  const patch: Insert<"business_profiles"> = {
+    ...cropColumns(kind, input?.crop),
+    user_id: userId,
+    ...(kind === "logo" ? { logo_path: path } : { cover_path: path }),
+  }
 
   const { error } = await db
     .from("business_profiles")
@@ -338,8 +354,11 @@ export async function removeBusinessImage(
 
   const previous = await currentPath(db, userId, kind)
 
-  const patch: Patch<"business_profiles"> =
-    kind === "logo" ? { logo_path: null } : { cover_path: null }
+  // The framing goes with the picture it framed.
+  const patch: Patch<"business_profiles"> = {
+    ...cropColumns(kind, null),
+    ...(kind === "logo" ? { logo_path: null } : { cover_path: null }),
+  }
 
   const { error } = await db
     .from("business_profiles")

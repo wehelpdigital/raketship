@@ -4,11 +4,11 @@ import {
   DEFAULT_CROP,
   dragCrop,
   isCropped,
-  logoStyle,
+  cropStyle,
   MAX_ZOOM,
   MIN_ZOOM,
   normaliseCrop,
-} from "./logo"
+} from "./crop"
 
 describe("normaliseCrop", () => {
   it("keeps a sensible crop as it is", () => {
@@ -62,7 +62,7 @@ describe("normaliseCrop", () => {
   })
 })
 
-describe("logoStyle", () => {
+describe("cropStyle", () => {
   it("always covers the mask, so no crop can leave a gap", () => {
     // This is the invariant that makes the whole model safe: cover fills the
     // circle whatever the aspect ratio, and the zoom never drops below 1.
@@ -71,14 +71,14 @@ describe("logoStyle", () => {
       { zoom: 4, x: 100, y: 100 },
       { zoom: 2.5, x: 13, y: 87 },
     ]) {
-      expect(logoStyle(crop).objectFit).toBe("cover")
+      expect(cropStyle(crop).objectFit).toBe("cover")
     }
   })
 
   it("anchors the zoom on the point that was chosen", () => {
     // If transform-origin did not track object-position, zooming would walk
     // away from whatever the owner had just centred.
-    const style = logoStyle({ zoom: 3, x: 20, y: 80 })
+    const style = cropStyle({ zoom: 3, x: 20, y: 80 })
     expect(style.objectPosition).toBe("20% 80%")
     expect(style.transformOrigin).toBe("20% 80%")
     expect(style.transform).toBe("scale(3)")
@@ -86,11 +86,11 @@ describe("logoStyle", () => {
 
   it("writes no transform at all when nothing is zoomed", () => {
     // A no-op transform still creates a compositing layer on some browsers.
-    expect(logoStyle(DEFAULT_CROP).transform).toBeUndefined()
+    expect(cropStyle(DEFAULT_CROP).transform).toBeUndefined()
   })
 
   it("normalises before it renders", () => {
-    const style = logoStyle({ zoom: 999, x: -20, y: 500 })
+    const style = cropStyle({ zoom: 999, x: -20, y: 500 })
     expect(style.objectPosition).toBe("0% 100%")
     expect(style.transform).toBe(`scale(${MAX_ZOOM})`)
   })
@@ -157,5 +157,36 @@ describe("isCropped", () => {
     expect(isCropped(null)).toBe(false)
     expect(isCropped({ zoom: 1.5, x: 50, y: 50 })).toBe(true)
     expect(isCropped({ zoom: 1, x: 20, y: 50 })).toBe(true)
+  })
+})
+
+describe("dragCrop across a frame that is not square", () => {
+  const start = { zoom: 1, x: 50, y: 50 }
+
+  it("moves the same distance for the same fraction of each side", () => {
+    // The cover frame is 264x88. A drag of a quarter of the width and a
+    // quarter of the height should shift the picture by the same amount on
+    // each axis — sharing one number made a vertical drag move three times
+    // as far as a horizontal one.
+    const moved = dragCrop(start, 66, 22, 264, 88)
+    expect(50 - moved.x).toBe(50 - moved.y)
+  })
+
+  it("still treats a square frame as square when only one size is given", () => {
+    const both = dragCrop(start, 40, 40, 200, 200)
+    const one = dragCrop(start, 40, 40, 200)
+    expect(one).toEqual(both)
+  })
+
+  it("moves the picture with the finger on both axes", () => {
+    const moved = dragCrop(start, 30, 20, 264, 88)
+    expect(moved.x).toBeLessThan(50)
+    expect(moved.y).toBeLessThan(50)
+  })
+
+  it("does nothing rather than dividing by zero on either axis", () => {
+    expect(dragCrop(start, 30, 30, 264, 0)).toEqual(normaliseCrop(start))
+    expect(dragCrop(start, 30, 30, 0, 88)).toEqual(normaliseCrop(start))
+    expect(dragCrop(start, 30, 30, Number.NaN, 88)).toEqual(normaliseCrop(start))
   })
 })

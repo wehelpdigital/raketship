@@ -1,5 +1,5 @@
 import { initialsOf } from "@/lib/business/media"
-import { logoStyle, type LogoCrop } from "@/lib/business/logo"
+import { cropStyle, type ImageCrop } from "@/lib/business/crop"
 import { cn } from "@/lib/utils"
 
 export interface LogoMaskProps {
@@ -7,7 +7,7 @@ export interface LogoMaskProps {
   url: string | null
   /** Used for the initials, and as the alt text when there is a logo. */
   name: string | null
-  crop?: Partial<LogoCrop> | null
+  crop?: Partial<ImageCrop> | null
   className?: string
   /** Tailwind text size for the initials fallback. */
   textClassName?: string
@@ -45,7 +45,7 @@ export function LogoMask({
         <img
           src={url}
           alt={name ? `${name} logo` : ""}
-          style={logoStyle(crop)}
+          style={cropStyle(crop)}
           className="size-full"
         />
       ) : (

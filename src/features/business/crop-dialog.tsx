@@ -1,9 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
 import { Loader2, Move, RotateCcw, ZoomIn } from "lucide-react"
-import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -15,54 +13,75 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { setLogoCrop } from "@/features/business/actions"
 import {
   DEFAULT_CROP,
   dragCrop,
-  logoStyle,
+  cropStyle,
   MAX_ZOOM,
   MIN_ZOOM,
   normaliseCrop,
-  type LogoCrop,
-} from "@/lib/business/logo"
+  type ImageCrop,
+} from "@/lib/business/crop"
 import { cn } from "@/lib/utils"
 
-export interface LogoEditorProps {
+export interface CropDialogProps {
+  /** Blob URL for a file just chosen, or the stored URL of an existing image. */
   url: string
-  crop: LogoCrop
+  /** The logo crops to a circle; the cover to a 3:1 banner. */
+  shape: "circle" | "banner"
+  title: string
+  description: string
+  /** Label for the confirm button — it commits an upload on a new picture. */
+  confirmLabel: string
+  crop: ImageCrop
   open: boolean
+  busy?: boolean
   onOpenChange: (open: boolean) => void
+  onConfirm: (crop: ImageCrop) => void
 }
 
-/** The mask is square; this is its side in px inside the dialog. */
-const MASK = 224
+/** The frame's width in the dialog; the banner is a third as tall. */
+const FRAME = 264
 
 /**
- * Choosing which part of the logo the circle shows.
+ * Choosing which part of a picture survives the crop.
  *
- * Drag to move, slide to zoom, and what you see is exactly what the public
- * page renders — the preview uses the same logoStyle() the real mask does, so
- * there is no second implementation to disagree with it.
+ * Controlled and side-effect free: it hands the chosen framing back and lets
+ * the caller decide what that means. That is what allows the same dialog to be
+ * a step in an upload — frame it, THEN send it — as well as a way to re-frame
+ * something already stored. Saving from in here would have forced the file to
+ * be uploaded before it could be looked at.
+ *
+ * What you see is exactly what renders elsewhere: the preview uses the same
+ * cropStyle() the real frames do, so there is no second implementation to
+ * disagree with it.
  *
  * Pointer events rather than mouse or touch: one code path covers a finger, a
  * mouse and a stylus, and setPointerCapture keeps the drag alive when the
- * pointer leaves the circle, which on a phone is most of the time.
+ * pointer leaves the frame, which on a phone is most of the time.
  */
-export function LogoEditor({
+export function CropDialog({
   url,
+  shape,
+  title,
+  description,
+  confirmLabel,
   crop,
   open,
+  busy = false,
   onOpenChange,
-}: LogoEditorProps) {
-  const router = useRouter()
-  const [value, setValue] = React.useState<LogoCrop>(() => normaliseCrop(crop))
-  const [saving, startSaving] = React.useTransition()
-  const dragRef = React.useRef<{ x: number; y: number; from: LogoCrop } | null>(
+  onConfirm,
+}: CropDialogProps) {
+  const [value, setValue] = React.useState<ImageCrop>(() => normaliseCrop(crop))
+  const dragRef = React.useRef<{ x: number; y: number; from: ImageCrop } | null>(
     null
   )
 
+  const isCircle = shape === "circle"
+  const frameHeight = isCircle ? FRAME : FRAME / 3
+
   // Reset when the dialog is opened, during render rather than in an effect,
-  // so it never paints last time's framing for a frame first.
+  // so it never paints the previous picture's framing for a frame first.
   const [wasOpen, setWasOpen] = React.useState(open)
   if (wasOpen !== open) {
     setWasOpen(open)
@@ -70,7 +89,7 @@ export function LogoEditor({
   }
 
   function down(event: React.PointerEvent<HTMLDivElement>) {
-    if (saving) return
+    if (busy) return
     event.currentTarget.setPointerCapture(event.pointerId)
     dragRef.current = { x: event.clientX, y: event.clientY, from: value }
   }
@@ -85,7 +104,8 @@ export function LogoEditor({
         drag.from,
         event.clientX - drag.x,
         event.clientY - drag.y,
-        MASK
+        FRAME,
+        frameHeight
       )
     )
   }
@@ -118,55 +138,45 @@ export function LogoEditor({
     )
   }
 
-  function save() {
-    startSaving(async () => {
-      const result = await setLogoCrop(value)
-      if (!result.ok) {
-        toast.error(result.message ?? "Hindi na-save.")
-        return
-      }
-      toast.success(result.message ?? "Saved.")
-      onOpenChange(false)
-      router.refresh()
-    })
-  }
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        // Closing mid-upload would strand the file half-committed.
+        if (!busy) onOpenChange(next)
+      }}
+    >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Ayusin ang logo</DialogTitle>
-          <DialogDescription>
-            I-drag ang larawan para pumili kung anong parte ang lalabas sa bilog.
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5">
           <div className="flex justify-center">
             <div
               role="application"
-              aria-label="I-drag para igalaw ang logo"
+              aria-label="I-drag para igalaw ang larawan"
               tabIndex={0}
               onPointerDown={down}
               onPointerMove={move}
               onPointerUp={up}
               onPointerCancel={up}
               onKeyDown={key}
-              style={{ width: MASK, height: MASK }}
+              style={{ width: FRAME, height: frameHeight }}
               className={cn(
-                "relative max-w-full touch-none overflow-hidden rounded-full ring-2 ring-border select-none",
+                "relative max-w-full touch-none overflow-hidden ring-2 ring-border select-none",
                 "outline-none focus-visible:ring-4 focus-visible:ring-ring",
-                saving ? "cursor-not-allowed" : "cursor-grab active:cursor-grabbing"
+                isCircle ? "rounded-full" : "rounded-xl",
+                busy ? "cursor-wait" : "cursor-grab active:cursor-grabbing"
               )}
             >
-              {/* Exactly the style the public page uses, so this preview cannot
-                  drift from what a customer will actually see. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={url}
                 alt=""
                 draggable={false}
-                style={logoStyle(value)}
+                style={cropStyle(value)}
                 className="pointer-events-none size-full"
               />
             </div>
@@ -179,7 +189,7 @@ export function LogoEditor({
 
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
-              <Label htmlFor="logo-zoom" className="flex items-center gap-1.5">
+              <Label htmlFor="crop-zoom" className="flex items-center gap-1.5">
                 <ZoomIn className="size-4" aria-hidden="true" />
                 Laki
               </Label>
@@ -188,18 +198,17 @@ export function LogoEditor({
               </span>
             </div>
             {/*
-              A native range input: it is keyboard accessible, it works with a
-              screen reader, and it is the one control a phone renders well
-              without any help from us.
+              A native range input: keyboard accessible, works with a screen
+              reader, and the one control a phone renders well unaided.
             */}
             <input
-              id="logo-zoom"
+              id="crop-zoom"
               type="range"
               min={MIN_ZOOM}
               max={MAX_ZOOM}
               step={0.1}
               value={value.zoom}
-              disabled={saving}
+              disabled={busy}
               onChange={(event) =>
                 setValue((previous) =>
                   normaliseCrop({ ...previous, zoom: Number(event.target.value) })
@@ -215,7 +224,7 @@ export function LogoEditor({
             type="button"
             variant="ghost"
             className="h-11 gap-1.5"
-            disabled={saving}
+            disabled={busy}
             onClick={() => setValue(DEFAULT_CROP)}
           >
             <RotateCcw className="size-4" aria-hidden="true" />
@@ -227,7 +236,7 @@ export function LogoEditor({
               type="button"
               variant="outline"
               className="h-11"
-              disabled={saving}
+              disabled={busy}
               onClick={() => onOpenChange(false)}
             >
               Cancel
@@ -235,13 +244,13 @@ export function LogoEditor({
             <Button
               type="button"
               className="h-11 gap-2"
-              disabled={saving}
-              onClick={save}
+              disabled={busy}
+              onClick={() => onConfirm(value)}
             >
-              {saving ? (
+              {busy ? (
                 <Loader2 className="motion-safe:animate-spin" aria-hidden="true" />
               ) : null}
-              {saving ? "Saving…" : "I-save"}
+              {busy ? "Saving…" : confirmLabel}
             </Button>
           </div>
         </DialogFooter>

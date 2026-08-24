@@ -1,4 +1,5 @@
 import { LogoMask } from "@/features/business/logo-mask"
+import { cropStyle } from "@/lib/business/crop"
 import { mediaUrl } from "@/lib/business/media"
 import type { BusinessProfileRow } from "@/lib/supabase/types"
 
@@ -33,7 +34,12 @@ export function BusinessHeader({ business, fallbackName }: BusinessHeaderProps) 
         <img
           src={cover}
           alt=""
-          className="aspect-[3/1] w-full object-cover"
+          style={cropStyle({
+            zoom: business?.cover_zoom ?? 1,
+            x: business?.cover_x ?? 50,
+            y: business?.cover_y ?? 50,
+          })}
+          className="aspect-[3/1] w-full"
         />
       ) : null}
 

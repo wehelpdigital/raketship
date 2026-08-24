@@ -14,6 +14,7 @@ import { BusinessForm } from "@/features/business/business-form"
 import { ImageField } from "@/features/business/image-field"
 import { PalettePicker } from "@/features/business/palette-picker"
 import { LogoMask } from "@/features/business/logo-mask"
+import { cropStyle } from "@/lib/business/crop"
 import { mediaUrl } from "@/lib/business/media"
 import { supabaseConfigured } from "@/lib/env"
 import { getBusinessProfile } from "@/lib/queries/business"
@@ -122,6 +123,11 @@ export default async function BusinessModulePage() {
                 label="Cover photo"
                 hint="Malapad — tarpaulin, produkto, o shop mo"
                 url={coverUrl}
+                crop={{
+                  zoom: profile?.cover_zoom ?? 1,
+                  x: profile?.cover_x ?? 50,
+                  y: profile?.cover_y ?? 50,
+                }}
               />
 
               {/* What the two pictures actually add up to, at the size the
@@ -136,7 +142,12 @@ export default async function BusinessModulePage() {
                       <img
                         src={coverUrl}
                         alt=""
-                        className="size-full object-cover"
+                        style={cropStyle({
+                          zoom: profile?.cover_zoom ?? 1,
+                          x: profile?.cover_x ?? 50,
+                          y: profile?.cover_y ?? 50,
+                        })}
+                        className="size-full"
                       />
                     ) : null}
                   </div>
