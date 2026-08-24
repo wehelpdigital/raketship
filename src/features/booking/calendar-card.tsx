@@ -82,8 +82,12 @@ export function CalendarCard({
     }
   }
 
+  // Press feedback rides on `has-[a:active]` rather than `active:` because the
+  // thing being pressed is the title link's stretched ::after, not the card.
+  // The copy row sits at z-10 above that overlay, so pressing it never reads as
+  // pressing the card.
   return (
-    <article className="group relative flex h-full flex-col gap-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10 transition-colors hover:bg-muted/40 has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring sm:p-5 lg:gap-4 lg:p-6">
+    <article className="group relative flex h-full touch-manipulation flex-col gap-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10 transition-[transform,background-color,box-shadow] duration-150 ease-out hover:bg-muted/40 has-[a:active]:bg-muted/60 has-[a:active]:shadow-sm has-[a:focus-visible]:ring-2 has-[a:focus-visible]:ring-ring has-[a:active]:motion-safe:scale-[0.985] sm:p-5 lg:gap-4 lg:p-6">
       <div className="flex items-start justify-between gap-3">
         <h3 className="min-w-0 text-sm font-medium text-balance lg:text-base">
           <Link

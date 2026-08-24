@@ -43,8 +43,8 @@ export const viewport: Viewport = {
   // Cover the notch so our pb-safe / pt-safe utilities have room to work.
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#14131c" },
+    { media: "(prefers-color-scheme: light)", color: "#fffdfb" },
+    { media: "(prefers-color-scheme: dark)", color: "#120d09" },
   ],
 }
 
