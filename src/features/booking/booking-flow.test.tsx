@@ -488,7 +488,28 @@ describe("the confirmation", () => {
     expect(screen.queryByText(/hindi bababa/i)).toBeNull()
   })
 
-  it("says nothing about contacting when the owner gave no way to", async () => {
+  it("still states the deadline when the owner gave no way to contact them", async () => {
+    // This is exactly when the deadline matters most: the customer has to go
+    // and find the number themselves, so they need to know how long they have.
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    await bookThrough(user, {
+      cancelNoticeHours: 24,
+      contact: {
+        mobile: null,
+        chatApps: [],
+        facebookUrl: null,
+        instagramHandle: null,
+        websiteUrl: null,
+      },
+    })
+    await screen.findByText("Booked na po!")
+
+    expect(screen.getByText(/hindi bababa sa 1 araw/i)).toBeInTheDocument()
+    // ...but no buttons, because there is nothing to press.
+    expect(screen.queryByRole("link", { name: /Viber|Facebook/ })).toBeNull()
+  })
+
+  it("says nothing at all with neither a deadline nor a way to contact", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     await bookThrough(user, {
       contact: {

@@ -6,8 +6,6 @@ import {
   CalendarX2,
   ChevronDown,
   Loader2,
-  Mail,
-  Phone,
   RotateCcw,
   Undo2,
 } from "lucide-react"
@@ -180,53 +178,68 @@ export function BookedRowCard({
 
       {open ? (
         <div id={bodyId} className="space-y-4 border-t px-4 py-4 sm:px-5">
-          <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+          {/*
+            Written out as "Label: value" rather than a grid of headings above
+            values. An owner reading a booking back to a customer on the phone
+            reads a line, not a layout — and half of these are one short word,
+            which a heading above makes taller than the thing it names.
+          */}
+          <dl className="space-y-1.5 text-sm">
+            <Fact label="Pangalan">{row.customerName}</Fact>
+
             <Fact label="Kailan">
               <span className="tabular-nums">
                 {longDate(when.isoDate)}, {when.time} – {until.time}
               </span>
-              <span className="block text-xs text-muted-foreground">
-                {row.timezone}
-              </span>
             </Fact>
+
+            <Fact label="Timezone">{row.timezone}</Fact>
+
+            {row.customerEmail ? (
+              <Fact label="Email">
+                <a
+                  href={`mailto:${row.customerEmail}`}
+                  className="underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                >
+                  {row.customerEmail}
+                </a>
+              </Fact>
+            ) : null}
+
+            {row.customerPhone ? (
+              <Fact label="Mobile">
+                <a
+                  href={`tel:${row.customerPhone}`}
+                  className="tabular-nums underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                >
+                  {row.customerPhone}
+                </a>
+              </Fact>
+            ) : null}
+
+            {!row.customerEmail && !row.customerPhone ? (
+              <Fact label="Contact">
+                <span className="text-muted-foreground">Wala silang iniwan</span>
+              </Fact>
+            ) : null}
+
+            <Fact label="Serbisyo">{row.serviceName ?? row.calendarName}</Fact>
+
+            <Fact label="Haba">{formatDuration(row.durationMinutes)}</Fact>
+
+            {row.servicePriceCentavos ? (
+              <Fact label="Presyo">
+                <span className="tabular-nums">
+                  {formatPeso(row.servicePriceCentavos)}
+                </span>
+              </Fact>
+            ) : null}
+
+            <Fact label="Calendar">{row.calendarName}</Fact>
 
             <Fact label="Reference">
               <span className="font-mono tracking-wider tabular-nums">
                 {referenceOf(row.id)}
-              </span>
-            </Fact>
-
-            <Fact label="Contact">
-              {row.customerEmail ? (
-                <a
-                  href={`mailto:${row.customerEmail}`}
-                  className="flex min-w-0 items-center gap-1.5 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                >
-                  <Mail className="size-3.5 shrink-0" aria-hidden="true" />
-                  <span className="truncate">{row.customerEmail}</span>
-                </a>
-              ) : null}
-              {row.customerPhone ? (
-                <a
-                  href={`tel:${row.customerPhone}`}
-                  className="flex items-center gap-1.5 tabular-nums hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                >
-                  <Phone className="size-3.5 shrink-0" aria-hidden="true" />
-                  {row.customerPhone}
-                </a>
-              ) : null}
-              {!row.customerEmail && !row.customerPhone ? (
-                <span className="text-muted-foreground">Wala silang iniwan</span>
-              ) : null}
-            </Fact>
-
-            <Fact label="Serbisyo">
-              {row.serviceName ?? row.calendarName}
-              <span className="block text-xs text-muted-foreground">
-                {formatDuration(row.durationMinutes)}
-                {row.servicePriceCentavos
-                  ? ` · ${formatPeso(row.servicePriceCentavos)}`
-                  : ""}
               </span>
             </Fact>
           </dl>
@@ -234,10 +247,9 @@ export function BookedRowCard({
           {answered.length > 0 ? (
             <dl className="space-y-1.5 rounded-lg bg-muted/40 p-3 text-sm">
               {answered.map(({ field, text }) => (
-                <div key={field.id} className="flex flex-wrap gap-x-2">
-                  <dt className="text-muted-foreground">{field.label}:</dt>
-                  <dd className="min-w-0 text-pretty">{text}</dd>
-                </div>
+                <Fact key={field.id} label={field.label}>
+                  {text}
+                </Fact>
               ))}
             </dl>
           ) : null}
@@ -318,6 +330,14 @@ export function BookedRowCard({
   )
 }
 
+/**
+ * One labelled fact, on one line: "Pangalan: Gero Santos".
+ *
+ * The label keeps a fixed width on anything wider than a phone so the values
+ * line up in a column and the whole panel can be read down rather than across.
+ * Below that it wraps, because a fixed label column at 390px leaves the value
+ * a few characters wide.
+ */
 function Fact({
   label,
   children,
@@ -326,9 +346,9 @@ function Fact({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-w-0 space-y-0.5">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 space-y-0.5 text-pretty">{children}</dd>
+    <div className="flex flex-wrap gap-x-2">
+      <dt className="text-muted-foreground sm:w-24 sm:shrink-0">{label}:</dt>
+      <dd className="min-w-0 flex-1 text-pretty">{children}</dd>
     </div>
   )
 }

@@ -1353,6 +1353,16 @@ function Confirmed({
     here rather than in each so the receipt cannot come out saying something
     the page does not.
   */
+  /*
+    The deadline and the buttons are separate things to have. Gating the whole
+    block on having contact details hid the deadline from every shop that had
+    not filled a number in — which was most of them, and which is exactly when
+    the deadline matters, because the customer has to go and find the number
+    themselves. Either alone is worth the box; neither is worth an empty one.
+  */
+  const reachable = contact !== null && hasAnyContact(contact)
+  const saysSomething = reachable || cancelNoticeHours > 0
+
   const rows = [
     {
       label: "Kailan",
@@ -1464,7 +1474,7 @@ function Confirmed({
               filled in. Silence here is what turns a change of plan into a
               no-show.
             */}
-            {contact && hasAnyContact(contact) ? (
+            {saysSomething ? (
               <div className="space-y-2 rounded-xl bg-muted/40 p-4">
                 <p className="text-sm text-pretty">
                   <span className="font-medium">
@@ -1474,13 +1484,15 @@ function Confirmed({
                     {cancelNoticeSentence(cancelNoticeHours)}
                   </span>
                 </p>
-                <ContactChips
-                  mobile={contact.mobile}
-                  chatApps={contact.chatApps}
-                  facebookUrl={contact.facebookUrl}
-                  instagramHandle={contact.instagramHandle}
-                  websiteUrl={contact.websiteUrl}
-                />
+                {contact ? (
+                  <ContactChips
+                    mobile={contact.mobile}
+                    chatApps={contact.chatApps}
+                    facebookUrl={contact.facebookUrl}
+                    instagramHandle={contact.instagramHandle}
+                    websiteUrl={contact.websiteUrl}
+                  />
+                ) : null}
               </div>
             ) : null}
 

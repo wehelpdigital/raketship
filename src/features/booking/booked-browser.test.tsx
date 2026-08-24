@@ -210,7 +210,15 @@ describe("opening a row", () => {
 
     await user.click(screen.getByRole("button", { expanded: false }))
 
-    expect(screen.getByText("Reference")).toBeInTheDocument()
+    // Written out plainly, so an owner reading it back on the phone reads a
+    // line rather than a layout.
+    expect(screen.getByText("Pangalan:")).toBeInTheDocument()
+    // Twice on purpose: once in the row you scan, once labelled in the detail
+    // you read back to the customer.
+    expect(screen.getAllByText("Suki 1")).toHaveLength(2)
+    expect(screen.getByText("Kailan:")).toBeInTheDocument()
+    expect(screen.getByText("Reference:")).toBeInTheDocument()
+    expect(screen.getByText("Email:")).toBeInTheDocument()
     expect(screen.getByRole("link", { name: /juan@example.com/ })).toBeInTheDocument()
   })
 
@@ -221,10 +229,10 @@ describe("opening a row", () => {
 
     const rows = () => screen.getAllByRole("button", { name: /Suki/ })
     await user.click(rows()[0])
-    expect(screen.getAllByText("Reference")).toHaveLength(1)
+    expect(screen.getAllByText("Reference:")).toHaveLength(1)
 
     await user.click(rows()[1])
-    expect(screen.getAllByText("Reference")).toHaveLength(1)
+    expect(screen.getAllByText("Reference:")).toHaveLength(1)
   })
 
   it("closes again when tapped a second time", async () => {
@@ -262,6 +270,7 @@ describe("opening a row", () => {
 
     await user.click(screen.getByRole("button", { expanded: false }))
 
+    // The owner's own questions read the same way as everything else.
     expect(screen.getByText("Anong hairstyle:")).toBeInTheDocument()
     expect(screen.getByText("Fade po")).toBeInTheDocument()
   })
