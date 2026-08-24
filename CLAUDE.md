@@ -183,6 +183,13 @@ Six tables: `booking_calendars`, `booking_availability`, `booking_blackouts`,
 `booking_form_fields`, `bookings` (`0004_booking_module.sql`) and
 `booking_services` (`0006_booking_services.sql`).
 
+**Booked** searches, filters and pages IN THE BROWSER over rows already loaded.
+A raket has tens or hundreds of bookings, not millions, and instant beats a
+round trip per keystroke. Rows collapse to a scannable line and open one at a
+time — a list where every row is expanded is a list you cannot scan. The pure
+parts (matching, paging, the page window) live in `lib/booking/booked-filter.ts`
+so they are testable without rendering.
+
 **Booked** (`/modules/booking/booked`) lists what came in through the public
 pages, split into upcoming, finished and cancelled around ONE clock read — a
 booking is upcoming until it ENDS, so the one in progress is still today's

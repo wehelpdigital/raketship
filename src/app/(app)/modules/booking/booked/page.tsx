@@ -5,7 +5,8 @@ import { CalendarCheck, CalendarClock, ChevronLeft, Lock } from "lucide-react"
 import { PageContainer, PageHeader } from "@/components/shell/page-container"
 import { SetupNotice } from "@/components/shell/setup-notice"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BookedList, type BookedRow } from "@/features/booking/booked-list"
+import { BookedBrowser } from "@/features/booking/booked-browser"
+import type { BookedRow } from "@/features/booking/booked-list"
 import { supabaseConfigured } from "@/lib/env"
 import { listBookedForOwner, type OwnerBooking } from "@/lib/queries/booking"
 import { getCurrentUser } from "@/lib/supabase/server"
@@ -19,6 +20,11 @@ export const metadata: Metadata = { title: "Booked" }
  * A static segment, so it deliberately shadows /modules/booking/[calendarId]
  * the same way /modules/booking shadows /modules/[moduleId]. Calendar ids are
  * uuids, so "booked" can never be one of them.
+ *
+ * The page is a working list rather than a reading column: rows collapse to a
+ * scannable line and open one at a time, and the searching, filtering and
+ * paging happen in the browser over rows already loaded. See BookedBrowser for
+ * why that is client-side.
  */
 export default async function BookedPage() {
   const user = await getCurrentUser()
@@ -37,6 +43,20 @@ export default async function BookedPage() {
 
   const { upcoming, past, cancelled, fieldsByCalendar } =
     await listBookedForOwner(user.id)
+
+  /*
+    Named from the bookings themselves rather than by loading every calendar:
+    a filter offering a calendar with nothing on it is a dead end, and the
+    names are already here.
+  */
+  const calendars = Array.from(
+    new Map(
+      [...upcoming, ...past, ...cancelled].map((b) => [
+        b.calendar_id,
+        { id: b.calendar_id, name: b.calendar?.name ?? "Booking" },
+      ])
+    ).values()
+  ).sort((a, b) => a.name.localeCompare(b.name))
 
   const total = upcoming.length + past.length + cancelled.length
 
@@ -81,49 +101,42 @@ export default async function BookedPage() {
           </div>
 
           <TabsContent value="upcoming" keepMounted>
-            {upcoming.length > 0 ? (
-              <div className="space-y-4">
-                <SlotNotice />
-                <BookedList
-                  rows={upcoming.map(toRow)}
-                  fieldsByCalendar={fieldsByCalendar}
-                />
-              </div>
-            ) : (
-              <Quiet>
-                Walang paparating na booking. Ang mga bagong booking sa public
-                link mo ay lalabas dito.
-              </Quiet>
-            )}
+            <div className="space-y-4">
+              {upcoming.length > 0 ? <SlotNotice /> : null}
+              <BookedBrowser
+                rows={upcoming.map(toRow)}
+                fieldsByCalendar={fieldsByCalendar}
+                calendars={calendars}
+                emptyLabel="Walang paparating na booking. Ang mga bagong booking sa public link mo ay lalabas dito."
+              />
+            </div>
           </TabsContent>
 
           <TabsContent value="past" keepMounted>
-            {past.length > 0 ? (
-              <BookedList
-                rows={past.map(toRow)}
-                fieldsByCalendar={fieldsByCalendar}
-              />
-            ) : (
-              <Quiet>Wala pang natapos na booking.</Quiet>
-            )}
+            <BookedBrowser
+              rows={past.map(toRow)}
+              fieldsByCalendar={fieldsByCalendar}
+              calendars={calendars}
+              emptyLabel="Wala pang natapos na booking."
+            />
           </TabsContent>
 
           <TabsContent value="cancelled" keepMounted>
-            {cancelled.length > 0 ? (
-              <div className="space-y-4">
+            <div className="space-y-4">
+              {cancelled.length > 0 ? (
                 <p className="rounded-lg bg-muted/50 px-3 py-2 text-sm text-pretty text-muted-foreground">
                   Bakante na ulit ang mga oras na ito — pwede na silang kunin ng
                   iba.
                 </p>
-                <BookedList
-                  rows={cancelled.map(toRow)}
-                  fieldsByCalendar={fieldsByCalendar}
-                  variant="cancelled"
-                />
-              </div>
-            ) : (
-              <Quiet>Walang na-cancel. Mabuti iyon.</Quiet>
-            )}
+              ) : null}
+              <BookedBrowser
+                rows={cancelled.map(toRow)}
+                fieldsByCalendar={fieldsByCalendar}
+                calendars={calendars}
+                variant="cancelled"
+                emptyLabel="Walang na-cancel. Mabuti iyon."
+              />
+            </div>
           </TabsContent>
         </Tabs>
       )}
@@ -187,14 +200,6 @@ function Count({ n }: { n: number }) {
     <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground tabular-nums">
       {n}
     </span>
-  )
-}
-
-function Quiet({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="rounded-xl bg-card px-4 py-8 text-center text-sm text-pretty text-muted-foreground ring-1 ring-border">
-      {children}
-    </p>
   )
 }
 
