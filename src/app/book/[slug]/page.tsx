@@ -230,6 +230,17 @@ export default async function PublicBookingPage({ params }: PageProps) {
           horizonDays={calendar.booking_horizon_days}
           challenge={challenge}
           challengeBits={CHALLENGE_BITS}
+          contact={
+            business
+              ? {
+                  mobile: business.mobile_number,
+                  chatApps: business.chat_apps ?? [],
+                  facebookUrl: business.facebook_url,
+                  instagramHandle: business.instagram_handle,
+                  websiteUrl: business.website_url,
+                }
+              : null
+          }
         />
       ) : (
         <div className="rounded-2xl bg-card p-6 text-center ring-1 ring-border">

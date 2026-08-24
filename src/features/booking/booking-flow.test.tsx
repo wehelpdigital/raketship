@@ -319,3 +319,153 @@ describe("BookingFlow with a service catalogue", () => {
     expect(sent.viewerZone).toBe("Asia/Manila")
   })
 })
+
+// -----------------------------------------------------------------------------
+// The confirmation, which is the screen a suki keeps
+// -----------------------------------------------------------------------------
+
+/** Drives the wizard all the way to a booked slot. */
+async function bookThrough(
+  user: ReturnType<typeof userEvent.setup>,
+  overrides: Partial<React.ComponentProps<typeof BookingFlow>> = {}
+) {
+  actions.submitBooking.mockResolvedValue({
+    ok: true,
+    bookingId: "9f8e7d6c-1111-4222-8333-444444444444",
+  })
+  renderFlow(overrides)
+
+  await user.click(
+    screen.getAllByRole("button", { name: /Mon|Tue|Wed|Thu|Fri|Sat|Sun/ })[0]
+  )
+  await waitFor(() => expect(timeStep()).toBeInTheDocument())
+  await user.click(await screen.findByRole("button", { name: /9:00 AM/ }))
+  await waitFor(() => expect(detailStep()).toBeInTheDocument())
+
+  await user.type(screen.getByLabelText(/Pangalan/), "Juan dela Cruz")
+  await user.type(screen.getByLabelText("Email"), "juan@example.com")
+  await user.click(screen.getByRole("button", { name: /Confirm booking/ }))
+}
+
+describe("the confirmation", () => {
+  it("says it plainly, and keeps the details together", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    await bookThrough(user)
+
+    expect(await screen.findByText("Booked na po!")).toBeInTheDocument()
+    // Everything a suki would want in the screenshot they are about to take.
+    expect(screen.getByText("Kailan")).toBeInTheDocument()
+    expect(screen.getByText("Haba")).toBeInTheDocument()
+    expect(screen.getByText("Oras ng shop")).toBeInTheDocument()
+  })
+
+  it("shows a reference they can quote", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    await bookThrough(user)
+
+    expect(await screen.findByText("Reference")).toBeInTheDocument()
+    expect(screen.getByText("9F8E7D6C")).toBeInTheDocument()
+  })
+
+  it("wears the shop's colour rather than a stock green", async () => {
+    // The page has already been repainted in whatever the owner chose; a
+    // success state ignoring that would be the one borrowed thing on it.
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    const { container } = render(<div />)
+    container.remove()
+
+    await bookThrough(user)
+    await screen.findByText("Booked na po!")
+
+    const mark = document.querySelector(".confirm-pop")
+    expect(mark).not.toBeNull()
+    expect(mark?.className).toContain("bg-primary")
+    expect(document.querySelector(".bg-chart-3\\/15")).toBeNull()
+  })
+
+  it("animates, and the tick draws itself", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    await bookThrough(user)
+    await screen.findByText("Booked na po!")
+
+    expect(document.querySelector(".confirm-rise")).not.toBeNull()
+    expect(document.querySelector(".confirm-pop")).not.toBeNull()
+    // A single stroke, retracted by its dash — that is what makes it draw.
+    expect(document.querySelector("path.confirm-draw")).not.toBeNull()
+  })
+
+  it("names the service and its price when one was picked", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    actions.submitBooking.mockResolvedValue({ ok: true, bookingId: "abcdef12-0000-4000-8000-000000000000" })
+    renderCatalog()
+
+    // The catalogue asks what before it asks when.
+    await user.click(screen.getByRole("button", { name: /Gupit lang/ }))
+    await user.click(
+      screen.getAllByRole("button", { name: /Mon|Tue|Wed|Thu|Fri|Sat|Sun/ })[0]
+    )
+    await waitFor(() => expect(timeStep()).toBeInTheDocument())
+    await user.click(await screen.findByRole("button", { name: /9:00 AM/ }))
+    await waitFor(() => expect(detailStep()).toBeInTheDocument())
+    await user.type(screen.getByLabelText(/Pangalan/), "Juan")
+    await user.type(screen.getByLabelText("Email"), "juan@example.com")
+    await user.click(screen.getByRole("button", { name: /Confirm booking/ }))
+
+    expect(await screen.findByText("Booked na po!")).toBeInTheDocument()
+    expect(screen.getByText("Serbisyo")).toBeInTheDocument()
+    expect(screen.getByText("Gupit lang")).toBeInTheDocument()
+    // The price agreed at booking time, not today's list.
+    expect(screen.getByText("₱150")).toBeInTheDocument()
+  })
+
+  it("offers a picture to keep, and a screenshot as the fallback", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    await bookThrough(user)
+    await screen.findByText("Booked na po!")
+
+    // The download is the better answer; the screenshot is the one everybody
+    // already knows how to do.
+    expect(
+      screen.getByRole("button", { name: /I-download bilang larawan/ })
+    ).toBeInTheDocument()
+    expect(screen.getByText(/i-screenshot/i)).toBeInTheDocument()
+  })
+
+  it("says who to tell if they need to cancel", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    await bookThrough(user, {
+      contact: {
+        mobile: "09171234567",
+        chatApps: ["viber"],
+        facebookUrl: "https://facebook.com/nena",
+        instagramHandle: null,
+        websiteUrl: null,
+      },
+    })
+    await screen.findByText("Booked na po!")
+
+    // Nothing here can cancel a public booking — there is no account behind
+    // it — so the useful thing is who to tell.
+    expect(screen.getByText(/mag-cancel o magpalit ng oras/i)).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: /09171234567/ })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: /Viber/ })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: /Facebook/ })).toBeInTheDocument()
+  })
+
+  it("says nothing about contacting when the owner gave no way to", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    await bookThrough(user, {
+      contact: {
+        mobile: null,
+        chatApps: [],
+        facebookUrl: null,
+        instagramHandle: null,
+        websiteUrl: null,
+      },
+    })
+    await screen.findByText("Booked na po!")
+
+    // An invitation to message with nothing to message is worse than silence.
+    expect(screen.queryByText(/mag-cancel o magpalit/i)).toBeNull()
+  })
+})

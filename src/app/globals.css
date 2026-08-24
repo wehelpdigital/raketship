@@ -220,3 +220,105 @@
     display: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   The booking confirmation.
+
+   A booking is the one moment on the public page worth celebrating, and the
+   only one a suki will screenshot. The mark draws itself, the card rises, and
+   the details arrive a beat later — staggered so the eye lands on "booked"
+   before it starts reading times.
+--------------------------------------------------------------------------- */
+@keyframes confirm-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes confirm-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* The tick is a single stroke, so it can be drawn by retracting its dash. */
+@keyframes confirm-draw {
+  from {
+    stroke-dashoffset: 28;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* One ring travelling outward. Purely decorative, and it runs once. */
+@keyframes confirm-ripple {
+  from {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+}
+
+@layer utilities {
+  .confirm-rise {
+    animation: confirm-rise 380ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  }
+  .confirm-pop {
+    animation: confirm-pop 460ms cubic-bezier(0.2, 0.9, 0.3, 1.2) backwards;
+  }
+  .confirm-draw {
+    stroke-dasharray: 28;
+    animation: confirm-draw 420ms 260ms ease-out backwards;
+  }
+  .confirm-ripple {
+    animation: confirm-ripple 900ms 200ms ease-out forwards;
+  }
+
+  /* Stagger, so the details arrive after the verdict rather than with it. */
+  .confirm-delay-1 {
+    animation-delay: 140ms;
+  }
+  .confirm-delay-2 {
+    animation-delay: 240ms;
+  }
+  .confirm-delay-3 {
+    animation-delay: 340ms;
+  }
+
+  /*
+    Nothing moves for anyone who asked for that. The tick still has to END
+    drawn rather than stay hidden, so the dash is cleared rather than the
+    animation merely stopped.
+  */
+  @media (prefers-reduced-motion: reduce) {
+    .confirm-rise,
+    .confirm-pop,
+    .confirm-draw,
+    .confirm-ripple {
+      animation: none;
+    }
+    .confirm-draw {
+      stroke-dasharray: none;
+    }
+    .confirm-ripple {
+      display: none;
+    }
+  }
+}

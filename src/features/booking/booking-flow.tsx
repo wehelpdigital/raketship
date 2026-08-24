@@ -15,6 +15,7 @@ import * as React from "react"
 import {
   CalendarCheck,
   CalendarOff,
+  Camera,
   Check,
   ChevronLeft,
   Clock,
@@ -35,6 +36,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { CaptchaField, type CaptchaValue } from "@/features/booking/captcha-field"
 import { FieldPreview } from "@/features/booking/field-preview"
+import { ReceiptDownload } from "@/features/booking/receipt-download"
+import {
+  ContactChips,
+  hasAnyContact,
+} from "@/features/business/contact-chips"
 import { ZonePicker } from "@/features/booking/zone-picker"
 import {
   getAvailableSlots,
@@ -123,6 +129,18 @@ export interface OpenRange {
 }
 
 /**
+ * How to reach the shop, for the confirmation. Only the parts a customer can
+ * act on — the rest of the business row has no business travelling here.
+ */
+export interface PublicContact {
+  mobile: string | null
+  chatApps: readonly string[]
+  facebookUrl: string | null
+  instagramHandle: string | null
+  websiteUrl: string | null
+}
+
+/**
  * One thing on offer. Trimmed down from the stored row on the server: the
  * public page has no business shipping the owner's id or timestamps to every
  * stranger who opens the link.
@@ -159,6 +177,8 @@ export interface BookingFlowProps {
   /** The anti-robot challenge for this visit. Not optional, ever. */
   challenge: { nonce: string; issuedAt: number; signature: string }
   challengeBits: number
+  /** How to reach the shop, shown once a booking is made. */
+  contact?: PublicContact | null
 }
 
 type SlotState =
@@ -213,6 +233,7 @@ export function BookingFlow({
   horizonDays,
   challenge,
   challengeBits,
+  contact = null,
 }: BookingFlowProps) {
   /*
     A catalogue turns the length into a choice, and the length decides which
@@ -515,6 +536,7 @@ export function BookingFlow({
         confirmation={confirmed}
         timezoneLabel={timezoneLabel}
         viewerZone={viewerZone}
+        contact={contact}
       />
     )
   }
@@ -1285,66 +1307,209 @@ function LocalTimeNote({
   )
 }
 
+/**
+ * The one moment on this page worth celebrating.
+ *
+ * It is also the only screen a suki will screenshot, so it carries everything
+ * they would want in that picture — what, when, how long, whose clock, what it
+ * costs and the reference — and says so in an order that reads top to bottom.
+ *
+ * The colour is the shop's, not a generic green. This page has already been
+ * repainted in whatever the owner chose, and a success state that ignored that
+ * would be the one thing on it that looked borrowed.
+ */
 function Confirmed({
   calendarName,
   confirmation,
   timezoneLabel,
   viewerZone,
+  contact,
 }: {
   calendarName: string
   confirmation: Confirmation
   timezoneLabel: string
   viewerZone: string | null
+  contact: PublicContact | null
 }) {
-  const reference = confirmation.bookingId?.slice(0, 8).toUpperCase()
+  const reference = confirmation.bookingId?.slice(0, 8).toUpperCase() ?? null
+  const service = confirmation.service
+
+  /*
+    One list, drawn twice: on screen and into the downloaded picture. Built
+    here rather than in each so the receipt cannot come out saying something
+    the page does not.
+  */
+  const rows = [
+    {
+      label: "Kailan",
+      value: longDate(confirmation.isoDate),
+      note: confirmation.slot.label,
+    },
+    ...(service
+      ? [
+          {
+            label: "Serbisyo",
+            value: service.name,
+            note:
+              service.priceCentavos > 0
+                ? formatPeso(service.priceCentavos)
+                : undefined,
+          },
+        ]
+      : []),
+    { label: "Haba", value: formatDuration(confirmation.durationMinutes) },
+    { label: "Oras ng shop", value: timezoneLabel },
+  ]
 
   return (
-    <Card>
-      <CardContent className="space-y-4 py-8 text-center">
-        <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-chart-3/15 text-chart-3">
-          <Check className="size-7" aria-hidden />
-        </div>
+    <div className="confirm-rise">
+      <Card className="overflow-hidden border-primary/25">
+        {/* A band of the shop's own colour, so the first thing the eye meets
+            is the brand rather than a stock green tick. */}
+        <div className="relative -mt-6 mb-2 flex flex-col items-center gap-3 bg-primary/8 px-6 pt-8 pb-6 text-center">
+          <span className="relative flex size-12 items-center justify-center">
+            <span
+              aria-hidden
+              className="confirm-ripple absolute inset-0 rounded-full bg-primary/30"
+            />
+            <span className="confirm-pop relative flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
+              {/* Hand-drawn rather than the icon component: a single path is
+                  what lets the tick draw itself. */}
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={3}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="size-6"
+                aria-hidden
+              >
+                <path className="confirm-draw" d="M5 13l4 4L19 7" />
+              </svg>
+            </span>
+          </span>
 
-        <div className="space-y-1">
-          <h2 className="text-xl font-semibold tracking-tight lg:text-2xl">
-            Booked na po!
-          </h2>
-          <p className="text-sm text-pretty text-muted-foreground">
-            Nakalista ka na sa {calendarName}. Salamat, suki.
-          </p>
-        </div>
-
-        <div className="mx-auto max-w-sm space-y-1 rounded-xl bg-muted/50 p-4 text-left ring-1 ring-border">
-          <p className="text-base font-semibold">
-            {longDate(confirmation.isoDate)}
-          </p>
-          <p className="text-sm font-medium">{confirmation.slot.label}</p>
-          {confirmation.service ? (
-            <p className="text-sm text-pretty">
-              {confirmation.service.name}
-              {confirmation.service.priceCentavos > 0
-                ? ` · ${formatPeso(confirmation.service.priceCentavos)}`
-                : ""}
+          <div className="confirm-rise confirm-delay-1 space-y-1">
+            <h2 className="text-2xl font-semibold tracking-tight text-balance">
+              Booked na po!
+            </h2>
+            <p className="text-sm text-pretty text-muted-foreground">
+              Nakalista ka na sa {calendarName}. Salamat, suki.
             </p>
-          ) : null}
-          <p className="text-xs text-muted-foreground">
-            {formatDuration(confirmation.durationMinutes)} · {timezoneLabel}
-          </p>
-          <LocalTimeNote
-            startsAt={confirmation.slot.startsAt}
-            viewerZone={viewerZone}
-          />
-          {reference ? (
-            <p className="pt-1 font-mono text-xs text-muted-foreground">
-              Ref {reference}
-            </p>
-          ) : null}
+          </div>
         </div>
 
-        <p className="text-xs text-muted-foreground">
-          I-screenshot mo na ito para may kopya ka.
-        </p>
-      </CardContent>
-    </Card>
+        <CardContent className="space-y-4">
+          <dl className="confirm-rise confirm-delay-2 divide-y overflow-hidden rounded-xl ring-1 ring-border">
+            <Detail icon={CalendarCheck} label="Kailan">
+              <span className="font-medium">{longDate(confirmation.isoDate)}</span>
+              <span className="block tabular-nums">
+                {confirmation.slot.label}
+              </span>
+            </Detail>
+
+            {service ? (
+              <Detail icon={Tag} label="Serbisyo">
+                <span className="font-medium">{service.name}</span>
+                {service.priceCentavos > 0 ? (
+                  <span className="block tabular-nums">
+                    {formatPeso(service.priceCentavos)}
+                  </span>
+                ) : null}
+              </Detail>
+            ) : null}
+
+            <Detail icon={Clock} label="Haba">
+              {formatDuration(confirmation.durationMinutes)}
+            </Detail>
+
+            <Detail icon={Globe} label="Oras ng shop">
+              {timezoneLabel}
+              <LocalTimeNote
+                startsAt={confirmation.slot.startsAt}
+                viewerZone={viewerZone}
+              />
+            </Detail>
+          </dl>
+
+          <div className="confirm-rise confirm-delay-3 space-y-3">
+            {reference ? (
+              <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 px-4 py-3">
+                <span className="text-xs text-muted-foreground">Reference</span>
+                <span className="font-mono text-sm font-semibold tracking-wider tabular-nums">
+                  {reference}
+                </span>
+              </div>
+            ) : null}
+
+            {/*
+              Cancelling is not something this page can do — there is no
+              account behind a public booking and no way to prove who is
+              asking. So it says who to tell, with the ways the owner actually
+              filled in. Silence here is what turns a change of plan into a
+              no-show.
+            */}
+            {contact && hasAnyContact(contact) ? (
+              <div className="space-y-2 rounded-xl bg-muted/40 p-4">
+                <p className="text-sm text-pretty">
+                  <span className="font-medium">
+                    Kailangan mong mag-cancel o magpalit ng oras?
+                  </span>{" "}
+                  <span className="text-muted-foreground">
+                    Mag-message lang po sa amin.
+                  </span>
+                </p>
+                <ContactChips
+                  mobile={contact.mobile}
+                  chatApps={contact.chatApps}
+                  facebookUrl={contact.facebookUrl}
+                  instagramHandle={contact.instagramHandle}
+                  websiteUrl={contact.websiteUrl}
+                />
+              </div>
+            ) : null}
+
+            <ReceiptDownload
+              businessName={calendarName}
+              headline="Booked na po!"
+              rows={rows}
+              reference={reference}
+              isoDate={confirmation.isoDate}
+            />
+
+            {/* The download is the better answer, but a screenshot is the one
+                everybody already knows. */}
+            <p className="flex items-start justify-center gap-2 text-xs text-pretty text-muted-foreground">
+              <Camera className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+              Pwede mo rin itong i-screenshot.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+/** One labelled fact on the confirmation. */
+function Detail({
+  icon: Icon,
+  label,
+  children,
+}: {
+  icon: typeof Clock
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex items-start gap-3 px-4 py-3">
+      <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <Icon className="size-3.5" aria-hidden />
+      </span>
+      <div className="min-w-0 flex-1">
+        <dt className="text-xs text-muted-foreground">{label}</dt>
+        <dd className="text-sm text-pretty">{children}</dd>
+      </div>
+    </div>
   )
 }

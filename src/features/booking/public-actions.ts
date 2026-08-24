@@ -674,7 +674,16 @@ export async function submitBooking(
     }
   }
 
+  /*
+    The public page, and every owner-facing view the booking changes. The count
+    beside Booked lives in the app LAYOUT, so that has to go too — without it
+    the badge keeps serving whatever it said before this booking existed.
+  */
   revalidatePath(`/book/${calendar.slug}`)
+  revalidatePath("/modules/booking/booked")
+  revalidatePath("/modules/booking")
+  revalidatePath("/dashboard")
+  revalidatePath("/", "layout")
 
   return {
     ok: true,

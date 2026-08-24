@@ -184,6 +184,14 @@ only confirmed rows, and a partial unique index on `(calendar_id, starts_at)
 where status = 'confirmed'` makes a second one a 409. Cancelling sets the status
 rather than deleting the row, which is what hands the slot back to both.
 
+The badge count lives in the app LAYOUT, which the client router cache holds
+for the life of the tab — and a booking arrives in somebody ELSE's browser, so
+nothing here can be told about it. Two things keep it honest: submitBooking()
+revalidates the owner-facing paths including `("/", "layout")`, and `StaleRefresh`
+refetches when the tab is looked at again after being away. Without both, an
+owner who left the app open kept seeing whatever the count was when they loaded
+it.
+
 Sub-navigation lives in `moduleSubItems()` in `components/shell/module-nav.ts` —
 written out per module, because these are bespoke routes the generic module page
 knows nothing about. `isModuleActive()` excludes the children so the parent and

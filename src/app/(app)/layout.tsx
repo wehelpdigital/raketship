@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/shell/app-header"
 import { BottomNav } from "@/components/shell/bottom-nav"
 import { PaletteStyle } from "@/components/shell/palette-style"
 import { SideNav, type ModuleNavItem } from "@/components/shell/side-nav"
+import { StaleRefresh } from "@/components/shell/stale-refresh"
 import { supabaseConfigured } from "@/lib/env"
 import { getThemePreset } from "@/lib/queries/business"
 import { countUpcomingBookings } from "@/lib/queries/booking"
@@ -78,6 +79,9 @@ export default async function AppLayout({
   return (
     <div className="min-h-dvh bg-background lg:pl-64">
       <PaletteStyle preset={palette} />
+      {/* A booking arrives in somebody else's browser, so nothing here can be
+          told about it. Coming back to the tab is the cue to ask. */}
+      <StaleRefresh />
       <SideNav modules={modules} badges={badges} />
       <div className="flex min-h-dvh flex-col">
         <AppHeader
