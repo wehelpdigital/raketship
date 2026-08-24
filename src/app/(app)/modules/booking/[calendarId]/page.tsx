@@ -21,11 +21,12 @@ import { AvailabilityEditor } from "@/features/booking/availability-editor"
 import { CalendarForm } from "@/features/booking/calendar-form"
 import { FormBuilder } from "@/features/booking/form-builder"
 import { SharePanel } from "@/features/booking/share-panel"
-import { summariseAvailability } from "@/lib/booking/slots"
+import { groupAvailabilityByDay } from "@/lib/booking/slots"
 import { bookingUrl } from "@/lib/booking/slug"
 import { env, supabaseConfigured } from "@/lib/env"
 import { getCalendar } from "@/lib/queries/booking"
 import { getCurrentUser } from "@/lib/supabase/server"
+import { cn } from "@/lib/utils"
 
 interface PageProps {
   params: Promise<{ calendarId: string }>
@@ -153,12 +154,49 @@ export default async function CalendarEditorPage({ params }: PageProps) {
             <Card>
               <CardContent className="space-y-4 py-2 lg:py-4">
                 <h2 className="text-sm font-semibold tracking-tight">
-                  Where this calendar stands
+                  Summary
                 </h2>
 
-                <Fact icon={Clock} label="Days and hours">
-                  {summariseAvailability(availability)}
-                </Fact>
+                {/* One row per day. Joined into a single line this became a
+                    run-on of days and times that nobody could read. */}
+                <div className="space-y-1.5">
+                  <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <Clock className="size-3.5 shrink-0" aria-hidden="true" />
+                    Days and hours
+                  </p>
+                  <dl className="overflow-hidden rounded-lg ring-1 ring-border">
+                    {groupAvailabilityByDay(availability).map((day) => (
+                      <div
+                        key={day.weekday}
+                        className="flex items-baseline gap-3 border-b border-border/60 px-3 py-1.5 last:border-b-0 odd:bg-muted/30"
+                      >
+                        <dt className="w-10 shrink-0 text-xs font-medium">
+                          <abbr title={day.long} className="no-underline">
+                            {day.short}
+                          </abbr>
+                        </dt>
+                        <dd
+                          className={cn(
+                            "min-w-0 flex-1 text-right text-xs tabular-nums",
+                            day.ranges.length === 0
+                              ? "text-muted-foreground/60"
+                              : "text-foreground"
+                          )}
+                        >
+                          {day.ranges.length === 0 ? (
+                            "Closed"
+                          ) : (
+                            <span className="flex flex-col items-end gap-0.5">
+                              {day.ranges.map((range) => (
+                                <span key={range}>{range}</span>
+                              ))}
+                            </span>
+                          )}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
                 <Fact icon={Globe2} label="Timezone">
                   {`Those hours are read as ${calendar.timezone} time (${calendar.country}).`}{" "}
                   Change it under Availability.

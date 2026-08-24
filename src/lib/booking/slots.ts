@@ -261,6 +261,45 @@ export function upcomingDates(
   return dates
 }
 
+export interface DayHours {
+  /** 0 = Sunday. */
+  weekday: number
+  /** "Mon" */
+  short: string
+  /** "Monday" */
+  long: string
+  /** ["9:00 AM – 12:00 PM", "1:00 PM – 5:00 PM"], earliest first. */
+  ranges: string[]
+}
+
+/**
+ * All seven days, each with its own hours.
+ *
+ * summariseAvailability() joins everything into one line, which is right for a
+ * card but unreadable as a schedule — a full week becomes a run-on string of
+ * days and times. This keeps the days apart so they can be laid out as rows.
+ * Closed days are included so the week always reads as seven rows.
+ */
+export function groupAvailabilityByDay(
+  availability: Pick<
+    BookingAvailabilityRow,
+    "weekday" | "start_minute" | "end_minute"
+  >[]
+): DayHours[] {
+  return WEEKDAY_LABELS.map((long, weekday) => ({
+    weekday,
+    short: WEEKDAY_SHORT[weekday],
+    long,
+    ranges: availability
+      .filter((a) => a.weekday === weekday && a.end_minute > a.start_minute)
+      .sort((a, b) => a.start_minute - b.start_minute)
+      .map(
+        (a) =>
+          `${formatTimeLabel(a.start_minute)} – ${formatTimeLabel(a.end_minute)}`
+      ),
+  }))
+}
+
 /** Weekday rules collapsed to one readable line per day. */
 export function summariseAvailability(
   availability: Pick<

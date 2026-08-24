@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   buildSlots,
   formatTimeLabel,
+  groupAvailabilityByDay,
   isoDateInZone,
   minutesToTime,
   summariseAvailability,
@@ -267,5 +268,48 @@ describe("summariseAvailability", () => {
         { weekday: 1, start_minute: 540, end_minute: 660 },
       ])
     ).toBe("Mon 9:00 AM–11:00 AM, 2:00 PM–4:00 PM · Wed 9:00 AM–12:00 PM")
+  })
+})
+
+describe("groupAvailabilityByDay", () => {
+  it("returns all seven days so the week reads as seven rows", () => {
+    const days = groupAvailabilityByDay([])
+    expect(days).toHaveLength(7)
+    expect(days.map((d) => d.short)).toEqual([
+      "Sun",
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat",
+    ])
+    expect(days.every((d) => d.ranges.length === 0)).toBe(true)
+  })
+
+  it("keeps each day's ranges to that day, earliest first", () => {
+    const days = groupAvailabilityByDay([
+      { weekday: 1, start_minute: 780, end_minute: 1020 },
+      { weekday: 1, start_minute: 540, end_minute: 720 },
+      { weekday: 3, start_minute: 600, end_minute: 660 },
+    ])
+    expect(days[1].ranges).toEqual([
+      "9:00 AM – 12:00 PM",
+      "1:00 PM – 5:00 PM",
+    ])
+    expect(days[3].ranges).toEqual(["10:00 AM – 11:00 AM"])
+    expect(days[2].ranges).toEqual([])
+  })
+
+  it("drops a range that ends before it starts rather than printing it", () => {
+    const days = groupAvailabilityByDay([
+      { weekday: 2, start_minute: 600, end_minute: 600 },
+      { weekday: 2, start_minute: 900, end_minute: 800 },
+    ])
+    expect(days[2].ranges).toEqual([])
+  })
+
+  it("carries the long name for a tooltip", () => {
+    expect(groupAvailabilityByDay([])[5].long).toBe("Friday")
   })
 })

@@ -218,7 +218,7 @@ export function CalendarForm({
     <div className={cn("space-y-6", className)}>
       <form onSubmit={submit} className="space-y-4">
         <div className="space-y-1.5">
-          <Label htmlFor={nameId}>What are you booking?</Label>
+          <Label htmlFor={nameId}>Booking name</Label>
           <Input
             id={nameId}
             value={name}
@@ -232,12 +232,12 @@ export function CalendarForm({
             onChange={(event) => setName(event.target.value)}
           />
           <p className="text-xs text-muted-foreground">
-            This is the title your suki sees on the booking page.
+            What your suki sees at the top of the booking page.
           </p>
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor={descriptionId}>Short description</Label>
+          <Label htmlFor={descriptionId}>Description</Label>
           <Textarea
             id={descriptionId}
             value={description}
@@ -249,7 +249,7 @@ export function CalendarForm({
             onChange={(event) => setDescription(event.target.value)}
           />
           <p className="text-xs text-muted-foreground">
-            Optional. Tell them what to expect, or what to bring.
+            Optional. What to expect, or what to bring.
           </p>
         </div>
 
@@ -257,7 +257,7 @@ export function CalendarForm({
             keeps its 44px target, side by side the moment there is room. */}
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="space-y-1.5">
-            <Label htmlFor={durationId}>How long is one booking?</Label>
+            <Label htmlFor={durationId}>Length</Label>
             <NumberSelect
               id={durationId}
               value={duration}
@@ -266,10 +266,11 @@ export function CalendarForm({
               disabled={saving}
               onChange={setDuration}
             />
+            <p className="text-xs text-muted-foreground">One booking</p>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor={bufferId}>Gap after each one</Label>
+            <Label htmlFor={bufferId}>Break after</Label>
             <NumberSelect
               id={bufferId}
               value={buffer}
@@ -278,10 +279,11 @@ export function CalendarForm({
               disabled={saving}
               onChange={setBuffer}
             />
+            <p className="text-xs text-muted-foreground">Between bookings</p>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor={noticeId}>Book at least</Label>
+            <Label htmlFor={noticeId}>Advance notice</Label>
             <NumberSelect
               id={noticeId}
               value={notice}
@@ -290,6 +292,7 @@ export function CalendarForm({
               disabled={saving}
               onChange={setNotice}
             />
+            <p className="text-xs text-muted-foreground">Minimum lead time</p>
           </div>
         </div>
 
