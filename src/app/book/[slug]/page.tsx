@@ -6,8 +6,8 @@ import { CalendarCheck, Clock, Globe, ShieldCheck } from "lucide-react"
 import { BookingFlow, type BookingDay } from "@/features/booking/booking-flow"
 import {
   buildSlots,
+  groupAvailabilityByDay,
   isoDateInZone,
-  summariseAvailability,
   upcomingDates,
   zoneOffsetMinutes,
   zonedTimeToInstant,
@@ -16,6 +16,7 @@ import {
 import { bookingUrl } from "@/lib/booking/slug"
 import { env } from "@/lib/env"
 import { getPublishedCalendar, getTakenSlots } from "@/lib/queries/booking"
+import { cn } from "@/lib/utils"
 
 /**
  * How far ahead this page offers. The action behind it enforces its own, wider
@@ -195,12 +196,48 @@ export default async function PublicBookingPage({ params }: PageProps) {
               value={timezoneLabel}
               hint={`Lahat ng oras dito ay sa ${calendar.timezone}.`}
             />
-            <MetaRow
-              icon={<CalendarCheck className="size-4" aria-hidden />}
-              label="Bukás na araw"
-              value={summariseAvailability(availability)}
-            />
           </dl>
+
+          {/* One row per day. Joined into a single string the whole week runs
+              together and a suki cannot tell Tuesday from Thursday. */}
+          <div className="space-y-2 rounded-xl bg-card p-4 ring-1 ring-border">
+            <p className="flex items-center gap-2 text-xs text-muted-foreground">
+              <CalendarCheck className="size-4 shrink-0" aria-hidden />
+              Bukás na araw
+            </p>
+            <dl className="overflow-hidden rounded-lg ring-1 ring-border/70">
+              {groupAvailabilityByDay(availability).map((day) => (
+                <div
+                  key={day.weekday}
+                  className="flex items-baseline gap-3 border-b border-border/50 px-3 py-1.5 last:border-b-0 odd:bg-muted/25"
+                >
+                  <dt className="w-9 shrink-0 text-xs font-medium">
+                    <abbr title={day.long} className="no-underline">
+                      {day.short}
+                    </abbr>
+                  </dt>
+                  <dd
+                    className={cn(
+                      "min-w-0 flex-1 text-right text-xs tabular-nums",
+                      day.ranges.length === 0
+                        ? "text-muted-foreground/60"
+                        : "text-foreground"
+                    )}
+                  >
+                    {day.ranges.length === 0 ? (
+                      "Sarado"
+                    ) : (
+                      <span className="flex flex-col items-end gap-0.5">
+                        {day.ranges.map((range) => (
+                          <span key={range}>{range}</span>
+                        ))}
+                      </span>
+                    )}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
 
           <p className="flex items-start gap-2 text-xs text-muted-foreground">
             <ShieldCheck className="mt-0.5 size-3.5 shrink-0" aria-hidden />

@@ -4,8 +4,9 @@
 
 /* ---------------------------------------------------------------------------
    RaketShip design tokens
-   Brand: energetic indigo "launch" primary, warm amber accents for upgrades.
-   Neutrals carry a faint cool cast so cards read crisp on small screens.
+   Brand: an energetic orange primary. Because it owns the warm end of the
+   scale, `destructive`, `warning` and the chart hues are all spaced away from
+   it deliberately — see the notes on each.
 --------------------------------------------------------------------------- */
 :root {
   --radius: 0.75rem;
@@ -174,7 +175,30 @@
   }
 }
 
+@keyframes step-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @layer utilities {
+  /* One wizard step replacing another. Not a transition: the outgoing step
+     unmounts, so there is nothing to transition from. */
+  .step-enter {
+    animation: step-enter 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .step-enter {
+      animation: none;
+    }
+  }
+
   /* Respect notches / home indicators without hard-coding pixel values. */
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 0px);

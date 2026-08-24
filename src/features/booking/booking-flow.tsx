@@ -12,7 +12,7 @@
  */
 
 import * as React from "react"
-import { CalendarCheck, CalendarOff, Check, Clock, Globe } from "lucide-react"
+import { CalendarCheck, CalendarOff, Check, ChevronLeft, Clock, Globe } from "lucide-react"
 
 import { Spinner } from "@/components/shell/loader"
 import { Button } from "@/components/ui/button"
@@ -210,6 +210,7 @@ export function BookingFlow({
   const [submitting, setSubmitting] = React.useState(false)
   const [confirmed, setConfirmed] = React.useState<Confirmation | null>(null)
 
+  const [stepIndex, setStepIndex] = React.useState(0)
   const timesRef = React.useRef<HTMLDivElement>(null)
   const formRef = React.useRef<HTMLDivElement>(null)
   const requestRef = React.useRef(0)
@@ -283,13 +284,27 @@ export function BookingFlow({
     setSelectedDate(iso)
     setSelectedSlot(null)
     setFormError(null)
+    setStepIndex(1)
     revealOnPhone(timesRef)
   }
 
   function pickSlot(slot: Slot) {
     setSelectedSlot(slot)
     setFormError(null)
+    setStepIndex(2)
     revealOnPhone(formRef)
+  }
+
+  function goBack() {
+    setFormError(null)
+    setStepIndex(Math.max(0, step - 1))
+  }
+
+  /** Only backwards, and only to a step already completed. */
+  function goToStep(target: number) {
+    if (target > furthest || target === step) return
+    setFormError(null)
+    setStepIndex(target)
   }
 
   function answersForFields(): Record<string, AnswerValue> {
@@ -375,22 +390,26 @@ export function BookingFlow({
     )
   }
 
-  const step = selectedSlot ? 2 : selectedDate ? 1 : 0
+  // A wizard needs to go back without losing a choice, so the step is state.
+  // Clamping it against what has actually been picked means it can never sit
+  // ahead of the data — no effect has to chase it back into range.
+  const furthest = selectedSlot ? 2 : selectedDate ? 1 : 0
+  const step = Math.min(stepIndex, furthest)
   const offered = withoutRefused(slotState, gone)
 
   return (
     <div className="space-y-4 lg:space-y-5">
-      <Stepper current={step} />
+      <Stepper current={step} furthest={furthest} onGoTo={goToStep} />
 
       {/*
-        One column on a phone, so the three steps simply appear in order as they
-        are unlocked. From `lg` the picker and the form sit side by side — the
-        extra width is spent on seeing your choice while you type, not on
-        margins.
+        A wizard: exactly one step on screen. Only the step being worked on is
+        mounted, so a phone never scrolls past three stacked cards and the
+        person is never looking at a choice they have not reached.
       */}
-      <div className="grid gap-4 lg:grid-cols-2 lg:items-start lg:gap-5">
-        <div className="space-y-4 lg:space-y-5">
-          {/* --- 1. the day ------------------------------------------------- */}
+      <div className="space-y-4">
+        {step === 0 ? (
+          <div key="step-date" className="step-enter">
+            {/* --- 1. the day ---------------------------------------------- */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-sm">
@@ -408,8 +427,11 @@ export function BookingFlow({
             </CardContent>
           </Card>
 
-          {/* --- 2. the time ------------------------------------------------ */}
-          <div ref={timesRef} className="scroll-mt-20">
+          </div>
+        ) : null}
+
+        {step === 1 ? (
+          <div key="step-time" ref={timesRef} className="step-enter scroll-mt-20">
             {selectedDate ? (
               <Card>
                 <CardHeader>
@@ -432,12 +454,13 @@ export function BookingFlow({
                 </CardContent>
               </Card>
             ) : null}
+            <BackRow onBack={goBack} label="Ibang petsa" />
           </div>
-        </div>
+        ) : null}
 
-        {/* --- 3. details and confirm --------------------------------------- */}
-        <div ref={formRef} className="scroll-mt-20">
-          {selectedSlot && selectedDate ? (
+        {step === 2 ? (
+          <div key="step-details" ref={formRef} className="step-enter scroll-mt-20">
+            {selectedSlot && selectedDate ? (
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm">Your details</CardTitle>
@@ -568,19 +591,31 @@ export function BookingFlow({
                 </form>
               </CardContent>
             </Card>
-          ) : (
-            <div className="hidden h-full min-h-56 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border p-6 text-center lg:flex">
-              <CalendarCheck className="size-6 text-muted-foreground" aria-hidden />
-              <p className="text-sm font-medium">
-                {selectedDate ? "Pumili na ng oras" : "Pumili muna ng petsa"}
-              </p>
-              <p className="max-w-56 text-xs text-pretty text-muted-foreground">
-                Lalabas dito ang form kapag napili mo na ang araw at oras.
-              </p>
-            </div>
-          )}
-        </div>
+            ) : null}
+            <BackRow onBack={goBack} label="Ibang oras" />
+          </div>
+        ) : null}
       </div>
+    </div>
+  )
+}
+
+/**
+ * The way back out of a step. Deliberately quiet — going forward is the
+ * action, and a Back button competing with it costs taps on a phone.
+ */
+function BackRow({ onBack, label }: { onBack: () => void; label: string }) {
+  return (
+    <div className="mt-3 flex">
+      <Button
+        type="button"
+        variant="ghost"
+        onClick={onBack}
+        className="h-11 gap-1.5 px-3 text-muted-foreground hover:text-foreground"
+      >
+        <ChevronLeft className="size-4" aria-hidden />
+        {label}
+      </Button>
     </div>
   )
 }
@@ -591,7 +626,15 @@ export function BookingFlow({
 
 const STEPS = ["Petsa", "Oras", "Detalye"] as const
 
-function Stepper({ current }: { current: number }) {
+function Stepper({
+  current,
+  furthest,
+  onGoTo,
+}: {
+  current: number
+  furthest: number
+  onGoTo: (index: number) => void
+}) {
   return (
     <ol
       aria-label="Booking steps"
@@ -600,16 +643,29 @@ function Stepper({ current }: { current: number }) {
       {STEPS.map((label, index) => {
         const state: StepState =
           index < current ? "done" : index === current ? "current" : "todo"
+        // A finished step is a way back to a decision already made. A step
+        // not yet reached is not a link to anywhere.
+        const reachable = index < current && index <= furthest
+        const Mark = reachable ? "button" : "span"
         return (
           <li
             key={label}
             aria-current={state === "current" ? "step" : undefined}
             className="flex min-w-0 flex-1 items-center gap-2 last:flex-none"
           >
-            <span
+            <Mark
+              {...(reachable
+                ? {
+                    type: "button" as const,
+                    onClick: () => onGoTo(index),
+                    "aria-label": `Bumalik sa ${label}`,
+                  }
+                : {})}
               className={cn(
                 "flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ring-2 transition-colors sm:size-7 sm:text-xs",
-                STEP_MARK[state]
+                STEP_MARK[state],
+                reachable &&
+                  "cursor-pointer outline-none hover:opacity-80 focus-visible:ring-3 focus-visible:ring-ring/50"
               )}
             >
               {state === "done" ? (
@@ -617,7 +673,7 @@ function Stepper({ current }: { current: number }) {
               ) : (
                 index + 1
               )}
-            </span>
+            </Mark>
             <span
               className={cn(
                 "truncate text-xs font-medium transition-colors sm:text-sm",

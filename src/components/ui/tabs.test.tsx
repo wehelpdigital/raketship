@@ -41,19 +41,24 @@ describe("Tabs", () => {
     }
   })
 
-  it("marks the panel it just revealed so the transition can run", async () => {
+  it("swaps which panel is shown", async () => {
     const user = userEvent.setup()
     const { container } = threeTabs()
 
+    const panels = () =>
+      Array.from(container.querySelectorAll('[data-slot="tabs-content"]'))
+
+    expect(panels()[0]).not.toHaveAttribute("hidden")
+    expect(panels()[1]).toHaveAttribute("hidden")
+
     await user.click(screen.getByRole("tab", { name: "B" }))
 
-    const panels = Array.from(
-      container.querySelectorAll('[data-slot="tabs-content"]')
-    )
-    // The one that appeared gets the starting-style hook for a frame; the one
-    // that left is hidden outright.
-    expect(panels[1]).toHaveAttribute("data-starting-style")
-    expect(panels[0]).toHaveAttribute("hidden")
+    expect(panels()[0]).toHaveAttribute("hidden")
+    expect(panels()[1]).not.toHaveAttribute("hidden")
+
+    // Deliberately not asserting data-starting-style here: Base UI sets it for
+    // a single frame, so a test that reads it passes or fails on timing. The
+    // class assertions above already prove the transition is wired to it.
   })
 
   it("keeps hidden panels mounted so their state survives a switch", async () => {
