@@ -41,51 +41,57 @@ export function ProfileForm({
   const businessError = state.fieldErrors?.businessName
 
   return (
-    <form action={formAction} className="space-y-3">
-      <div className="space-y-1.5">
-        <Label htmlFor="fullName">Your name</Label>
-        <Input
-          id="fullName"
-          name="fullName"
-          autoComplete="name"
-          placeholder="Juan dela Cruz"
-          className="h-11"
-          defaultValue={state.values?.fullName ?? fullName ?? ""}
-          disabled={readOnly}
-          aria-invalid={nameError ? true : undefined}
-          aria-describedby={nameError ? "fullName-error" : undefined}
-        />
-        {nameError ? (
-          <p id="fullName-error" className="text-sm text-destructive">
-            {nameError}
-          </p>
-        ) : null}
-      </div>
+    <form action={formAction} className="space-y-3 sm:space-y-4">
+      {/*
+        Both names are short enough to sit side by side once there is room;
+        the email is a long value, so it keeps the full width at every size.
+      */}
+      <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="fullName">Your name</Label>
+          <Input
+            id="fullName"
+            name="fullName"
+            autoComplete="name"
+            placeholder="Juan dela Cruz"
+            className="h-11"
+            defaultValue={state.values?.fullName ?? fullName ?? ""}
+            disabled={readOnly}
+            aria-invalid={nameError ? true : undefined}
+            aria-describedby={nameError ? "fullName-error" : undefined}
+          />
+          {nameError ? (
+            <p id="fullName-error" className="text-sm text-destructive">
+              {nameError}
+            </p>
+          ) : null}
+        </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="businessName">Business name</Label>
-        <Input
-          id="businessName"
-          name="businessName"
-          autoComplete="organization"
-          placeholder="Aling Nena's Bakeshop"
-          className="h-11"
-          defaultValue={state.values?.businessName ?? businessName ?? ""}
-          disabled={readOnly}
-          aria-invalid={businessError ? true : undefined}
-          aria-describedby={
-            businessError ? "businessName-error" : "businessName-hint"
-          }
-        />
-        {businessError ? (
-          <p id="businessName-error" className="text-sm text-destructive">
-            {businessError}
-          </p>
-        ) : (
-          <p id="businessName-hint" className="text-xs text-muted-foreground">
-            Optional. This is what your suki will see.
-          </p>
-        )}
+        <div className="space-y-1.5">
+          <Label htmlFor="businessName">Business name</Label>
+          <Input
+            id="businessName"
+            name="businessName"
+            autoComplete="organization"
+            placeholder="Aling Nena's Bakeshop"
+            className="h-11"
+            defaultValue={state.values?.businessName ?? businessName ?? ""}
+            disabled={readOnly}
+            aria-invalid={businessError ? true : undefined}
+            aria-describedby={
+              businessError ? "businessName-error" : "businessName-hint"
+            }
+          />
+          {businessError ? (
+            <p id="businessName-error" className="text-sm text-destructive">
+              {businessError}
+            </p>
+          ) : (
+            <p id="businessName-hint" className="text-xs text-muted-foreground">
+              Optional. This is what your suki will see.
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="space-y-1.5">

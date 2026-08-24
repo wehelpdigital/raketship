@@ -69,6 +69,25 @@ function priceLabel(centavos: number): string {
   return centavos <= 0 ? "Free" : formatPeso(centavos)
 }
 
+/**
+ * Three notches is what every seeded module ships, but the schema allows
+ * fewer — and a short ladder dropped into a fixed three-column grid would
+ * leave a hole. Static strings, because Tailwind cannot see an interpolated
+ * class name.
+ */
+const LADDER_COLUMNS: Record<number, string> = {
+  1: "lg:grid-cols-1",
+  2: "lg:grid-cols-2",
+}
+
+/**
+ * Button is `whitespace-nowrap` by default and these cards are barely 170px
+ * wide once the ladder goes three across, so "Move back down to Starter"
+ * would spill. Wrap instead; min-h-11 keeps the phone tap target.
+ */
+const LADDER_ACTION =
+  "mt-3 h-auto min-h-11 w-full py-2 text-center whitespace-normal"
+
 export interface TierLadderProps {
   moduleId: string
   moduleName: string
@@ -89,7 +108,7 @@ export function TierLadder({
 
   if (tiers.length === 0) {
     return (
-      <p className="text-sm text-pretty text-muted-foreground">
+      <p className="max-w-prose text-sm text-pretty text-muted-foreground">
         This module has no tiers yet. Check back soon.
       </p>
     )
@@ -114,13 +133,20 @@ export function TierLadder({
   return (
     <>
       {!owned && (
-        <p className="text-sm text-pretty text-muted-foreground">
+        <p className="max-w-prose text-sm text-pretty text-muted-foreground">
           Add {moduleName} to your raket first — then you can climb this ladder
           one notch at a time.
         </p>
       )}
 
-      <ul className="space-y-3">
+      {/* A stacked ladder on phone; three columns at desktop so Starter, Plus
+          and Pro can be read against each other. */}
+      <ul
+        className={cn(
+          "space-y-3 lg:grid lg:items-stretch lg:gap-6 lg:space-y-0",
+          LADDER_COLUMNS[tiers.length] ?? "lg:grid-cols-3"
+        )}
+      >
         {tiers.map((tier, index) => {
           const previous = index > 0 ? tiers[index - 1] : undefined
           const added = deltaFeatures(tier.features, previous?.features)
@@ -134,15 +160,17 @@ export function TierLadder({
             <li
               key={tier.id}
               className={cn(
-                "rounded-xl bg-card p-4 ring-1 ring-foreground/10 sm:p-5",
+                "rounded-xl bg-card p-4 ring-1 ring-foreground/10 sm:p-5 lg:flex lg:h-full lg:flex-col lg:p-6",
                 state === "current" && "ring-2 ring-primary",
                 state === "included" && "opacity-80"
               )}
             >
-              <div className="flex items-start justify-between gap-3">
+              {/* Name beside price on phone; price under the name in a column,
+                  where that horizontal room is gone. */}
+              <div className="flex items-start justify-between gap-3 lg:flex-col lg:items-stretch">
                 <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-sm font-medium text-foreground">
+                    <h3 className="text-sm font-medium text-foreground lg:text-base">
                       {tier.name}
                     </h3>
                     {state === "current" && <Badge>Current</Badge>}
@@ -157,13 +185,13 @@ export function TierLadder({
                     )}
                   </div>
                   {tier.description ? (
-                    <p className="text-sm text-pretty text-muted-foreground">
+                    <p className="max-w-prose text-sm text-pretty text-muted-foreground">
                       {tier.description}
                     </p>
                   ) : null}
                 </div>
-                <div className="shrink-0 text-right">
-                  <span className="block text-base font-semibold tabular-nums text-foreground">
+                <div className="shrink-0 text-right lg:mt-3 lg:text-left">
+                  <span className="block text-base font-semibold tabular-nums text-foreground lg:text-3xl">
                     {priceLabel(tier.price_centavos)}
                   </span>
                   {tier.price_centavos > 0 && (
@@ -175,7 +203,7 @@ export function TierLadder({
               </div>
 
               {added.length > 0 && (
-                <div className="mt-3 space-y-2">
+                <div className="mt-3 space-y-2 lg:mt-5">
                   <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                     {previous ? `What ${tier.name} adds` : "What you get"}
                   </p>
@@ -202,9 +230,11 @@ export function TierLadder({
                 </p>
               )}
 
+              {/* mt-auto pins the action to the card floor so the three
+                  columns line their buttons up. */}
               {state === "upgrade" && (
                 <Button
-                  className="mt-3 h-11 w-full"
+                  className={cn(LADDER_ACTION, "lg:mt-auto")}
                   onClick={() => setTarget(tier)}
                   disabled={pending}
                 >
@@ -217,7 +247,7 @@ export function TierLadder({
               {state === "included" && (
                 <Button
                   variant="ghost"
-                  className="mt-3 h-11 w-full text-muted-foreground"
+                  className={cn(LADDER_ACTION, "text-muted-foreground lg:mt-auto")}
                   onClick={() => setTarget(tier)}
                   disabled={pending}
                 >

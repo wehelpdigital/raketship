@@ -6,6 +6,7 @@ import { Rocket } from "lucide-react"
 
 import { isNavItemActive, NAV_ITEMS } from "@/components/shell/bottom-nav"
 import { ModuleIcon } from "@/components/module-icon"
+import { NavPending } from "@/components/shell/nav-pending"
 import {
   accentChip,
   moduleHref,
@@ -70,7 +71,8 @@ export function SideNav({
                     )}
                   >
                     <Icon className="size-4.5 shrink-0" aria-hidden="true" />
-                    {item.label}
+                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                    <NavPending />
                   </Link>
                 </li>
               )
@@ -121,6 +123,7 @@ export function SideNav({
                         />
                       </span>
                       <span className="min-w-0 flex-1 truncate">{mod.name}</span>
+                      <NavPending />
                       {mod.tier ? (
                         <span className="shrink-0 text-[10px] font-medium text-muted-foreground/70">
                           {mod.tier}

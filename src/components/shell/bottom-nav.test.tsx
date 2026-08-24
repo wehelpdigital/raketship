@@ -21,6 +21,9 @@ vi.mock("next/link", async () => {
       href: string
       children: React.ReactNode
     }) => react.createElement("a", { href, ...rest }, children),
+    // NavPending reads this; the real hook needs a Link ancestor from the
+    // router, which a plain <a> stand-in cannot provide.
+    useLinkStatus: () => ({ pending: false }),
   }
 })
 

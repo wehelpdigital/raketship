@@ -7,6 +7,15 @@ import { toast } from "sonner"
 import { activateModule, deactivateModule } from "@/features/marketplace/actions"
 import { Button } from "@/components/ui/button"
 
+/**
+ * The desktop rail this button sits in is only about a third of the content
+ * column, and Button is `whitespace-nowrap` by default — so a long label
+ * ("Delivery & Logistics is coming soon") would spill out of the card. Wrap
+ * instead, with a min-height that keeps the 44px phone tap target.
+ */
+const CTA =
+  "h-auto min-h-11 w-full py-2 text-center whitespace-normal lg:min-h-12 lg:text-base"
+
 export interface ActivateButtonProps {
   moduleId: string
   moduleName: string
@@ -32,7 +41,7 @@ export function ActivateButton({
 
   if (!available) {
     return (
-      <Button className="h-11 w-full" variant="outline" disabled>
+      <Button className={CTA} variant="outline" disabled>
         {moduleName} is coming soon
       </Button>
     )
@@ -41,7 +50,7 @@ export function ActivateButton({
   if (owned) {
     return (
       <Button
-        className="h-11 w-full"
+        className={CTA}
         variant="outline"
         disabled={pending}
         onClick={() => run(deactivateModule)}
@@ -58,7 +67,7 @@ export function ActivateButton({
 
   return (
     <Button
-      className="h-11 w-full"
+      className={CTA}
       disabled={pending}
       onClick={() => run(activateModule)}
     >

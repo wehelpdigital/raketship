@@ -260,7 +260,7 @@ export function RegisterForm({ nextPath = "/dashboard" }: RegisterFormProps) {
           )}
         </Button>
 
-        <p className="text-center text-sm text-muted-foreground text-pretty">
+        <p className="text-center text-sm text-muted-foreground text-pretty lg:text-left">
           May account ka na?{" "}
           <Link
             href="/login"

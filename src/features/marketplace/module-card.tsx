@@ -55,17 +55,24 @@ export function ModuleCard({
 
   const body = (
     <>
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-3 lg:gap-4">
         <span
           className={cn(
-            "flex size-11 shrink-0 items-center justify-center rounded-xl",
+            "flex size-11 shrink-0 items-center justify-center rounded-xl lg:size-12 lg:rounded-2xl",
             accentChip(module.accent)
           )}
         >
-          <ModuleIcon name={module.icon} className="size-5" aria-hidden="true" />
+          <ModuleIcon
+            name={module.icon}
+            className="size-5 lg:size-6"
+            aria-hidden="true"
+          />
         </span>
         <div className="min-w-0 flex-1 space-y-1">
-          <h3 className="truncate text-sm font-medium text-foreground">
+          {/* Wraps rather than truncates: at the narrowest desktop width the
+              three-up grid leaves barely 110px here, and "Invoices & Receipts"
+              should not arrive as "Invoices & Rec…". */}
+          <h3 className="line-clamp-2 text-sm font-medium text-foreground lg:text-base">
             {module.name}
           </h3>
           {module.tagline ? (
@@ -75,8 +82,8 @@ export function ModuleCard({
           ) : null}
         </div>
       </div>
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <span className="text-xs font-medium text-muted-foreground">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 lg:mt-4">
+        <span className="text-xs font-medium text-muted-foreground lg:text-sm">
           {soon ? "Not open yet" : priceHint(fromCentavos)}
         </span>
         <span className="flex items-center gap-1">
@@ -92,7 +99,8 @@ export function ModuleCard({
     </>
   )
 
-  const base = "block rounded-xl bg-card p-4 ring-1 ring-foreground/10 sm:p-5"
+  const base =
+    "block rounded-xl bg-card p-4 ring-1 ring-foreground/10 sm:p-5 lg:p-6"
 
   if (soon) {
     return (

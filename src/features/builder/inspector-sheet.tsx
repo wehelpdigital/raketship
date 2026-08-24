@@ -29,6 +29,7 @@ import { cn } from "@/lib/utils"
 
 import { deleteNode, updateNodeData } from "@/features/builder/actions"
 import { NodeIcon, accentChipClass } from "@/features/builder/element-node"
+import { sheetSideClass, useSheetSide } from "@/features/builder/use-is-desktop"
 
 export interface InspectorSheetProps {
   open: boolean
@@ -155,7 +156,9 @@ function Field({
       ) : null}
 
       {field.help ? (
-        <p className="text-xs text-pretty text-muted-foreground">{field.help}</p>
+        <p className="max-w-prose text-xs text-pretty text-muted-foreground">
+          {field.help}
+        </p>
       ) : null}
     </div>
   )
@@ -232,13 +235,16 @@ function InspectorForm({
 
   return (
     <>
-      <div className="no-scrollbar min-h-0 space-y-6 overflow-y-auto px-4 pb-2">
+      {/* `flex-1` earns its keep on the desktop side panel: the popup is
+          full height there, so the fields take the slack and the buttons stay
+          at the foot of the rail instead of floating mid-air. */}
+      <div className="no-scrollbar min-h-0 flex-1 space-y-6 overflow-y-auto px-4 pb-2">
         {locked ? (
           <div className="flex items-start gap-3 rounded-lg bg-muted p-4">
             <Lock className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
             <div className="space-y-1">
               <p className="text-sm font-medium">This step is locked</p>
-              <p className="text-xs text-pretty text-muted-foreground">
+              <p className="max-w-prose text-xs text-pretty text-muted-foreground">
                 It came with a tier you are not on right now. Upgrade to edit it
                 again.
               </p>
@@ -252,7 +258,7 @@ function InspectorForm({
           </div>
         ) : null}
 
-        <div className="space-y-3">
+        <div className="space-y-3 lg:space-y-4">
           {def.fields.map((field) => (
             <Field
               key={field.key}
@@ -269,7 +275,7 @@ function InspectorForm({
 
       {/* `pb-safe` belongs on the popup, not here: it is a later rule in the
           same utilities layer and would silently cancel `pb-6`. */}
-      <div className="shrink-0 space-y-3 px-4 pb-6">
+      <div className="shrink-0 space-y-3 px-4 pb-6 lg:border-t lg:border-border lg:pt-4">
         <Button
           className="h-11 w-full"
           onClick={save}
@@ -309,29 +315,27 @@ export function InspectorSheet({
   onSaved,
   onDeleted,
 }: InspectorSheetProps) {
+  const side = useSheetSide()
   const def = node ? resolveNodeType(node.data.nodeType) : null
 
   return (
     <Sheet open={open} onOpenChange={(next) => onOpenChange(next)}>
-      <SheetContent
-        side="bottom"
-        className="max-h-[85dvh] rounded-t-xl pb-safe"
-      >
+      <SheetContent side={side} className={sheetSideClass(side)}>
         <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
+          <SheetTitle className="flex items-center gap-2 lg:text-lg">
             {def ? (
               <span
                 className={cn(
-                  "flex size-8 items-center justify-center rounded-lg",
+                  "flex size-8 items-center justify-center rounded-lg lg:size-10",
                   accentChipClass(def.accent)
                 )}
               >
-                <NodeIcon name={def.icon} className="size-4" />
+                <NodeIcon name={def.icon} className="size-4 lg:size-5" />
               </span>
             ) : null}
             {def?.label ?? "Step"}
           </SheetTitle>
-          <SheetDescription>
+          <SheetDescription className="max-w-prose text-pretty">
             {def?.description ?? "Pick a step on the canvas to edit it."}
           </SheetDescription>
         </SheetHeader>

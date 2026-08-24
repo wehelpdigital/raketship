@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { Boxes, Rocket } from "lucide-react"
+import { Rocket } from "lucide-react"
 
 import { PageContainer } from "@/components/shell/page-container"
 import { SetupNotice } from "@/components/shell/setup-notice"
@@ -17,7 +17,6 @@ import { getCurrentUser } from "@/lib/supabase/server"
 import { ensureWorkspace } from "@/features/builder/actions"
 import { RaketCanvas } from "@/features/builder/canvas"
 import { RenameRaketDialog } from "@/features/builder/rename-raket-dialog"
-import { RunPreview } from "@/features/builder/run-preview"
 
 export const metadata: Metadata = {
   title: "Build your Raket",
@@ -32,7 +31,8 @@ async function setUpWorkspace() {
 
 /**
  * Shown whenever there is nothing to draw yet — no session, no Supabase keys,
- * or an account the provisioning trigger never got to.
+ * or an account the provisioning trigger never got to. It stays a single
+ * centred column at every width: a lone message has nothing to put beside it.
  */
 function SetupPanel({
   title,
@@ -45,13 +45,17 @@ function SetupPanel({
 }) {
   return (
     <PageContainer>
-      <div className="rounded-xl bg-card p-4 text-center shadow-sm ring-1 ring-border sm:p-5">
-        <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <Rocket className="size-6" />
+      <div className="rounded-xl bg-card p-4 text-center shadow-sm ring-1 ring-border sm:p-5 lg:mx-auto lg:max-w-xl lg:p-8">
+        <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary lg:size-16">
+          <Rocket className="size-6 lg:size-8" />
         </span>
-        <h1 className="mt-3 text-lg font-semibold text-balance">{title}</h1>
-        <p className="mt-1 text-sm text-pretty text-muted-foreground">{body}</p>
-        {action ? <div className="mt-6">{action}</div> : null}
+        <h2 className="mt-3 text-lg font-semibold text-balance lg:mt-4 lg:text-2xl">
+          {title}
+        </h2>
+        <p className="mx-auto mt-1 max-w-prose text-sm text-pretty text-muted-foreground lg:text-base">
+          {body}
+        </p>
+        {action ? <div className="mt-6 lg:mx-auto lg:max-w-xs">{action}</div> : null}
       </div>
 
       <SetupNotice />
@@ -112,49 +116,40 @@ export default async function RaketPage() {
   const moduleCount = canvas.nodes.filter((row) => row.type === "module").length
 
   return (
-    <PageContainer>
-      <header className="space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 space-y-1">
-            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-              Build your Raket
-            </p>
-            <h1 className="truncate text-xl font-semibold text-balance">
-              {workspace.raket.name}
-            </h1>
-          </div>
-          <RenameRaketDialog
-            raketId={workspace.raket.id}
-            name={workspace.raket.name}
-          />
+    /*
+     * Full-bleed workspace: the board is the page. Everything the old right
+     * rail carried either moved into the slim bar below or lives elsewhere —
+     * modules are bought in the Raket Market, so there is nothing to add here.
+     *
+     * The height budget is only the chrome that actually surrounds it: the app
+     * bar (3.5rem, 4rem at lg), this bar (~3.75rem) and, on a phone, the tab bar.
+     */
+    <div className="flex h-[calc(100dvh-10.75rem)] min-h-96 flex-col md:h-[calc(100dvh-7.25rem)] lg:h-[calc(100dvh-7.75rem)]">
+      <div className="flex shrink-0 items-center gap-3 border-b px-4 py-3 sm:px-6 lg:px-8">
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-base font-semibold text-balance lg:text-lg">
+            {workspace.raket.name}
+          </h2>
+          <p className="truncate text-xs text-muted-foreground">
+            {moduleCount === 0
+              ? "No modules yet — add one from the Raket Market."
+              : `${moduleCount} module${moduleCount === 1 ? "" : "s"} · tap one to open its builder`}
+          </p>
         </div>
+        <RenameRaketDialog
+          raketId={workspace.raket.id}
+          name={workspace.raket.name}
+        />
+      </div>
 
-        <p className="text-sm text-pretty text-muted-foreground">
-          {moduleCount === 0
-            ? "No modules on the canvas yet."
-            : `${moduleCount} module${moduleCount === 1 ? "" : "s"} on the canvas.`}{" "}
-          Tap a module to open its own builder.
-        </p>
-
-        <div className="flex items-center gap-3">
-          <RunPreview nodes={nodes} edges={edges} />
-          <Button
-            variant="outline"
-            className="h-11"
-            render={<Link href="/marketplace" />}
-          >
-            <Boxes />
-            Add a module
-          </Button>
-        </div>
-      </header>
-
-      <RaketCanvas
-        flowId={canvas.flow.id}
-        initialNodes={nodes}
-        initialEdges={edges}
-        nodeIds={nodeIds}
-      />
-    </PageContainer>
+      <div className="min-h-0 flex-1">
+        <RaketCanvas
+          flowId={canvas.flow.id}
+          initialNodes={nodes}
+          initialEdges={edges}
+          nodeIds={nodeIds}
+        />
+      </div>
+    </div>
   )
 }

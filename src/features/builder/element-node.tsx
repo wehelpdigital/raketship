@@ -104,7 +104,7 @@ export function ElementCard({
       data-slot="element-card"
       data-locked={locked ? "true" : undefined}
       className={cn(
-        "w-62 rounded-xl bg-card p-4 text-left shadow-sm ring-1 ring-border transition-shadow",
+        "w-62 rounded-xl bg-card p-4 text-left shadow-sm ring-1 ring-border transition-shadow lg:w-52 lg:rounded-lg lg:p-3",
         selected && "ring-2 ring-primary",
         locked && "opacity-70",
         className
@@ -113,16 +113,16 @@ export function ElementCard({
       <div className="flex items-start gap-3">
         <span
           className={cn(
-            "flex size-10 shrink-0 items-center justify-center rounded-lg",
+            "flex size-10 shrink-0 items-center justify-center rounded-lg lg:size-8 lg:rounded-md",
             accentChipClass(def.accent)
           )}
         >
-          <NodeIcon name={def.icon} className="size-5" />
+          <NodeIcon name={def.icon} className="size-5 lg:size-4" />
         </span>
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <p className="truncate text-sm font-medium text-foreground">
+            <p className="truncate text-sm font-medium text-foreground lg:text-[13px]">
               {labelOf(def, values)}
             </p>
             {locked ? (
@@ -132,7 +132,7 @@ export function ElementCard({
               />
             ) : null}
           </div>
-          <p className="truncate text-xs text-muted-foreground">
+          <p className="truncate text-xs text-muted-foreground lg:text-[11px]">
             {summarise(nodeType, values)}
           </p>
         </div>

@@ -10,6 +10,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
+import { NavPending } from "@/components/shell/nav-pending"
 import { cn } from "@/lib/utils"
 
 export interface NavItem {
@@ -92,7 +93,10 @@ export function BottomNav({ className }: { className?: string }) {
                 >
                   <Icon className="size-5" aria-hidden="true" />
                 </span>
-                {item.shortLabel ?? item.label}
+                <span className="flex items-center gap-1">
+                  {item.shortLabel ?? item.label}
+                  <NavPending className="size-2.5" />
+                </span>
               </Link>
             </li>
           )

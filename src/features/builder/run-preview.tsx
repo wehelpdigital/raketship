@@ -16,6 +16,7 @@ import { resolveNodeType, summarise } from "@/lib/flow/registry"
 import { cn } from "@/lib/utils"
 
 import { NodeIcon, accentChipClass } from "@/features/builder/element-node"
+import { sheetSideClass, useSheetSide } from "@/features/builder/use-is-desktop"
 
 export interface RunPreviewProps {
   nodes: readonly CanvasNode[]
@@ -31,6 +32,7 @@ export function RunPreview({
   variant = "button",
   className,
 }: RunPreviewProps) {
+  const side = useSheetSide()
   const ordered = linearise([...nodes], [...edges])
   const connected = new Set(edges.map((edge) => edge.target))
 
@@ -56,20 +58,17 @@ export function RunPreview({
         {variant === "icon" ? null : "Preview run"}
       </SheetTrigger>
 
-      <SheetContent
-        side="bottom"
-        className="max-h-[85dvh] rounded-t-xl pb-safe"
-      >
+      <SheetContent side={side} className={sheetSideClass(side)}>
         <SheetHeader>
-          <SheetTitle>How this reads</SheetTitle>
-          <SheetDescription>
+          <SheetTitle className="lg:text-lg">How this reads</SheetTitle>
+          <SheetDescription className="max-w-prose text-pretty">
             The order your steps run in, following the lines you drew.
           </SheetDescription>
         </SheetHeader>
 
-        <div className="no-scrollbar min-h-0 overflow-y-auto px-4 pb-6">
+        <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-4 pb-6">
           {ordered.length === 0 ? (
-            <p className="text-sm text-pretty text-muted-foreground">
+            <p className="max-w-prose text-sm text-pretty text-muted-foreground">
               Nothing on this canvas yet. Add your first step and it will show
               up here.
             </p>
@@ -87,24 +86,24 @@ export function RunPreview({
                 return (
                   <li
                     key={node.id}
-                    className="flex items-start gap-3 rounded-lg bg-muted/40 p-4"
+                    className="flex items-start gap-3 rounded-lg bg-muted/40 p-4 lg:gap-4"
                   >
-                    <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-background text-xs font-medium tabular-nums ring-1 ring-border">
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-background text-xs font-medium tabular-nums ring-1 ring-border lg:size-8 lg:text-sm">
                       {index + 1}
                     </span>
                     <span
                       className={cn(
-                        "flex size-8 shrink-0 items-center justify-center rounded-lg",
+                        "flex size-8 shrink-0 items-center justify-center rounded-lg lg:size-9",
                         accentChipClass(def.accent)
                       )}
                     >
-                      <NodeIcon name={def.icon} className="size-4" />
+                      <NodeIcon name={def.icon} className="size-4 lg:size-5" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-foreground">
+                      <p className="text-sm font-medium text-foreground lg:text-base">
                         {label}
                       </p>
-                      <p className="text-xs text-pretty text-muted-foreground">
+                      <p className="text-xs text-pretty text-muted-foreground lg:text-sm">
                         {summarise(node.data.nodeType, values)}
                       </p>
                       {stray ? (
@@ -119,7 +118,7 @@ export function RunPreview({
             </ol>
           )}
 
-          <p className="mt-6 text-xs text-pretty text-muted-foreground">
+          <p className="mt-6 max-w-prose text-xs text-pretty text-muted-foreground">
             RaketShip does not run these flows yet. This preview is here so you
             can check the order reads the way you mean it.
           </p>

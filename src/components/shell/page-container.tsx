@@ -14,7 +14,7 @@ export function PageContainer({
     <div
       data-slot="page-container"
       className={cn(
-        "mx-auto w-full max-w-2xl space-y-6 px-4 py-6 pb-24 sm:px-6 md:pb-6",
+        "mx-auto w-full max-w-2xl space-y-6 px-4 py-6 pb-24 sm:px-6 md:max-w-3xl md:pb-6 lg:max-w-5xl lg:space-y-8 lg:px-8 lg:py-8 xl:max-w-6xl",
         className
       )}
       {...props}
@@ -41,7 +41,7 @@ export function PageHeader({
       className={cn("flex items-start justify-between gap-3", className)}
     >
       <div className="min-w-0 space-y-1">
-        <h2 className="text-xl font-semibold tracking-tight text-balance sm:text-2xl">
+        <h2 className="text-xl font-semibold tracking-tight text-balance sm:text-2xl lg:text-3xl">
           {title}
         </h2>
         {description ? (
@@ -72,7 +72,7 @@ export function SectionHeading({
       data-slot="section-heading"
       className={cn("flex items-center justify-between gap-3", className)}
     >
-      <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
+      <h2 className="text-sm font-semibold tracking-tight lg:text-base">{title}</h2>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>
   )

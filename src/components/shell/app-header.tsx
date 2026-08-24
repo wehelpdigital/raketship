@@ -98,7 +98,7 @@ export function AppHeader({
               aria-hidden="true"
               className="h-5 w-px shrink-0 bg-border md:hidden"
             />
-            <h1 className="min-w-0 truncate text-sm font-medium text-muted-foreground md:sr-only lg:not-sr-only lg:text-lg lg:font-semibold lg:tracking-tight lg:text-foreground">
+            <h1 className="min-w-0 truncate text-sm font-medium text-muted-foreground md:sr-only">
               {title}
             </h1>
           </>

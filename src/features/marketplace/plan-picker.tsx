@@ -18,6 +18,16 @@ import {
 import type { PlanRow } from "@/lib/supabase/types"
 import { cn, formatPeso } from "@/lib/utils"
 
+/**
+ * Two plans today, but the table is data-driven — three or more would leave a
+ * hole in a fixed two-column grid at desktop. Static strings, since Tailwind
+ * cannot see an interpolated class name.
+ */
+const PLAN_COLUMNS: Record<number, string> = {
+  1: "sm:grid-cols-1 sm:max-w-md",
+  2: "sm:grid-cols-2",
+}
+
 export interface PlanPickerProps {
   plans: PlanRow[]
   currentPlanId: string | null
@@ -48,7 +58,12 @@ export function PlanPicker({
   }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div
+      className={cn(
+        "grid gap-3 md:gap-6",
+        PLAN_COLUMNS[plans.length] ?? "sm:grid-cols-2 lg:grid-cols-3"
+      )}
+    >
       {plans.map((plan) => {
         const isCurrent = plan.id === currentPlanId
         const isUpgrade =
@@ -64,25 +79,34 @@ export function PlanPicker({
           <Card
             key={plan.id}
             className={cn(
-              "sm:[--card-spacing:--spacing(5)]",
+              "relative sm:[--card-spacing:--spacing(5)] lg:[--card-spacing:--spacing(6)]",
               isCurrent && "ring-2 ring-primary"
             )}
           >
+            {/* A filled cap reads as "this one is yours" from across the room,
+                which a 2px ring alone does not at desktop width. */}
+            {isCurrent && (
+              <span
+                aria-hidden="true"
+                className="absolute inset-x-0 top-0 h-1.5 bg-primary"
+              />
+            )}
+
             <CardHeader>
-              <CardTitle className="flex flex-wrap items-center gap-2">
+              <CardTitle className="flex flex-wrap items-center gap-2 lg:text-lg">
                 {plan.name}
                 {isCurrent && <Badge>Your plan</Badge>}
               </CardTitle>
               {plan.tagline ? (
-                <CardDescription className="text-pretty">
+                <CardDescription className="max-w-prose text-pretty">
                   {plan.tagline}
                 </CardDescription>
               ) : null}
             </CardHeader>
 
-            <CardContent className="flex-1 space-y-3">
+            <CardContent className="flex-1 space-y-3 lg:space-y-4">
               <p>
-                <span className="text-2xl font-semibold tabular-nums text-foreground">
+                <span className="text-2xl font-semibold tabular-nums text-foreground lg:text-3xl">
                   {plan.price_centavos <= 0
                     ? "Free"
                     : formatPeso(plan.price_centavos)}
@@ -117,7 +141,7 @@ export function PlanPicker({
                         className="mt-0.5 size-4 shrink-0 text-chart-3"
                         aria-hidden="true"
                       />
-                      <span className="text-pretty text-muted-foreground">
+                      <span className="max-w-prose text-pretty text-muted-foreground">
                         {feature}
                       </span>
                     </li>
@@ -126,7 +150,7 @@ export function PlanPicker({
               )}
 
               {blocked && (
-                <p className="text-sm text-pretty text-muted-foreground">
+                <p className="max-w-prose text-sm text-pretty text-muted-foreground">
                   You have {activeModuleCount} modules running. Remove{" "}
                   {overflowing} to fit on {plan.name}.
                 </p>

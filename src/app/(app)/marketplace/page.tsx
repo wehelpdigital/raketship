@@ -16,6 +16,7 @@ import { supabaseConfigured } from "@/lib/env"
 import { getCatalog, getPlans, type CatalogModule } from "@/lib/queries/catalog"
 import { getWorkspace, type WorkspaceSummary } from "@/lib/queries/workspace"
 import { getCurrentUser } from "@/lib/supabase/server"
+import { cn } from "@/lib/utils"
 
 export const metadata: Metadata = {
   title: "Marketplace",
@@ -44,6 +45,13 @@ const CATEGORY_LABELS: Record<string, string> = {
   relationships: "Relationships",
   insights: "Insights",
 }
+
+/**
+ * One ladder for every repeating card grid here: one column on phone, two from
+ * sm, three at desktop. Four across was tried and rejected — at 1280px it left
+ * each card barely 260px, which crops the longer module names.
+ */
+const CARD_GRID = "grid gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4"
 
 function categoryLabel(id: string): string {
   return CATEGORY_LABELS[id] ?? id.charAt(0).toUpperCase() + id.slice(1)
@@ -77,14 +85,14 @@ function ModuleGrid({
 }) {
   if (modules.length === 0) {
     return (
-      <p className="text-sm text-pretty text-muted-foreground">
+      <p className="max-w-prose text-sm text-pretty text-muted-foreground">
         Wala pang module dito. Try another tab.
       </p>
     )
   }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className={CARD_GRID}>
       {modules.map((mod) => (
         <ModuleCard
           key={mod.id}
@@ -100,23 +108,71 @@ function ModuleGrid({
 
 function EmptyGrid() {
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      {[0, 1, 2, 3].map((i) => (
+    <div className={CARD_GRID}>
+      {[0, 1, 2, 3, 4, 5].map((i) => (
         <div
           key={i}
-          className="rounded-xl bg-card p-4 ring-1 ring-foreground/10 sm:p-5"
+          className="rounded-xl bg-card p-4 ring-1 ring-foreground/10 sm:p-5 lg:p-6"
         >
-          <div className="flex items-start gap-3">
-            <Skeleton className="size-11 shrink-0 rounded-xl" />
+          <div className="flex items-start gap-3 lg:gap-4">
+            <Skeleton className="size-11 shrink-0 rounded-xl lg:size-12 lg:rounded-2xl" />
             <div className="min-w-0 flex-1 space-y-2">
               <Skeleton className="h-4 w-24" />
               <Skeleton className="h-3 w-full" />
             </div>
           </div>
-          <Skeleton className="mt-3 h-3 w-20" />
+          <Skeleton className="mt-3 h-3 w-20 lg:mt-4" />
         </div>
       ))}
     </div>
+  )
+}
+
+interface SlotsMeterProps {
+  planName: string
+  activeCount: number
+  slots: number
+  left: number
+  used: number
+  className?: string
+}
+
+/**
+ * How many module slots the plan still has. A full-width card under the title
+ * on phone and tablet; at desktop the caller lifts it into the right-hand
+ * column beside the page title, which leaves the category strip below it the
+ * whole width.
+ */
+function SlotsMeter({
+  planName,
+  activeCount,
+  slots,
+  left,
+  used,
+  className,
+}: SlotsMeterProps) {
+  return (
+    <section
+      aria-label="Plan usage"
+      className={cn(
+        "space-y-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10 sm:p-5",
+        className
+      )}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <p className="text-sm font-medium text-foreground">{planName} plan</p>
+          <p className="text-sm text-pretty text-muted-foreground">
+            {activeCount} of {slots} module {slots === 1 ? "slot" : "slots"} in
+            use
+          </p>
+        </div>
+        <Badge variant={left === 0 ? "outline" : "secondary"}>
+          {left === 0 ? "Puno na" : `${left} left`}
+        </Badge>
+      </div>
+      <Progress value={used} aria-label="Module slots in use" />
+    </section>
   )
 }
 
@@ -152,7 +208,7 @@ export default async function MarketplacePage() {
     return (
       <PageContainer>
         <PageHeader
-          title="Marketplace"
+          title="Raket Market"
           description="Add only what your raket needs today."
         />
         <SetupNotice />
@@ -163,39 +219,43 @@ export default async function MarketplacePage() {
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Marketplace"
-        description="Add only what your raket needs today."
-      />
+      {/* Phone and tablet stack title over meter. At desktop the meter moves
+          into a right-hand column, which leaves the category strip and the
+          module grid below it the full width of the page. */}
+      <div className="space-y-6 lg:grid lg:grid-cols-3 lg:items-start lg:gap-8 lg:space-y-0">
+        <PageHeader
+          className="lg:col-span-2"
+          title="Raket Market"
+          description="Add only what your raket needs today."
+        />
+        <SlotsMeter
+          className="lg:col-start-3"
+          planName={plan?.name ?? "Libre"}
+          activeCount={activeCount}
+          slots={slots}
+          left={left}
+          used={used}
+        />
+      </div>
 
-      <section className="space-y-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10 sm:p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 space-y-1">
-            <p className="text-sm font-medium text-foreground">
-              {plan?.name ?? "Libre"} plan
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {activeCount} of {slots} module {slots === 1 ? "slot" : "slots"} in
-              use
-            </p>
-          </div>
-          <Badge variant={left === 0 ? "outline" : "secondary"}>
-            {left === 0 ? "Puno na" : `${left} left`}
-          </Badge>
-        </div>
-        <Progress value={used} aria-label="Module slots in use" />
-      </section>
-
-      <section className="space-y-3">
-        <Tabs defaultValue="all" className="gap-3">
-          {/* Full-bleed scroller so the tab row never widens the page. */}
-          <div className="-mx-4 overflow-x-auto px-4 no-scrollbar sm:-mx-6 sm:px-6">
-            <TabsList className="h-auto w-max group-data-horizontal/tabs:h-auto">
-              <TabsTrigger value="all" className="h-11 px-3">
+      <section className="space-y-3 lg:space-y-6">
+        <Tabs defaultValue="all" className="gap-3 lg:gap-6">
+          {/* Full-bleed scroller so the tab row never widens the page; from
+              lg the strip has the whole column and simply fits. */}
+          <div className="-mx-4 overflow-x-auto px-4 no-scrollbar sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
+            {/* The list is h-8 by default, which would crop the 44px tap
+                targets phones need — hence the height override in the same
+                orientation variant the list itself uses. */}
+            <TabsList className="w-max group-data-[orientation=horizontal]/tabs:h-auto">
+              <TabsTrigger value="all" className="h-11 px-3 lg:h-9">
                 All
               </TabsTrigger>
               {categories.map((category) => (
-                <TabsTrigger key={category} value={category} className="h-11 px-3">
+                <TabsTrigger
+                  key={category}
+                  value={category}
+                  className="h-11 px-3 lg:h-9"
+                >
                   {categoryLabel(category)}
                 </TabsTrigger>
               ))}
@@ -216,9 +276,9 @@ export default async function MarketplacePage() {
         </Tabs>
       </section>
 
-      <section className="space-y-3">
+      <section className="space-y-3 lg:space-y-4">
         <SectionHeading title="Your plan" />
-        <p className="text-sm text-pretty text-muted-foreground">
+        <p className="max-w-prose text-sm text-pretty text-muted-foreground">
           The plan sets how many modules can run at once. Each module is then
           priced on its own ladder.
         </p>

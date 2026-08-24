@@ -131,7 +131,7 @@ export function LoginForm({ nextPath = "/dashboard", notice }: LoginFormProps) {
           )}
         </Button>
 
-        <p className="text-center text-sm text-muted-foreground text-pretty">
+        <p className="text-center text-sm text-muted-foreground text-pretty lg:text-left">
           Bago ka lang?{" "}
           <Link
             href="/register"

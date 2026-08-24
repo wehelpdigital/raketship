@@ -61,108 +61,123 @@ export default async function AccountPage() {
 
       {supabaseConfigured ? null : <SetupNotice reason="unconfigured" />}
 
-      <Card className="sm:[--card-spacing:--spacing(5)]">
-        <CardHeader>
-          <CardTitle>Profile</CardTitle>
-          <CardDescription className="text-pretty">
-            This is the name that shows up on your bookings and receipts.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ProfileForm
-            email={email}
-            fullName={workspace.profile?.full_name ?? null}
-            businessName={workspace.profile?.business_name ?? null}
-            readOnly={!supabaseConfigured}
-          />
-        </CardContent>
-      </Card>
+      {/*
+        One column on phone and tablet, in the order below. At `lg` the thing
+        you actually came to edit takes two thirds; the plan, the theme and
+        the way out become a settings rail beside it.
+      */}
+      <div className="grid gap-6 lg:grid-cols-3 lg:items-start lg:gap-8">
+        <div className="lg:col-span-2">
+          <Card className="sm:[--card-spacing:--spacing(5)] lg:[--card-spacing:--spacing(6)]">
+            <CardHeader>
+              <CardTitle className="lg:text-lg">Profile</CardTitle>
+              <CardDescription className="max-w-prose text-pretty">
+                This is the name that shows up on your bookings and receipts.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ProfileForm
+                email={email}
+                fullName={workspace.profile?.full_name ?? null}
+                businessName={workspace.profile?.business_name ?? null}
+                readOnly={!supabaseConfigured}
+              />
+            </CardContent>
+          </Card>
+        </div>
 
-      <Card className="sm:[--card-spacing:--spacing(5)]">
-        <CardHeader>
-          <CardTitle>Subscription</CardTitle>
-          <CardDescription className="text-pretty">
-            {plan?.tagline ?? "Start your raket for free"}
-          </CardDescription>
-          <CardAction>
-            <Badge variant={isFree ? "secondary" : "default"}>
-              {plan?.name ?? "Libre"}
-            </Badge>
-          </CardAction>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm">
-            <span className="text-lg font-semibold tracking-tight">
-              {formatPeso(plan?.price_centavos ?? 0)}
-            </span>{" "}
-            <span className="text-muted-foreground">
-              per {plan?.billing_period ?? "month"}
-            </span>
-          </p>
-
-          {features.length > 0 ? (
-            <ul className="space-y-3">
-              {features.map((feature) => (
-                <li key={feature} className="flex items-start gap-2 text-sm">
-                  <Check
-                    className="mt-0.5 size-4 shrink-0 text-primary"
-                    aria-hidden="true"
-                  />
-                  <span className="text-pretty">{feature}</span>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-
-          <Link
-            href="/marketplace"
-            className={cn(
-              buttonVariants({ variant: isFree ? "default" : "outline" }),
-              "h-11 w-full"
-            )}
-          >
-            {isFree ? "Upgrade to Basic" : "Manage subscription"}
-          </Link>
-        </CardContent>
-      </Card>
-
-      <Card className="sm:[--card-spacing:--spacing(5)]">
-        <CardHeader>
-          <CardTitle>Appearance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0 space-y-1">
-              <p className="text-sm font-medium">Theme</p>
-              <p className="text-sm text-pretty text-muted-foreground">
-                Light for daytime deliveries, dark for late-night encoding.
+        <div className="space-y-6 lg:space-y-8">
+          <Card className="sm:[--card-spacing:--spacing(5)]">
+            <CardHeader>
+              <CardTitle>Subscription</CardTitle>
+              <CardDescription className="text-pretty">
+                {plan?.tagline ?? "Start your raket for free"}
+              </CardDescription>
+              <CardAction>
+                <Badge variant={isFree ? "secondary" : "default"}>
+                  {plan?.name ?? "Libre"}
+                </Badge>
+              </CardAction>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {/* Wraps rather than clipping when the rail gets narrow. */}
+              <p className="flex flex-wrap items-baseline gap-x-1.5 text-sm">
+                <span className="text-lg font-semibold tracking-tight lg:text-xl">
+                  {formatPeso(plan?.price_centavos ?? 0)}
+                </span>
+                <span className="text-muted-foreground">
+                  per {plan?.billing_period ?? "month"}
+                </span>
               </p>
-            </div>
-            <ThemeToggle className="-mr-2" />
-          </div>
-        </CardContent>
-      </Card>
 
-      <Card className="sm:[--card-spacing:--spacing(5)]">
-        <CardHeader>
-          <CardTitle>Sign out</CardTitle>
-          <CardDescription className="text-pretty">
-            You can come back anytime — your raket stays exactly as you left it.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form action={signOut}>
-            <Button
-              type="submit"
-              variant="destructive"
-              className="h-11 w-full gap-2"
-            >
-              <LogOut aria-hidden="true" />
-              Sign out
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+              {features.length > 0 ? (
+                <ul className="space-y-3">
+                  {features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2 text-sm">
+                      <Check
+                        className="mt-0.5 size-4 shrink-0 text-primary"
+                        aria-hidden="true"
+                      />
+                      <span className="text-pretty">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+
+              <Link
+                href="/marketplace"
+                className={cn(
+                  buttonVariants({ variant: isFree ? "default" : "outline" }),
+                  "h-11 w-full sm:w-auto sm:px-6 lg:w-full lg:px-4"
+                )}
+              >
+                {isFree ? "Upgrade to Basic" : "Manage subscription"}
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card className="sm:[--card-spacing:--spacing(5)]">
+            <CardHeader>
+              <CardTitle>Appearance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {/* The toggle sits beside the label until the rail is too
+                  narrow for both, then drops onto its own line. */}
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-40 flex-1 space-y-1">
+                  <p className="text-sm font-medium">Theme</p>
+                  <p className="max-w-prose text-sm text-pretty text-muted-foreground">
+                    Light for daytime deliveries, dark for late-night encoding.
+                  </p>
+                </div>
+                <ThemeToggle className="-mr-2" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="sm:[--card-spacing:--spacing(5)]">
+            <CardHeader>
+              <CardTitle>Sign out</CardTitle>
+              <CardDescription className="text-pretty">
+                You can come back anytime — your raket stays exactly as you left
+                it.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form action={signOut}>
+                <Button
+                  type="submit"
+                  variant="destructive"
+                  className="h-11 w-full gap-2 sm:w-auto sm:px-6 lg:w-full lg:px-4"
+                >
+                  <LogOut aria-hidden="true" />
+                  Sign out
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </PageContainer>
   )
 }
