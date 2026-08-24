@@ -981,7 +981,7 @@ export function AvailabilityEditor({
             </Button>
           </div>
 
-          <div className="space-y-2.5">
+          <div className="space-y-1.5">
             {rows.map((row) => {
               const dayName = WEEKDAY_LABELS[row.weekday]
               const labelId = `${uid}-day-${row.weekday}-label`
@@ -992,7 +992,7 @@ export function AvailabilityEditor({
                 <div
                   key={row.weekday}
                   className={cn(
-                    "rounded-xl border p-3 transition-colors sm:p-4",
+                    "rounded-xl border p-3 transition-colors sm:px-4 sm:py-2.5",
                     problem
                       ? "border-destructive/40 bg-destructive/5"
                       : row.enabled
@@ -1000,40 +1000,48 @@ export function AvailabilityEditor({
                         : "border-border/60 bg-muted/30"
                   )}
                 >
-                  <div className="flex items-center gap-3">
-                    <Switch
-                      checked={row.enabled}
-                      onCheckedChange={(open) => toggleDay(row.weekday, open)}
-                      aria-labelledby={labelId}
-                      className="shrink-0 cursor-pointer after:-inset-x-3 after:-inset-y-3.5 after:content-['']"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p
-                        id={labelId}
-                        className="text-sm font-medium sm:text-[0.95rem]"
-                      >
-                        {dayName}
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {summariseDay(row)}
-                      </p>
+                  {/* From sm the toggle column is a fixed width so all seven
+                      days line up and the block reads as one schedule rather
+                      than seven independent cards. */}
+                  <div className="flex flex-col gap-2.5 sm:flex-row sm:items-start sm:gap-4">
+                    <div className="flex items-center gap-3 sm:w-36 sm:shrink-0 sm:py-1.5">
+                      <Switch
+                        checked={row.enabled}
+                        onCheckedChange={(open) => toggleDay(row.weekday, open)}
+                        aria-labelledby={labelId}
+                        className="shrink-0 cursor-pointer after:-inset-x-3 after:-inset-y-3.5 after:content-['']"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p
+                          id={labelId}
+                          className="text-sm font-medium sm:text-[0.95rem]"
+                        >
+                          {dayName}
+                        </p>
+                        {/* Only when shut: with the pickers visible this line
+                            just repeated the times sitting under it. */}
+                        {row.enabled ? null : (
+                          <p className="truncate text-xs text-muted-foreground">
+                            {summariseDay(row)}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
 
                   {row.enabled ? (
-                    <div className="mt-3 space-y-2 border-t border-border/60 pt-3">
+                    <div className="min-w-0 flex-1 space-y-2">
                       {row.ranges.map((range, index) => {
                         const startId = `${uid}-d${row.weekday}-r${index}-start`
                         const endId = `${uid}-d${row.weekday}-r${index}-end`
                         return (
                           <div
                             key={range.id}
-                            className="flex flex-wrap items-center gap-2"
+                            className="flex items-center gap-2"
                           >
                             {/* The pair keeps its own line: below roughly 400px
                                 the remove button wraps under it rather than
                                 squeezing both pickers past legibility. */}
-                            <div className="flex min-w-0 grow basis-56 items-center gap-2">
+                            <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
                               <label htmlFor={startId} className="sr-only">
                                 {dayName} opens (range {index + 1})
                               </label>
@@ -1049,7 +1057,7 @@ export function AvailabilityEditor({
                                     event.target.value
                                   )
                                 }
-                                className="h-11 min-w-0 grow"
+                                className="h-11 min-w-0 flex-1 tabular-nums sm:h-9 sm:w-[7.5rem] sm:flex-none"
                               />
                               <span
                                 aria-hidden
@@ -1072,7 +1080,7 @@ export function AvailabilityEditor({
                                     event.target.value
                                   )
                                 }
-                                className="h-11 min-w-0 grow"
+                                className="h-11 min-w-0 flex-1 tabular-nums sm:h-9 sm:w-[7.5rem] sm:flex-none"
                               />
                             </div>
                             {row.ranges.length > 1 ? (
@@ -1082,7 +1090,7 @@ export function AvailabilityEditor({
                                 size="icon"
                                 onClick={() => dropRange(row.weekday, range.id)}
                                 aria-label={`Remove ${dayName} range ${index + 1}`}
-                                className="ml-auto size-11 shrink-0 text-muted-foreground hover:text-destructive"
+                                className="size-11 shrink-0 text-muted-foreground hover:text-destructive sm:size-9"
                               >
                                 <X aria-hidden />
                               </Button>
@@ -1098,10 +1106,10 @@ export function AvailabilityEditor({
                           size="sm"
                           onClick={() => addRange(row.weekday)}
                           disabled={!canAdd}
-                          className="h-11 px-2 text-muted-foreground hover:text-foreground sm:h-9"
+                          className="h-11 px-2 text-xs text-muted-foreground hover:text-foreground sm:h-8"
                         >
                           <Plus aria-hidden />
-                          Add another range
+                          Add a range
                         </Button>
                         {problem ? (
                           <p
@@ -1118,6 +1126,7 @@ export function AvailabilityEditor({
                       </div>
                     </div>
                   ) : null}
+                  </div>
                 </div>
               )
             })}
