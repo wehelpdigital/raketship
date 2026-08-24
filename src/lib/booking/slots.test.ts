@@ -4,6 +4,7 @@ import {
   buildSlots,
   formatTimeLabel,
   groupAvailabilityByDay,
+  instantInZone,
   isoDateInZone,
   minutesToTime,
   summariseAvailability,
@@ -311,5 +312,56 @@ describe("groupAvailabilityByDay", () => {
 
   it("carries the long name for a tooltip", () => {
     expect(groupAvailabilityByDay([])[5].long).toBe("Friday")
+  })
+})
+
+describe("instantInZone", () => {
+  // 2026-09-07T01:00:00Z is 9:00 AM in Manila (UTC+8).
+  const NINE_AM_MANILA = "2026-09-07T01:00:00.000Z"
+
+  it("reads an instant in the calendar's own zone", () => {
+    expect(instantInZone(NINE_AM_MANILA, MANILA)).toEqual({
+      time: "9:00 AM",
+      isoDate: "2026-09-07",
+    })
+  })
+
+  it("shifts the clock AND the date for a viewer further west", () => {
+    // 9am Monday in Manila is 9pm the previous evening in New York.
+    expect(instantInZone(NINE_AM_MANILA, NEW_YORK)).toEqual({
+      time: "9:00 PM",
+      isoDate: "2026-09-06",
+    })
+  })
+
+  it("returns the date so a caller can flag a day that moved", () => {
+    const here = instantInZone(NINE_AM_MANILA, MANILA)
+    const there = instantInZone(NINE_AM_MANILA, NEW_YORK)
+    // This difference is the whole reason the date comes back at all.
+    expect(here.isoDate).not.toBe(there.isoDate)
+  })
+
+  it("tracks daylight saving rather than a fixed offset", () => {
+    // London is BST (+1) in July and GMT (+0) in January.
+    expect(instantInZone("2026-07-15T12:00:00.000Z", "Europe/London").time).toBe(
+      "1:00 PM"
+    )
+    expect(instantInZone("2026-01-15T12:00:00.000Z", "Europe/London").time).toBe(
+      "12:00 PM"
+    )
+  })
+
+  it("renders midnight as 12:00 AM, not 24:00", () => {
+    expect(instantInZone("2026-09-06T16:00:00.000Z", MANILA).time).toBe(
+      "12:00 AM"
+    )
+  })
+
+  it("does not throw on rubbish input", () => {
+    expect(instantInZone("not-a-date", MANILA)).toEqual({
+      time: "",
+      isoDate: "",
+    })
+    expect(() => instantInZone(NINE_AM_MANILA, "Not/AZone")).not.toThrow()
   })
 })

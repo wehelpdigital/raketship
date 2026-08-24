@@ -287,6 +287,46 @@ export function upcomingDates(
   return dates
 }
 
+export interface ZonedInstant {
+  /** "9:00 AM" as that zone reads it. */
+  time: string
+  /** "2026-09-07" in that zone — which is not always the calendar's date. */
+  isoDate: string
+}
+
+/**
+ * An absolute instant as a given zone sees it.
+ *
+ * A slot stores the instant, so this conversion is exact. What it cannot hide
+ * is that a 9am Manila slot is the previous evening in New York — hence the
+ * date coming back alongside the time, so a caller can say so when it differs
+ * rather than quietly showing someone the wrong day.
+ */
+export function instantInZone(iso: string, timeZone: string): ZonedInstant {
+  const at = new Date(iso)
+  if (Number.isNaN(at.getTime())) return { time: "", isoDate: "" }
+
+  const isoDate = isoDateInZone(at, timeZone)
+  let minutes = 0
+  try {
+    const parts = formatter(`hm:${timeZone}`, () =>
+      new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        hour12: false,
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    ).formatToParts(at)
+    const get = (type: string) =>
+      Number(parts.find((p) => p.type === type)?.value ?? "0")
+    minutes = (get("hour") % 24) * 60 + get("minute")
+  } catch {
+    return { time: "", isoDate }
+  }
+
+  return { time: formatTimeLabel(minutes), isoDate }
+}
+
 export interface DayHours {
   /** 0 = Sunday. */
   weekday: number

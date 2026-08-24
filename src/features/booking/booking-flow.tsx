@@ -25,6 +25,13 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { FieldPreview } from "@/features/booking/field-preview"
 import {
   getAvailableSlots,
@@ -33,10 +40,12 @@ import {
 } from "@/features/booking/public-actions"
 import { validateAnswers, type AnswerValue } from "@/lib/booking/fields"
 import {
+  instantInZone,
   WEEKDAY_LABELS,
   WEEKDAY_SHORT,
   type Slot,
 } from "@/lib/booking/slots"
+import { timezoneChoices, zoneCity } from "@/lib/booking/timezones"
 import type { BookingFormFieldRow } from "@/lib/supabase/types"
 import { useViewerTimezone } from "@/lib/hooks/client"
 import { cn } from "@/lib/utils"
@@ -69,6 +78,12 @@ function partsOf(iso: string): { year: number; month: number; day: number } {
 function weekdayOfIso(iso: string): number {
   const { year, month, day } = partsOf(iso)
   return new Date(Date.UTC(year, month - 1, day)).getUTCDay()
+}
+
+/** "Sat 6 Sep", for flagging a slot that lands on another day. */
+function shortDate(iso: string): string {
+  const { month, day } = partsOf(iso)
+  return `${WEEKDAY_SHORT[weekdayOfIso(iso)]} ${day} ${MONTHS[month - 1].slice(0, 3)}`
 }
 
 /** "Monday, 1 March". */
@@ -220,6 +235,19 @@ export function BookingFlow({
   // matches the calendar's zone, so the "times shown in..." note stays quiet.
   const detectedZone = useViewerTimezone()
   const viewerZone = detectedZone && detectedZone !== timezone ? detectedZone : null
+
+  /**
+   * Which zone the times are written in. Starts as the calendar's, then follows
+   * the visitor's own once hydration reveals it — so the first paint matches
+   * the server and nobody sees the times jump for a reason they cannot see.
+   * Choosing explicitly pins it.
+   */
+  const [zoneChoice, setZoneChoice] = React.useState<string | null>(null)
+  const shownZone = zoneChoice ?? detectedZone ?? timezone
+  const zoneOptions = React.useMemo(
+    () => timezoneChoices(timezone, detectedZone),
+    [timezone, detectedZone]
+  )
 
   const slotState: SlotState = React.useMemo(() => {
     if (!selectedDate) return { status: "idle" }
@@ -446,11 +474,16 @@ export function BookingFlow({
                     state={offered}
                     selected={selectedSlot}
                     onPick={pickSlot}
+                    shownZone={shownZone}
+                    calendarDate={selectedDate}
                   />
-                  <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Globe className="size-3.5 shrink-0" aria-hidden />
-                    All times are in {timezoneLabel}
-                  </p>
+                  <ZonePicker
+                    value={shownZone}
+                    options={zoneOptions}
+                    calendarZone={timezone}
+                    calendarLabel={timezoneLabel}
+                    onChange={setZoneChoice}
+                  />
                 </CardContent>
               </Card>
             ) : null}
@@ -477,6 +510,8 @@ export function BookingFlow({
                   durationMinutes={durationMinutes}
                   timezoneLabel={timezoneLabel}
                   viewerZone={viewerZone}
+                  shownZone={shownZone}
+                  calendarZone={timezone}
                 />
 
                 <form onSubmit={handleSubmit} className="space-y-4" noValidate>
@@ -812,10 +847,16 @@ function TimePicker({
   state,
   selected,
   onPick,
+  shownZone,
+  calendarDate,
 }: {
   state: SlotState
   selected: Slot | null
   onPick: (slot: Slot) => void
+  /** The zone the customer asked to read times in. */
+  shownZone: string
+  /** The calendar's date for this list, so a shifted day can be flagged. */
+  calendarDate: string | null
 }) {
   if (state.status === "loading" || state.status === "idle") {
     return (
@@ -859,6 +900,13 @@ function TimePicker({
     >
       {state.slots.map((slot) => {
         const active = slot.startsAt === selected?.startsAt
+        const local = instantInZone(slot.startsAt, shownZone)
+        // A 9am Manila slot is the previous evening in New York. Saying only
+        // "9:00 PM" there would put someone on the wrong day.
+        const dayMoved =
+          local.isoDate.length > 0 &&
+          calendarDate !== null &&
+          local.isoDate !== calendarDate
         return (
           <button
             key={slot.startsAt}
@@ -866,17 +914,78 @@ function TimePicker({
             onClick={() => onPick(slot)}
             aria-pressed={active}
             className={cn(
-              "h-11 rounded-lg text-sm font-medium tabular-nums ring-1 transition-colors",
+              "h-11 rounded-lg px-1 text-sm font-medium tabular-nums ring-1 transition-colors",
               "outline-none focus-visible:ring-2 focus-visible:ring-ring",
               active
                 ? "bg-primary text-primary-foreground ring-primary"
                 : "bg-card text-foreground ring-border hover:bg-muted"
             )}
           >
-            {slot.label}
+            <span className="flex flex-col items-center leading-tight">
+              <span>{local.time || slot.label}</span>
+              {dayMoved ? (
+                <span className="text-[10px] font-normal opacity-80">
+                  {shortDate(local.isoDate)}
+                </span>
+              ) : null}
+            </span>
           </button>
         )
       })}
+    </div>
+  )
+}
+
+/**
+ * Which zone the times are written in.
+ *
+ * Defaults to the visitor's own once hydration reveals it, because the common
+ * case is someone booking from where they are. The owner's zone stays in the
+ * list and is named, so it is always clear whose clock is whose.
+ */
+function ZonePicker({
+  value,
+  options,
+  calendarZone,
+  calendarLabel,
+  onChange,
+}: {
+  value: string
+  options: string[]
+  calendarZone: string
+  calendarLabel: string
+  onChange: (zone: string) => void
+}) {
+  const id = React.useId()
+  const showingOwners = value === calendarZone
+
+  return (
+    <div className="mt-3 space-y-1.5">
+      <Label
+        htmlFor={id}
+        className="flex items-center gap-1.5 text-xs font-normal text-muted-foreground"
+      >
+        <Globe className="size-3.5 shrink-0" aria-hidden />
+        Oras na ipinapakita
+      </Label>
+      <Select value={value} onValueChange={(next) => onChange(String(next))}>
+        <SelectTrigger id={id} className="h-11 w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((zone) => (
+            <SelectItem key={zone} value={zone}>
+              {zoneCity(zone)}
+              {zone === calendarZone ? " — oras ng shop" : ""}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <p className="text-xs text-pretty text-muted-foreground">
+        {showingOwners
+          ? `Sa oras ng shop (${calendarLabel}).`
+          : `Naka-adjust na sa ${zoneCity(value)}. Sa shop ito ay ${calendarLabel}.`}
+      </p>
     </div>
   )
 }
@@ -889,6 +998,8 @@ function BookingSummary({
   durationMinutes,
   timezoneLabel,
   viewerZone,
+  shownZone,
+  calendarZone,
 }: {
   calendarName: string
   isoDate: string
@@ -896,17 +1007,34 @@ function BookingSummary({
   durationMinutes: number
   timezoneLabel: string
   viewerZone: string | null
+  /** Whatever zone the customer chose to read times in. */
+  shownZone: string
+  calendarZone: string
 }) {
+  const local = instantInZone(slot.startsAt, shownZone)
+  const inOwnersZone = shownZone === calendarZone
+  // Restating the choice in the zone they were NOT reading is what stops
+  // someone turning up an hour out; showing only one clock is the trap.
+  const owners = inOwnersZone ? null : instantInZone(slot.startsAt, calendarZone)
+
   return (
     <div className="space-y-1 rounded-lg bg-primary/8 p-3 ring-1 ring-primary/20">
       <p className="text-sm font-semibold text-balance">{calendarName}</p>
       <p className="text-sm">
-        {longDate(isoDate)} · <span className="font-medium">{slot.label}</span>
+        {longDate(local.isoDate || isoDate)} ·{" "}
+        <span className="font-medium">{local.time || slot.label}</span>
       </p>
       <p className="text-xs text-muted-foreground">
-        {durationMinutes} minutes · {timezoneLabel}
+        {durationMinutes} minutes ·{" "}
+        {inOwnersZone ? timezoneLabel : zoneCity(shownZone)}
       </p>
-      <LocalTimeNote startsAt={slot.startsAt} viewerZone={viewerZone} />
+      {owners ? (
+        <p className="text-xs text-muted-foreground">
+          Sa shop ({timezoneLabel}): {longDate(owners.isoDate)} · {owners.time}
+        </p>
+      ) : (
+        <LocalTimeNote startsAt={slot.startsAt} viewerZone={viewerZone} />
+      )}
     </div>
   )
 }

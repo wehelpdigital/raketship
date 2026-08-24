@@ -131,3 +131,40 @@ describe("BookingFlow as a wizard", () => {
     ).not.toBeInTheDocument()
   })
 })
+
+describe("reading times in your own timezone", () => {
+  async function reachTheTimes(user: ReturnType<typeof userEvent.setup>) {
+    renderFlow()
+    await user.click(
+      screen.getAllByRole("button", { name: /Mon|Tue|Wed|Thu|Fri|Sat|Sun/ })[0]
+    )
+    await waitFor(() =>
+      expect(screen.queryByText("Pumili ng oras")).toBeInTheDocument()
+    )
+  }
+
+  it("shows the shop's own clock until told otherwise", async () => {
+    const user = userEvent.setup()
+    await reachTheTimes(user)
+
+    // vitest.setup stubs matchMedia and jsdom reports UTC, so the viewer's zone
+    // never differs here — the calendar's own times stand.
+    expect(await screen.findByRole("button", { name: /9:00 AM/ })).toBeInTheDocument()
+  })
+
+  it("offers a way to change which zone the times are read in", async () => {
+    const user = userEvent.setup()
+    await reachTheTimes(user)
+
+    expect(screen.getByText("Oras na ipinapakita")).toBeInTheDocument()
+    // The shop's own zone is always in reach, so whose clock is whose stays clear.
+    expect(screen.getByText(/oras ng shop/)).toBeInTheDocument()
+  })
+
+  it("names the shop's timezone alongside the times", async () => {
+    const user = userEvent.setup()
+    await reachTheTimes(user)
+
+    expect(screen.getByText(/Manila · GMT\+8/)).toBeInTheDocument()
+  })
+})

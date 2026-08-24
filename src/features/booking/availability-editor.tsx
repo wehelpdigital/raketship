@@ -73,6 +73,11 @@ import type {
   BookingCalendarRow,
 } from "@/lib/supabase/types"
 import { useNowTick } from "@/lib/hooks/client"
+import {
+  ALL_TIMEZONES,
+  DEFAULT_COUNTRY,
+  DEFAULT_TIMEZONE,
+} from "@/lib/booking/timezones"
 import { cn } from "@/lib/utils"
 
 // =============================================================================
@@ -345,40 +350,9 @@ export function summariseDay(row: DayRow): string {
 // Country and timezone
 // =============================================================================
 
-export const DEFAULT_TIMEZONE = "Asia/Manila"
-export const DEFAULT_COUNTRY = "PH"
-
-/**
- * Intl.supportedValuesOf is missing from older runtimes and from some test
- * environments, so the shortlist below is the floor, never the whole list.
- */
-export const FALLBACK_TIMEZONES = [
-  "Asia/Manila",
-  "Asia/Singapore",
-  "Asia/Hong_Kong",
-  "Asia/Tokyo",
-  "Australia/Sydney",
-  "Europe/London",
-  "America/New_York",
-  "America/Los_Angeles",
-  "UTC",
-]
-
-function readSupportedTimezones(): string[] {
-  try {
-    if (typeof Intl.supportedValuesOf === "function") {
-      const zones = Intl.supportedValuesOf("timeZone")
-      if (Array.isArray(zones) && zones.length > 0) return zones
-    }
-  } catch {
-    // Older runtime, or a locked-down one. The fallback below is enough.
-  }
-  return []
-}
-
-export const ALL_TIMEZONES: string[] = Array.from(
-  new Set([...readSupportedTimezones(), ...FALLBACK_TIMEZONES])
-).sort((a, b) => a.localeCompare(b))
+// Re-exported for the tests and call sites that already import them here.
+export { FALLBACK_TIMEZONES } from "@/lib/booking/timezones"
+export { ALL_TIMEZONES, DEFAULT_COUNTRY, DEFAULT_TIMEZONE }
 
 export interface CountryOption {
   code: string
