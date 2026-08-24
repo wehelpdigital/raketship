@@ -72,3 +72,39 @@ Apply migrations with `npm run db:push` (needs `SUPABASE_DB_URL`), or paste
 ```bash
 npm run verify   # typecheck + lint + test
 ```
+
+## Booking module
+
+Five tables (`supabase/migrations/0004_booking_module.sql`): `booking_calendars`,
+`booking_availability`, `booking_blackouts`, `booking_form_fields`, `bookings`.
+
+**Routing:** `/modules/booking` is a static segment and deliberately shadows the
+dynamic `/modules/[moduleId]`. Booking gets a bespoke home; every other module
+falls through to the generic one. Don't "tidy" the duplicate away.
+
+**Times.** Availability is stored as **minutes from midnight** (540 = 09:00) and
+means nothing without the calendar's `timezone`. Weekday 0 = Sunday, matching JS
+`getDay()`. Never interpret those minutes in the server's or the browser's zone.
+Zone maths lives in `src/lib/booking/slots.ts` and goes through `Intl` — there is
+no date library to keep current with tzdata.
+
+**The public surface.** `/book/[slug]` is unauthenticated and outside the app
+shell, so RLS is the only guard. Verified against the live database:
+
+| Anonymous attempt | Result |
+|---|---|
+| Read a draft calendar | `[]` |
+| Read it once published | visible |
+| Read anyone's bookings | `[]` |
+| Book a published calendar | `201` |
+| Book the same slot twice | `409` |
+| Book an unpublished calendar | `401` |
+| Book under a forged `user_id` | `401` |
+
+The forged-owner case is why the insert policy matches `c.user_id = bookings.user_id`
+— without it anyone could file bookings into someone else's account. `public-actions.ts`
+must keep recomputing the slot with `buildSlots()` rather than trusting the posted
+`startsAt`, and re-validating answers server-side with `validateAnswers()`.
+
+Adding a question type is one entry in `src/lib/booking/fields.ts` — the builder's
+type picker, the public renderer and validation all read from it.
