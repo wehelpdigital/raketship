@@ -176,6 +176,20 @@ Six tables: `booking_calendars`, `booking_availability`, `booking_blackouts`,
 `booking_form_fields`, `bookings` (`0004_booking_module.sql`) and
 `booking_services` (`0006_booking_services.sql`).
 
+**Booked** (`/modules/booking/booked`) lists what came in through the public
+pages, split into upcoming, finished and cancelled around ONE clock read — a
+booking is upcoming until it ENDS, so the one in progress is still today's
+problem. A confirmed booking is unbookable twice over: `getTakenSlots` counts
+only confirmed rows, and a partial unique index on `(calendar_id, starts_at)
+where status = 'confirmed'` makes a second one a 409. Cancelling sets the status
+rather than deleting the row, which is what hands the slot back to both.
+
+Sub-navigation lives in `moduleSubItems()` in `components/shell/module-nav.ts` —
+written out per module, because these are bespoke routes the generic module page
+knows nothing about. `isModuleActive()` excludes the children so the parent and
+the child never light up together. The desktop rail folds them away; the badge
+beside Booked counts bookings still to come and is a head count, not a fetch.
+
 **Routing:** `/modules/booking` is a static segment and deliberately shadows the
 dynamic `/modules/[moduleId]`. Booking gets a bespoke home; every other module
 falls through to the generic one. Don't "tidy" the duplicate away.

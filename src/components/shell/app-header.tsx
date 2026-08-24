@@ -8,8 +8,11 @@ import { Boxes, ChevronDown, LogOut, Rocket, UserRound } from "lucide-react"
 import { isNavItemActive, NAV_ITEMS } from "@/components/shell/bottom-nav"
 import {
   accentChip,
+  badgeLabel,
   moduleHref,
+  moduleSubItems,
   type ModuleNavItem,
+  type NavBadges,
 } from "@/components/shell/module-nav"
 import { ThemeToggle } from "@/components/shell/theme-toggle"
 import { ModuleIcon } from "@/components/module-icon"
@@ -56,6 +59,7 @@ export interface AppHeaderProps {
   name?: string | null
   email?: string | null
   modules?: readonly ModuleNavItem[]
+  badges?: NavBadges
   className?: string
 }
 
@@ -63,6 +67,7 @@ export function AppHeader({
   name,
   email,
   modules = [],
+  badges = {},
   className,
 }: AppHeaderProps) {
   const pathname = usePathname() ?? ""
@@ -129,7 +134,7 @@ export function AppHeader({
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-0.5">
-          <ModulesMenu modules={modules} pathname={pathname} />
+          <ModulesMenu modules={modules} badges={badges} pathname={pathname} />
 
           <ThemeToggle />
 
@@ -194,9 +199,11 @@ export function AppHeader({
  */
 function ModulesMenu({
   modules,
+  badges,
   pathname,
 }: {
   modules: readonly ModuleNavItem[]
+  badges: NavBadges
   pathname: string
 }) {
   const current = modules.find((m) =>
@@ -228,25 +235,47 @@ function ModulesMenu({
 
         {modules.length > 0 ? (
           modules.map((mod) => (
-            <DropdownMenuItem
-              key={mod.id}
-              className="h-11 gap-2.5 px-2"
-              render={<Link href={moduleHref(mod.id)} />}
-            >
-              <span
-                className={cn(
-                  "flex size-6 shrink-0 items-center justify-center rounded-md",
-                  accentChip(mod.accent)
-                )}
+            <React.Fragment key={mod.id}>
+              <DropdownMenuItem
+                className="h-11 gap-2.5 px-2"
+                render={<Link href={moduleHref(mod.id)} />}
               >
-                <ModuleIcon
-                  name={mod.icon}
-                  className="size-3.5"
-                  aria-hidden="true"
-                />
-              </span>
-              <span className="min-w-0 flex-1 truncate">{mod.name}</span>
-            </DropdownMenuItem>
+                <span
+                  className={cn(
+                    "flex size-6 shrink-0 items-center justify-center rounded-md",
+                    accentChip(mod.accent)
+                  )}
+                >
+                  <ModuleIcon
+                    name={mod.icon}
+                    className="size-3.5"
+                    aria-hidden="true"
+                  />
+                </span>
+                <span className="min-w-0 flex-1 truncate">{mod.name}</span>
+              </DropdownMenuItem>
+
+              {moduleSubItems(mod.id).map((child) => (
+                <DropdownMenuItem
+                  key={child.id}
+                  // Indented to sit under its parent rather than beside it.
+                  className="h-10 gap-2.5 px-2 pl-10 text-muted-foreground"
+                  render={<Link href={child.href} />}
+                >
+                  <ModuleIcon
+                    name={child.icon}
+                    className="size-3.5 shrink-0"
+                    aria-hidden="true"
+                  />
+                  <span className="min-w-0 flex-1 truncate">{child.name}</span>
+                  {badgeLabel(badges[child.id] ?? 0) ? (
+                    <span className="ml-auto flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-destructive px-1.5 text-[11px] font-semibold text-destructive-foreground tabular-nums">
+                      {badgeLabel(badges[child.id] ?? 0)}
+                    </span>
+                  ) : null}
+                </DropdownMenuItem>
+              ))}
+            </React.Fragment>
           ))
         ) : (
           <p className="px-2 py-2 text-xs text-muted-foreground">

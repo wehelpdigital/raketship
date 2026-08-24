@@ -1183,3 +1183,75 @@ export async function reorderServices(input: {
   refresh()
   return done("Order saved.", calendar.id)
 }
+
+// -----------------------------------------------------------------------------
+// Bookings that came in through the public page
+// -----------------------------------------------------------------------------
+
+/**
+ * Cancels a booking, which hands its slot back.
+ *
+ * The row is kept rather than deleted: someone turned up in the owner's diary
+ * and then did not, and that is worth being able to look at. Setting the status
+ * is also what releases the time — `getTakenSlots` counts only confirmed rows,
+ * and the no-double-booking index is `where status = 'confirmed'` — so a
+ * cancelled slot becomes bookable again by both of the things that decide.
+ */
+export async function cancelBooking(
+  bookingId: string
+): Promise<BookingActionResult> {
+  const session = await requireSession()
+  if ("error" in session) return session.error
+  const { db, userId } = session
+
+  if (typeof bookingId !== "string" || bookingId.length === 0) {
+    return fail("We could not find that booking.")
+  }
+
+  const patch: Patch<"bookings"> = { status: "cancelled" }
+  const { error } = await db
+    .from("bookings")
+    .update(patch)
+    .eq("id", bookingId)
+    // Scoped by the session, never by an id from the browser.
+    .eq("user_id", userId)
+
+  if (error) return fail("We could not cancel that booking. Pakisubukan ulit.")
+
+  refresh()
+  return done("Cancelled. Bukás na ulit ang oras na iyon.")
+}
+
+/** Puts a cancelled booking back, if the slot has not been taken since. */
+export async function restoreBooking(
+  bookingId: string
+): Promise<BookingActionResult> {
+  const session = await requireSession()
+  if ("error" in session) return session.error
+  const { db, userId } = session
+
+  if (typeof bookingId !== "string" || bookingId.length === 0) {
+    return fail("We could not find that booking.")
+  }
+
+  const patch: Patch<"bookings"> = { status: "confirmed" }
+  const { error } = await db
+    .from("bookings")
+    .update(patch)
+    .eq("id", bookingId)
+    .eq("user_id", userId)
+
+  if (error) {
+    // The partial unique index fires when somebody else took the slot in the
+    // meantime, which is the one failure worth explaining rather than blaming
+    // on the network.
+    return fail(
+      isUniqueViolation(error)
+        ? "May kumuha na ng oras na iyon. Hindi na ito maibabalik."
+        : "We could not restore that booking. Pakisubukan ulit."
+    )
+  }
+
+  refresh()
+  return done("Nakabalik na ang booking.")
+}

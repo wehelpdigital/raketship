@@ -193,3 +193,16 @@ export function validateAnswers(
   }
   return errors
 }
+
+/**
+ * An answer as one readable line.
+ *
+ * Deliberately never throws on a surprise shape: answers are stored as jsonb
+ * and a row written by an older version of the form must still render.
+ */
+export function answerToText(value: AnswerValue | undefined): string {
+  if (value === null || value === undefined) return ""
+  if (Array.isArray(value)) return value.join(", ")
+  if (typeof value === "boolean") return value ? "Yes" : ""
+  return String(value)
+}

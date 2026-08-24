@@ -1,5 +1,6 @@
 import * as React from "react"
 import { render, screen, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import { SideNav } from "./side-nav"
@@ -130,5 +131,58 @@ describe("SideNav primary navigation", () => {
     expect(
       within(primary).getByRole("link", { name: "Build your Raket" })
     ).not.toHaveAttribute("aria-current")
+  })
+})
+
+describe("module pages, and folding them away", () => {
+  const withBooking: ModuleNavItem[] = [
+    { id: "booking", name: "Booking", icon: "CalendarCheck", accent: "chart-1", tier: null },
+  ]
+
+  it("lists a module's pages beneath it by default", () => {
+    // Hiding them until someone finds the chevron would hide the feature.
+    renderAt("/modules/booking", withBooking)
+    expect(screen.getByRole("link", { name: /Booked/ })).toBeInTheDocument()
+  })
+
+  it("folds them away and back", async () => {
+    const user = userEvent.setup()
+    renderAt("/modules/booking", withBooking)
+
+    const toggle = screen.getByRole("button", { name: /mga pahina ng Booking/ })
+    expect(toggle).toHaveAttribute("aria-expanded", "true")
+
+    await user.click(toggle)
+    expect(toggle).toHaveAttribute("aria-expanded", "false")
+    expect(screen.queryByRole("link", { name: /Booked/ })).not.toBeInTheDocument()
+
+    await user.click(toggle)
+    expect(screen.getByRole("link", { name: /Booked/ })).toBeInTheDocument()
+  })
+
+  it("gives a module with no pages nothing to fold", () => {
+    renderAt("/modules/invoicing")
+    expect(
+      screen.queryByRole("button", { name: /mga pahina ng Invoices/ })
+    ).not.toBeInTheDocument()
+  })
+
+  it("hands the highlight to the page, not the module", () => {
+    renderAt("/modules/booking/booked", withBooking)
+
+    const child = screen.getByRole("link", { name: /Booked/ })
+    expect(child).toHaveAttribute("aria-current", "page")
+    // Otherwise both would light up and "you are here" would stop meaning it.
+    expect(screen.getByRole("link", { name: /^Booking/ })).not.toHaveAttribute(
+      "aria-current"
+    )
+  })
+
+  it("keeps the module highlighted on its own pages", () => {
+    renderAt("/modules/booking", withBooking)
+    expect(screen.getByRole("link", { name: /^Booking/ })).toHaveAttribute(
+      "aria-current",
+      "page"
+    )
   })
 })

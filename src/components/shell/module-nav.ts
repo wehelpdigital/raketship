@@ -39,6 +39,64 @@ export function accentChip(accent: string | null | undefined): string {
  */
 export const BESPOKE_MODULES = new Set(["business", "booking"])
 
+/** A page inside a module, listed under it in the Modules group. */
+export interface ModuleSubItem {
+  id: string
+  name: string
+  href: string
+  icon: string
+}
+
+/**
+ * The pages a module offers beneath itself.
+ *
+ * Written out per module rather than derived, because these are bespoke
+ * screens with bespoke routes — the generic /modules/[moduleId] page has
+ * nothing to list. A module absent from here simply has no children.
+ */
+const SUB_ITEMS: Record<string, ModuleSubItem[]> = {
+  booking: [
+    {
+      id: "booked",
+      name: "Booked",
+      href: "/modules/booking/booked",
+      icon: "CalendarCheck",
+    },
+  ],
+}
+
+/** Counts to show beside sub-items, keyed by their id. */
+export type NavBadges = Readonly<Record<string, number>>
+
+/**
+ * A count small enough to read at a glance.
+ *
+ * Past ninety-nine the exact number stops being information and starts being
+ * a wide badge, so it caps.
+ */
+export function badgeLabel(count: number): string | null {
+  if (!Number.isFinite(count) || count <= 0) return null
+  return count > 99 ? "99+" : String(Math.trunc(count))
+}
+
+export function moduleSubItems(moduleId: string): ModuleSubItem[] {
+  return SUB_ITEMS[moduleId] ?? []
+}
+
+/**
+ * Whether the module itself is the current page, as opposed to one of its
+ * children. Without excluding the children, opening Booked would light up
+ * Booking as well and the highlight would stop meaning "you are here".
+ */
+export function isModuleActive(
+  pathname: string,
+  moduleId: string,
+  matches: (href: string) => boolean
+): boolean {
+  if (!matches(moduleHref(moduleId))) return false
+  return !moduleSubItems(moduleId).some((child) => matches(child.href))
+}
+
 export function moduleHref(moduleId: string): string {
   return `/modules/${moduleId}`
 }

@@ -7,6 +7,7 @@ import { PaletteStyle } from "@/components/shell/palette-style"
 import { SideNav, type ModuleNavItem } from "@/components/shell/side-nav"
 import { supabaseConfigured } from "@/lib/env"
 import { getThemePreset } from "@/lib/queries/business"
+import { countUpcomingBookings } from "@/lib/queries/booking"
 import { getWorkspace } from "@/lib/queries/workspace"
 import { getCurrentUser, getSupabaseServerClient } from "@/lib/supabase/server"
 import type { ProfileRow } from "@/lib/supabase/types"
@@ -61,17 +62,29 @@ export default async function AppLayout({
       tier: m.tier?.name ?? null,
     }))
 
+
+  /*
+    Counts beside the module pages, keyed by sub-item id. A head count, so the
+    shell pays for a number rather than for rows it will not render — and only
+    for the modules the user actually has.
+  */
+  const hasBooking = modules.some((m) => m.id === "booking")
+  const badges = {
+    booked: hasBooking && user ? await countUpcomingBookings(user.id) : 0,
+  }
+
   // Three navigation surfaces, exactly one visible per breakpoint:
   // phone -> BottomNav, tablet -> the header's inline row, desktop -> SideNav.
   return (
     <div className="min-h-dvh bg-background lg:pl-64">
       <PaletteStyle preset={palette} />
-      <SideNav modules={modules} />
+      <SideNav modules={modules} badges={badges} />
       <div className="flex min-h-dvh flex-col">
         <AppHeader
           name={name}
           email={user?.email ?? null}
           modules={modules}
+          badges={badges}
         />
         <main className="flex-1">{children}</main>
       </div>

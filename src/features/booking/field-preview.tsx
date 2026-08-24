@@ -6,7 +6,7 @@ import { CloudUpload } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import type { AnswerValue } from "@/lib/booking/fields"
+import { answerToText, type AnswerValue } from "@/lib/booking/fields"
 import type { BookingFormFieldRow } from "@/lib/supabase/types"
 import { cn } from "@/lib/utils"
 
@@ -28,12 +28,9 @@ export interface FieldPreviewProps {
  * narrow it per control without ever throwing on a surprise shape.
  * ------------------------------------------------------------------ */
 
-export function answerToText(value: AnswerValue | undefined): string {
-  if (value === null || value === undefined) return ""
-  if (Array.isArray(value)) return value.join(", ")
-  if (typeof value === "boolean") return value ? "Yes" : ""
-  return String(value)
-}
+// Re-exported so the callers that already import it from here keep working;
+// the implementation lives in the lib now, beside the rest of the field logic.
+export { answerToText }
 
 export function answerToList(value: AnswerValue | undefined): string[] {
   if (Array.isArray(value)) return value.filter((v) => typeof v === "string")

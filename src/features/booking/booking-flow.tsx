@@ -46,10 +46,16 @@ import {
   formatDuration,
   instantInZone,
   upcomingDates,
-  WEEKDAY_LABELS,
   WEEKDAY_SHORT,
   type Slot,
 } from "@/lib/booking/slots"
+import {
+  longDate,
+  MONTHS,
+  partsOf,
+  shortDate,
+  weekdayOfIso,
+} from "@/lib/booking/dates"
 import { timezoneChoices, zoneCity } from "@/lib/booking/timezones"
 import type {
   BookingFormFieldRow,
@@ -58,47 +64,6 @@ import type {
 import { useViewerTimezone } from "@/lib/hooks/client"
 import { cn, formatPeso } from "@/lib/utils"
 
-// -----------------------------------------------------------------------------
-// Dates, formatted from their parts so nothing depends on the viewer's locale
-// -----------------------------------------------------------------------------
-
-const MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-] as const
-
-function partsOf(iso: string): { year: number; month: number; day: number } {
-  const [year, month, day] = iso.split("-").map(Number)
-  return { year: year ?? 1970, month: month ?? 1, day: day ?? 1 }
-}
-
-/** 0 = Sunday. The ISO date is already the local date, so UTC is safe here. */
-function weekdayOfIso(iso: string): number {
-  const { year, month, day } = partsOf(iso)
-  return new Date(Date.UTC(year, month - 1, day)).getUTCDay()
-}
-
-/** "Sat 6 Sep", for flagging a slot that lands on another day. */
-function shortDate(iso: string): string {
-  const { month, day } = partsOf(iso)
-  return `${WEEKDAY_SHORT[weekdayOfIso(iso)]} ${day} ${MONTHS[month - 1].slice(0, 3)}`
-}
-
-/** "Monday, 1 March". */
-function longDate(iso: string): string {
-  const { month, day } = partsOf(iso)
-  return `${WEEKDAY_LABELS[weekdayOfIso(iso)]}, ${day} ${MONTHS[month - 1]}`
-}
 
 // -----------------------------------------------------------------------------
 // Static class maps — never interpolated, so the Tailwind scanner sees them all

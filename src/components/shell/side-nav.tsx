@@ -1,16 +1,21 @@
 "use client"
 
+import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Rocket } from "lucide-react"
+import { ChevronRight, Rocket } from "lucide-react"
 
 import { isNavItemActive, NAV_ITEMS } from "@/components/shell/bottom-nav"
 import { ModuleIcon } from "@/components/module-icon"
 import { NavPending } from "@/components/shell/nav-pending"
 import {
   accentChip,
+  badgeLabel,
+  isModuleActive,
   moduleHref,
+  moduleSubItems,
   type ModuleNavItem,
+  type NavBadges,
 } from "@/components/shell/module-nav"
 import { cn } from "@/lib/utils"
 
@@ -23,12 +28,27 @@ export { accentChip, moduleHref, type ModuleNavItem }
  */
 export function SideNav({
   modules = [],
+  badges = {},
   className,
 }: {
   modules?: readonly ModuleNavItem[]
+  badges?: NavBadges
   className?: string
 }) {
-  const pathname = usePathname() ?? ""
+  const pathname = usePathname()
+
+  /*
+    Which modules are folded open. Absent means open, so the pages are visible
+    by default and a module has to be deliberately collapsed to disappear —
+    hiding them until someone finds the chevron would hide the feature.
+
+    Kept in component state rather than storage: the nav lives in the layout,
+    so it survives every navigation, and there is no stored value to disagree
+    with the server on the first paint.
+  */
+  const [openModules, setOpenModules] = React.useState<Record<string, boolean>>(
+    {}
+  ) ?? ""
 
   return (
     <aside
@@ -94,15 +114,25 @@ export function SideNav({
             <ul className="space-y-1">
               {modules.map((mod) => {
                 const href = moduleHref(mod.id)
-                const active = isNavItemActive(pathname, href)
+                const matches = (target: string) =>
+                  isNavItemActive(pathname, target)
+                const active = isModuleActive(pathname, mod.id, matches)
+                const children = moduleSubItems(mod.id)
+
+                const expanded = openModules[mod.id] !== false
+                const listId = `side-nav-${mod.id}-pages`
 
                 return (
                   <li key={mod.id}>
+                    {/* A row, not a link with a button inside it — an anchor
+                        may not contain one, and the two do different things:
+                        the label navigates, the chevron only folds. */}
+                    <div className="flex items-center gap-1">
                     <Link
                       href={href}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                        "flex h-11 min-w-0 flex-1 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                         active
                           ? "bg-primary/10 text-primary"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -130,6 +160,66 @@ export function SideNav({
                         </span>
                       ) : null}
                     </Link>
+
+                    {children.length > 0 ? (
+                      <button
+                        type="button"
+                        aria-expanded={expanded}
+                        aria-controls={listId}
+                        aria-label={`${expanded ? "Itago" : "Ipakita"} ang mga pahina ng ${mod.name}`}
+                        onClick={() =>
+                          setOpenModules((previous) => ({
+                            ...previous,
+                            [mod.id]: !expanded,
+                          }))
+                        }
+                        className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                      >
+                        <ChevronRight
+                          className={cn(
+                            "size-4 transition-transform motion-reduce:transition-none",
+                            expanded && "rotate-90"
+                          )}
+                          aria-hidden="true"
+                        />
+                      </button>
+                    ) : null}
+                    </div>
+
+                    {children.length > 0 && expanded ? (
+                      // Indented to the parent's label rather than its icon, so
+                      // the nesting reads without a connector line.
+                      <ul id={listId} className="mt-1 space-y-1 pl-8">
+                        {children.map((child) => {
+                          const childActive = matches(child.href)
+                          return (
+                            <li key={child.id}>
+                              <Link
+                                href={child.href}
+                                aria-current={childActive ? "page" : undefined}
+                                className={cn(
+                                  "flex h-10 items-center gap-2.5 rounded-lg px-3 text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                                  childActive
+                                    ? "bg-primary/10 font-medium text-primary"
+                                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                                )}
+                              >
+                                <ModuleIcon
+                                  name={child.icon}
+                                  className="size-3.5 shrink-0"
+                                  aria-hidden="true"
+                                />
+                                <span className="min-w-0 flex-1 truncate">
+                                  {child.name}
+                                </span>
+                                <NavBadge count={badges[child.id] ?? 0} />
+                                <NavPending />
+                              </Link>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    ) : null}
                   </li>
                 )
               })}
@@ -149,5 +239,26 @@ export function SideNav({
         </p>
       </div>
     </aside>
+  )
+}
+
+/**
+ * An unread-style count beside a nav item.
+ *
+ * Destructive red because it is asking to be dealt with, not reporting a
+ * total — and it disappears at zero rather than showing one, so an empty
+ * badge never sits there looking like a bug.
+ */
+function NavBadge({ count }: { count: number }) {
+  const label = badgeLabel(count)
+  if (!label) return null
+
+  return (
+    <span
+      className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-destructive px-1.5 text-[11px] font-semibold text-destructive-foreground tabular-nums"
+      aria-label={`${count} paparating`}
+    >
+      {label}
+    </span>
   )
 }

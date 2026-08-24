@@ -215,6 +215,117 @@ export async function listUpcomingBookings(
   )
 }
 
+/**
+ * How many bookings are still to come.
+ *
+ * A head count, so the shell pays for a number rather than for every row it
+ * is not going to render. "Still to come" is judged on when a booking ENDS,
+ * the same way the Booked page splits its lists — otherwise the badge and the
+ * page it points at would disagree about the one in progress.
+ */
+export const countUpcomingBookings = cache(async function countUpcomingBookings(
+  userId: string
+): Promise<number> {
+  const supabase = await getSupabaseServerClient()
+  if (!supabase) return 0
+
+  const { count } = await supabase
+    .from("bookings")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("status", "confirmed")
+    .gte("ends_at", new Date().toISOString())
+
+  return count ?? 0
+})
+
+export interface OwnerBooking extends BookingRow {
+  calendar: BookingCalendarRow | null
+}
+
+export interface BookedList {
+  /** Confirmed and still to come, soonest first — the working list. */
+  upcoming: OwnerBooking[]
+  /** Confirmed but already happened, most recent first. */
+  past: OwnerBooking[]
+  /** Cancelled, whenever they were. Their slots went back on sale. */
+  cancelled: OwnerBooking[]
+  /** The questions each calendar asked, so stored answers can be labelled. */
+  fieldsByCalendar: Record<string, BookingFormFieldRow[]>
+}
+
+/**
+ * Everything that came in through the public booking pages.
+ *
+ * One read for the lot, then split in memory: the three groups are the same
+ * rows asked three different questions, and three round trips to answer them
+ * would be three chances for them to disagree about where "now" is.
+ *
+ * The answers are stored keyed by field id, which means nothing without the
+ * questions — so those come along, grouped by calendar.
+ */
+export async function listBookedForOwner(
+  userId: string,
+  limit = 500
+): Promise<BookedList> {
+  const empty: BookedList = {
+    upcoming: [],
+    past: [],
+    cancelled: [],
+    fieldsByCalendar: {},
+  }
+
+  const supabase = await getSupabaseServerClient()
+  if (!supabase) return empty
+
+  const [bookingRes, fieldRes] = await Promise.all([
+    supabase
+      .from("bookings")
+      .select("*, calendar:booking_calendars(*)")
+      .eq("user_id", userId)
+      .order("starts_at", { ascending: false })
+      .limit(limit),
+    supabase
+      .from("booking_form_fields")
+      .select("*")
+      .eq("user_id", userId)
+      .order("position", { ascending: true }),
+  ])
+
+  const rows = (bookingRes.data as OwnerBooking[] | null) ?? []
+  const fields = (fieldRes.data as BookingFormFieldRow[] | null) ?? []
+
+  const fieldsByCalendar: Record<string, BookingFormFieldRow[]> = {}
+  for (const field of fields) {
+    ;(fieldsByCalendar[field.calendar_id] ??= []).push(field)
+  }
+
+  // One clock for the whole split. Reading the time per row would let a
+  // booking starting this second land in both lists or neither.
+  const now = Date.now()
+
+  const upcoming: OwnerBooking[] = []
+  const past: OwnerBooking[] = []
+  const cancelled: OwnerBooking[] = []
+
+  for (const row of rows) {
+    if (row.status !== "confirmed") {
+      cancelled.push(row)
+      continue
+    }
+    // Judged on when it ENDS: a booking in progress is still today's problem,
+    // not history.
+    if (new Date(row.ends_at).getTime() >= now) upcoming.push(row)
+    else past.push(row)
+  }
+
+  // The query sorted newest first, which is right for what is over and wrong
+  // for what is coming.
+  upcoming.reverse()
+
+  return { upcoming, past, cancelled, fieldsByCalendar }
+}
+
 /** Slugs the user already holds, so the editor can suggest a free one. */
 export async function listOwnedSlugs(userId: string): Promise<string[]> {
   const supabase = await getSupabaseServerClient()
