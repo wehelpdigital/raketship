@@ -139,6 +139,86 @@ export type FlowEdgeRow = {
   created_at: string
 }
 
+
+export type BookingFieldType =
+  | "short_text"
+  | "long_text"
+  | "email"
+  | "phone"
+  | "number"
+  | "select"
+  | "multi_select"
+  | "checkbox"
+  | "date"
+  | "upload"
+
+export type BookingStatus = "confirmed" | "cancelled"
+
+export type BookingCalendarRow = {
+  id: string
+  user_id: string
+  name: string
+  description: string | null
+  slug: string
+  timezone: string
+  country: string
+  duration_minutes: number
+  buffer_minutes: number
+  notice_hours: number
+  is_published: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type BookingAvailabilityRow = {
+  id: string
+  calendar_id: string
+  user_id: string
+  /** 0 = Sunday, matching JS getDay(). */
+  weekday: number
+  start_minute: number
+  end_minute: number
+  created_at: string
+}
+
+export type BookingBlackoutRow = {
+  id: string
+  calendar_id: string
+  user_id: string
+  date: string
+  reason: string | null
+  created_at: string
+}
+
+export type BookingFormFieldRow = {
+  id: string
+  calendar_id: string
+  user_id: string
+  label: string
+  type: BookingFieldType
+  help: string | null
+  placeholder: string | null
+  required: boolean
+  options: string[]
+  position: number
+  created_at: string
+  updated_at: string
+}
+
+export type BookingRow = {
+  id: string
+  calendar_id: string
+  user_id: string
+  starts_at: string
+  ends_at: string
+  customer_name: string
+  customer_email: string | null
+  customer_phone: string | null
+  answers: Record<string, Json>
+  status: BookingStatus
+  created_at: string
+}
+
 type Relationship<
   Column extends string,
   Referenced extends string,
@@ -209,6 +289,31 @@ export type Database = {
           Relationship<"module_id", "modules">,
         ]
       >
+      booking_calendars: Table<BookingCalendarRow, "user_id" | "name" | "slug">
+      booking_availability: Table<
+        BookingAvailabilityRow,
+        "calendar_id" | "user_id" | "weekday" | "start_minute" | "end_minute",
+        [Relationship<"calendar_id", "booking_calendars">]
+      >
+      booking_blackouts: Table<
+        BookingBlackoutRow,
+        "calendar_id" | "user_id" | "date",
+        [Relationship<"calendar_id", "booking_calendars">]
+      >
+      booking_form_fields: Table<
+        BookingFormFieldRow,
+        "calendar_id" | "user_id" | "label",
+        [Relationship<"calendar_id", "booking_calendars">]
+      >
+      bookings: Table<
+        BookingRow,
+        | "calendar_id"
+        | "user_id"
+        | "starts_at"
+        | "ends_at"
+        | "customer_name",
+        [Relationship<"calendar_id", "booking_calendars">]
+      >
       flow_edges: Table<
         FlowEdgeRow,
         "flow_id" | "user_id" | "edge_key" | "source_key" | "target_key",
@@ -217,6 +322,10 @@ export type Database = {
     }
     Views: Record<string, never>
     Functions: {
+      booking_slug_available: {
+        Args: { p_slug: string }
+        Returns: boolean
+      }
       ensure_my_workspace: {
         Args: Record<string, never>
         Returns: undefined
