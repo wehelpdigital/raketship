@@ -52,7 +52,14 @@ export function BusinessHeader({
 
   return (
     <header className="mb-6 lg:mb-8">
-      <div className="flex items-start gap-4 sm:gap-5">
+      {/*
+        Centred, not top-aligned. The photo is 64px (80 at sm) and a column of
+        just a name and one meta row is about 50 — so top-aligning them left the
+        photo hanging below the text it was meant to sit beside. Centring lines
+        up whichever is shorter against the taller one, which is right whether
+        the business filled in a tagline and an address or nothing at all.
+      */}
+      <div className="flex items-center gap-4 sm:gap-5">
         <LogoMask
           url={logo}
           name={name}

@@ -194,3 +194,30 @@ describe("the cover photo", () => {
     expect(images.some((img) => img.src.includes("logo"))).toBe(true)
   })
 })
+
+describe("how the photo lines up with the name", () => {
+  it("centres the two against each other rather than top-aligning them", () => {
+    // jsdom does no layout, so this pins the rule rather than the pixels. The
+    // geometry it encodes: the photo is 64px (80 at sm) and a column of just a
+    // name and one meta row is about 50, so items-start left the photo hanging
+    // below the text it sits beside. items-center lines up whichever is
+    // shorter against the taller one, which holds whether the business filled
+    // in a tagline and an address or left both empty.
+    const { container } = renderHeader({
+      business: business({ business_name: "Salon ni Nena" }),
+    })
+
+    const row = container.querySelector("header > div")
+    expect(row).toHaveClass("items-center")
+    expect(row).not.toHaveClass("items-start")
+  })
+
+  it("keeps the photo first, so it stays the left column", () => {
+    const { container } = renderHeader({
+      business: business({ business_name: "Salon ni Nena" }),
+    })
+    const row = container.querySelector("header > div")
+    // The initials stand in for the photo when there is no logo.
+    expect(row?.firstElementChild).toHaveTextContent("SN")
+  })
+})
