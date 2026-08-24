@@ -168,6 +168,11 @@ export type BookingCalendarRow = {
   duration_minutes: number
   buffer_minutes: number
   notice_hours: number
+  /**
+   * Hours before the appointment a cancellation should reach the owner. Shown
+   * on the confirmation; nothing enforces it, because nothing can.
+   */
+  cancel_notice_hours: number
   /** How many days ahead the public page offers, today counting as day 1. */
   booking_horizon_days: number
   length_mode: BookingLengthMode

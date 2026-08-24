@@ -63,6 +63,7 @@ import {
   shortDate,
   weekdayOfIso,
 } from "@/lib/booking/dates"
+import { cancelNoticeSentence } from "@/lib/booking/notice"
 import { timezoneChoices, zoneCity } from "@/lib/booking/timezones"
 import type {
   BookingFormFieldRow,
@@ -179,6 +180,15 @@ export interface BookingFlowProps {
   challengeBits: number
   /** How to reach the shop, shown once a booking is made. */
   contact?: PublicContact | null
+  /**
+   * Hours of warning the owner asks for before a cancellation.
+   *
+   * Defaults to 0 — no stated deadline — while the column defaults to 24. That
+   * asymmetry is deliberate: the page always passes the stored value, so this
+   * only applies if a caller forgets, and a caller who forgets should make the
+   * page ask for nothing rather than announce a deadline the owner never set.
+   */
+  cancelNoticeHours?: number
 }
 
 type SlotState =
@@ -234,6 +244,7 @@ export function BookingFlow({
   challenge,
   challengeBits,
   contact = null,
+  cancelNoticeHours = 0,
 }: BookingFlowProps) {
   /*
     A catalogue turns the length into a choice, and the length decides which
@@ -537,6 +548,7 @@ export function BookingFlow({
         timezoneLabel={timezoneLabel}
         viewerZone={viewerZone}
         contact={contact}
+        cancelNoticeHours={cancelNoticeHours}
       />
     )
   }
@@ -1324,12 +1336,14 @@ function Confirmed({
   timezoneLabel,
   viewerZone,
   contact,
+  cancelNoticeHours,
 }: {
   calendarName: string
   confirmation: Confirmation
   timezoneLabel: string
   viewerZone: string | null
   contact: PublicContact | null
+  cancelNoticeHours: number
 }) {
   const reference = confirmation.bookingId?.slice(0, 8).toUpperCase() ?? null
   const service = confirmation.service
@@ -1457,7 +1471,7 @@ function Confirmed({
                     Kailangan mong mag-cancel o magpalit ng oras?
                   </span>{" "}
                   <span className="text-muted-foreground">
-                    Mag-message lang po sa amin.
+                    {cancelNoticeSentence(cancelNoticeHours)}
                   </span>
                 </p>
                 <ContactChips

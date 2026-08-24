@@ -230,6 +230,7 @@ export default async function PublicBookingPage({ params }: PageProps) {
           horizonDays={calendar.booking_horizon_days}
           challenge={challenge}
           challengeBits={CHALLENGE_BITS}
+          cancelNoticeHours={calendar.cancel_notice_hours}
           contact={
             business
               ? {

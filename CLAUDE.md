@@ -64,6 +64,13 @@ gating all read from it. To sell it, add its `type` to the relevant tier's `node
 `'module'` is an inner board linked back via `parent_node_id`. One `flow_nodes`/`flow_edges`
 schema serves both.
 
+**`supabase/setup.sql` is GENERATED** by `npm run db:setup`, and `npm run verify`
+fails when it is stale. It is a second source of truth for the schema, and it
+drifted twice before the check existed — the second time omitting the migration
+that adds `cancel_notice_hours`, a column every calendar insert names
+unconditionally, so a paste-provisioned project could not create a calendar at
+all. Never hand-edit it.
+
 Apply migrations with `npm run db:push` (needs `SUPABASE_DB_URL`), or paste
 `supabase/setup.sql` into the Supabase SQL Editor. Both are idempotent.
 `npm run db:seed-admin` creates the pre-confirmed demo admin behind the one-click login.

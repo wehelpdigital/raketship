@@ -38,6 +38,7 @@ export interface UpdateCalendarInput {
   durationMinutes?: number
   bufferMinutes?: number
   noticeHours?: number
+  cancelNoticeHours?: number
   horizonDays?: number
   timezone?: string
   country?: string
@@ -194,6 +195,16 @@ const horizonSchema = z
   .min(1, "A calendar has to accept bookings for at least a day.")
   .max(365, "A year ahead is the furthest a calendar can go.")
 
+/**
+ * Mirrors the booking_calendars_cancel_notice check constraint. The database is
+ * the real guard; this is so the owner gets a sentence rather than an error code.
+ */
+const cancelNoticeSchema = z
+  .number()
+  .int("Hours need to be a whole number.")
+  .min(0, "That cannot be negative.")
+  .max(720, "Keep it under 30 days.")
+
 const countrySchema = z
   .string()
   .regex(/^[A-Za-z]{2}$/, "Pick a country from the list.")
@@ -204,6 +215,7 @@ const calendarSchema = z.object({
   durationMinutes: durationSchema,
   bufferMinutes: bufferSchema,
   noticeHours: noticeSchema,
+  cancelNoticeHours: cancelNoticeSchema,
   horizonDays: horizonSchema,
   timezone: z.string().min(1, "Pick a timezone.").max(64, "Pick a timezone."),
   country: countrySchema,
@@ -368,6 +380,7 @@ export async function createCalendar(
     durationMinutes: numberField(formData, "durationMinutes", 30),
     bufferMinutes: numberField(formData, "bufferMinutes", 0),
     noticeHours: numberField(formData, "noticeHours", 2),
+    cancelNoticeHours: numberField(formData, "cancelNoticeHours", 24),
     horizonDays: numberField(formData, "horizonDays", 14),
     timezone: text(formData, "timezone") || "Asia/Manila",
     country: text(formData, "country") || "PH",
@@ -397,6 +410,7 @@ export async function createCalendar(
     duration_minutes: input.durationMinutes,
     buffer_minutes: input.bufferMinutes,
     notice_hours: input.noticeHours,
+    cancel_notice_hours: input.cancelNoticeHours,
     booking_horizon_days: input.horizonDays,
     is_published: false,
   }
@@ -457,6 +471,12 @@ export async function updateCalendar(
     const parsed = noticeSchema.safeParse(input.noticeHours)
     if (!parsed.success) return fail(firstIssue(parsed.error))
     patch.notice_hours = parsed.data
+  }
+
+  if (input.cancelNoticeHours !== undefined) {
+    const parsed = cancelNoticeSchema.safeParse(input.cancelNoticeHours)
+    if (!parsed.success) return fail(firstIssue(parsed.error))
+    patch.cancel_notice_hours = parsed.data
   }
 
   if (input.horizonDays !== undefined) {

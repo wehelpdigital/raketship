@@ -452,6 +452,42 @@ describe("the confirmation", () => {
     expect(screen.getByRole("link", { name: /Facebook/ })).toBeInTheDocument()
   })
 
+  it("asks for the notice the owner set before a cancellation", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    await bookThrough(user, {
+      cancelNoticeHours: 24,
+      contact: {
+        mobile: "09171234567",
+        chatApps: [],
+        facebookUrl: null,
+        instagramHandle: null,
+        websiteUrl: null,
+      },
+    })
+    await screen.findByText("Booked na po!")
+
+    expect(screen.getByText(/hindi bababa sa 1 araw/i)).toBeInTheDocument()
+  })
+
+  it("asks nothing in particular when the owner set no deadline", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    await bookThrough(user, {
+      cancelNoticeHours: 0,
+      contact: {
+        mobile: "09171234567",
+        chatApps: [],
+        facebookUrl: null,
+        instagramHandle: null,
+        websiteUrl: null,
+      },
+    })
+    await screen.findByText("Booked na po!")
+
+    // "at least 0 hours before" is nonsense; the invitation stands alone.
+    expect(screen.getByText(/Mag-message lang po sa amin/)).toBeInTheDocument()
+    expect(screen.queryByText(/hindi bababa/i)).toBeNull()
+  })
+
   it("says nothing about contacting when the owner gave no way to", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     await bookThrough(user, {

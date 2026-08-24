@@ -101,6 +101,7 @@ function calendarRow(overrides: Record<string, unknown> = {}) {
     duration_minutes: 30,
     buffer_minutes: 0,
     notice_hours: 2,
+    cancel_notice_hours: 24,
     booking_horizon_days: 60,
     length_mode: "fixed" as const,
     is_published: true,

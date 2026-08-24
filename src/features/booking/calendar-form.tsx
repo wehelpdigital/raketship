@@ -31,6 +31,7 @@ import {
   deleteCalendar,
   updateCalendar,
 } from "@/features/booking/actions"
+import { CANCEL_NOTICES, cancelNoticeLabel } from "@/lib/booking/notice"
 import type { BookingCalendarRow } from "@/lib/supabase/types"
 import { cn } from "@/lib/utils"
 
@@ -167,6 +168,9 @@ export function CalendarForm({
   )
   const [buffer, setBuffer] = React.useState(calendar?.buffer_minutes ?? 0)
   const [notice, setNotice] = React.useState(calendar?.notice_hours ?? 2)
+  const [cancelNotice, setCancelNotice] = React.useState(
+    calendar?.cancel_notice_hours ?? 24
+  )
   const [horizon, setHorizon] = React.useState(
     calendar?.booking_horizon_days ?? 14
   )
@@ -185,6 +189,7 @@ export function CalendarForm({
           payload.set("description", description)
           payload.set("bufferMinutes", String(buffer))
           payload.set("noticeHours", String(notice))
+          payload.set("cancelNoticeHours", String(cancelNotice))
           payload.set("horizonDays", String(horizon))
 
           const result = await createCalendar(payload)
@@ -205,6 +210,11 @@ export function CalendarForm({
           description,
           bufferMinutes: buffer,
           noticeHours: notice,
+          cancelNoticeHours: cancelNotice,
+          // Sent here too, not only on create. Without it updateCalendar skips
+          // the column entirely and the save reports success while quietly
+          // dropping the choice — this is the only screen that edits it.
+          horizonDays: horizon,
         })
         if (!result.ok) {
           setError(result.message ?? null)
@@ -225,6 +235,7 @@ export function CalendarForm({
   const descriptionId = `${uid}-description`
   const bufferId = `${uid}-buffer`
   const noticeId = `${uid}-notice`
+  const cancelNoticeId = `${uid}-cancel-notice`
   const horizonId = `${uid}-horizon`
 
   return (
@@ -270,7 +281,7 @@ export function CalendarForm({
             keeps its 44px target, side by side the moment there is room.
             How long a booking runs lives under its own tab — it grew a second
             mode and a whole catalogue, which no longer fits beside these. */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-1.5">
             <Label htmlFor={bufferId}>Break after</Label>
             <NumberSelect
@@ -308,6 +319,21 @@ export function CalendarForm({
               onChange={setNotice}
             />
             <p className="text-xs text-muted-foreground">Minimum lead time</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor={cancelNoticeId}>Cancellation notice</Label>
+            <NumberSelect
+              id={cancelNoticeId}
+              value={cancelNotice}
+              choices={withCurrent([...CANCEL_NOTICES], cancelNotice)}
+              label={cancelNoticeLabel}
+              disabled={saving}
+              onChange={setCancelNotice}
+            />
+            <p className="text-xs text-muted-foreground">
+              Sinasabi sa suki sa confirmation
+            </p>
           </div>
         </div>
 

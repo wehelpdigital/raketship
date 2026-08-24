@@ -165,7 +165,8 @@ src/
     supabase/        browser · server · admin clients
 supabase/
   migrations/        0001 schema · 0002 catalogue · 0003 provisioning
-  setup.sql          all three concatenated, for the SQL Editor
+  setup.sql          every migration concatenated, for the SQL Editor
+                     (generated — npm run db:setup; verify fails if stale)
 ```
 
 ---
