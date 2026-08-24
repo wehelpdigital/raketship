@@ -104,6 +104,17 @@ invariant to get wrong, and no crop can leave a gap. `dragCrop` takes width AND
 height — sharing one number made a vertical drag across the banner move three
 times as far as a horizontal one. The original file is never re-encoded.
 
+**The public header is one block: photo left, facts right.** Logo, then the
+name, what is being booked, the length, the zone and the location. The COVER is
+not on the public page — it was a 3:1 band that pushed all of that below the
+fold on a phone to show a picture answering none of it. It is still uploadable
+and still previewed in the module, so it is there for whatever wants it next.
+
+**One gate for where a business is.** `lib/business/address.ts` owns both
+`addressLine` (header) and `landmarkLine` (footer). They are together because if
+they ever disagreed about what "hidden" means, the disagreement would be
+someone's home address on a public page.
+
 **Framing is a step in the upload, not a repair afterwards.** Choose a file ->
 frame it -> confirm, and only then does it upload, with the path and the crop
 saved in one call. Uploading first would put the wrong crop on a public page

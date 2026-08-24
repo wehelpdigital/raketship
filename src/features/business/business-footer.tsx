@@ -1,5 +1,6 @@
 import { AtSign, Globe, MapPin, MessageCircle, Phone, Users } from "lucide-react"
 
+import { landmarkLine } from "@/lib/business/address"
 import { toInternational } from "@/lib/business/contact"
 import type { BusinessProfileRow } from "@/lib/supabase/types"
 
@@ -19,21 +20,17 @@ export function BusinessFooter({ business }: BusinessFooterProps) {
 
   const chat = business.chat_apps ?? []
   const mobile = business.mobile_number?.trim() || null
-  const address = addressLine(business)
   /*
-    The landmark is gated on the SAME setting as the address, not shown beside
-    it. "Katapat ng Mercury Drug, kulay dilaw na gate" locates a house as
-    precisely as a street number does — printing it while the address is hidden
-    would defeat the setting for the exact person it exists to protect.
+    The one-line address is printed in the header now, so only the directions
+    are left down here. They are gated on the same setting, because "katapat ng
+    Mercury Drug, kulay dilaw na gate" locates a house as precisely as a street
+    number does.
   */
-  const landmark =
-    business.address_visibility === "hidden"
-      ? null
-      : business.landmark?.trim() || null
+  const landmark = landmarkLine(business)
 
   const hasContact =
     mobile || business.facebook_url || business.instagram_handle || business.website_url
-  const hasPlace = address || landmark
+  const hasPlace = landmark !== null
 
   if (!hasContact && !hasPlace) return null
 
@@ -92,53 +89,22 @@ export function BusinessFooter({ business }: BusinessFooterProps) {
       ) : null}
 
       {hasPlace ? (
-        <Panel title="Saan kayo">
-          <div className="space-y-1.5 text-sm">
-            {address ? (
-              <Row icon={MapPin} label="Address">
-                {address}
-              </Row>
-            ) : null}
-            {landmark ? (
-              // Directions run to a sentence here, so this keeps its own line
-              // and its line breaks rather than being folded into the address.
-              <p className="whitespace-pre-line text-pretty text-muted-foreground">
-                {landmark}
-              </p>
-            ) : null}
-          </div>
+        <Panel title="Paano pumunta">
+          {/* Directions run to a sentence, so they keep their own block and
+              their line breaks rather than being folded onto the address. */}
+          <p className="flex items-start gap-2 text-sm">
+            <MapPin
+              className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <span className="whitespace-pre-line text-pretty text-muted-foreground">
+              {landmark}
+            </span>
+          </p>
         </Panel>
       ) : null}
     </div>
   )
-}
-
-/**
- * The address, cut to what the owner agreed to publish.
- *
- * "hidden" returns nothing at all, and "area" drops the street — a freelancer
- * working from a bedroom must be able to fill the address in for their own
- * records without it appearing on a page anyone can open.
- */
-export function addressLine(business: BusinessProfileRow): string | null {
-  if (business.address_visibility === "hidden") return null
-
-  const parts =
-    business.address_visibility === "full"
-      ? [
-          business.street_address,
-          business.barangay,
-          business.city,
-          business.province,
-        ]
-      : [business.barangay, business.city, business.province]
-
-  const line = parts
-    .map((part) => part?.trim())
-    .filter((part): part is string => Boolean(part))
-    .join(", ")
-
-  return line.length > 0 ? line : null
 }
 
 function Panel({
@@ -178,25 +144,3 @@ function Chip({
   )
 }
 
-function Row({
-  icon: Icon,
-  label,
-  children,
-}: {
-  icon: typeof Phone
-  label: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className="flex items-start gap-2">
-      <Icon
-        className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-        aria-hidden="true"
-      />
-      <div className="min-w-0 flex-1">
-        <span className="sr-only">{label}: </span>
-        <span className="text-pretty">{children}</span>
-      </div>
-    </div>
-  )
-}

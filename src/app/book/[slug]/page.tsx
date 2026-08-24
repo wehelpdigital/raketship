@@ -1,11 +1,6 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import {
-  CalendarOff,
-  Clock,
-  Globe,
-  ShieldCheck,
-} from "lucide-react"
+import { CalendarOff, ShieldCheck } from "lucide-react"
 import {
   BookingFlow,
   type OpenRange,
@@ -194,38 +189,25 @@ export default async function PublicBookingPage({ params }: PageProps) {
         Now: a compact header, then the booking, then the detail for whoever
         wants it. Desktop gets the detail as a column instead of a disclosure.
       */}
-      <BusinessHeader business={business} fallbackName={calendar.name} />
+      <BusinessHeader
+        business={business}
+        fallbackName={calendar.name}
+        bookingName={calendar.name}
+        timeLabel={
+          catalog
+            ? publicServices.length === 1
+              ? formatDuration(publicServices[0].durationMinutes)
+              : `${publicServices.length} serbisyo`
+            : formatDuration(calendar.duration_minutes)
+        }
+        zoneLabel={timezoneLabel}
+      />
 
-      <header className="mb-6 lg:mb-8">
-        <div className="flex items-start gap-3 sm:gap-4">
-          <div className="min-w-0 flex-1 space-y-1">
-            <h1 className="text-xl font-semibold tracking-tight text-balance sm:text-2xl lg:text-3xl">
-              {calendar.name}
-            </h1>
-            {/* Duration and zone ride in the header: they are the two facts
-                that decide whether someone books at all. */}
-            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">
-                <Clock className="size-4 shrink-0" aria-hidden />
-                {catalog
-                  ? publicServices.length === 1
-                    ? formatDuration(publicServices[0].durationMinutes)
-                    : `${publicServices.length} serbisyo`
-                  : formatDuration(calendar.duration_minutes)}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Globe className="size-4 shrink-0" aria-hidden />
-                {timezoneLabel}
-              </span>
-            </p>
-          </div>
-        </div>
-        {calendar.description ? (
-          <p className="mt-3 max-w-prose text-sm text-pretty text-muted-foreground sm:mt-4 sm:text-base">
-            {calendar.description}
-          </p>
-        ) : null}
-      </header>
+      {calendar.description ? (
+        <p className="mb-6 max-w-prose text-sm text-pretty text-muted-foreground sm:text-base lg:mb-8">
+          {calendar.description}
+        </p>
+      ) : null}
       {hasTimes ? (
         <BookingFlow
           calendarId={calendar.id}

@@ -1,8 +1,7 @@
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import { addressLine, BusinessFooter } from "./business-footer"
-import { BusinessHeader } from "./business-header"
+import { BusinessFooter } from "./business-footer"
 import type { BusinessProfileRow } from "@/lib/supabase/types"
 
 function business(
@@ -46,38 +45,6 @@ const FULL_ADDRESS = {
   province: "Metro Manila",
 }
 
-describe("addressLine", () => {
-  it("shows everything when the owner asked for that", () => {
-    const line = addressLine(
-      business({ ...FULL_ADDRESS, address_visibility: "full" })
-    )
-    expect(line).toBe(
-      "Blk 4 Lot 12 Sampaguita St., Concepcion Uno, Marikina City, Metro Manila"
-    )
-  })
-
-  it("drops the street on the default setting", () => {
-    // This is the one that protects a raket run out of a bedroom, and it is
-    // the DEFAULT, so filling the address in can never leak a home by accident.
-    const line = addressLine(
-      business({ ...FULL_ADDRESS, address_visibility: "area" })
-    )
-    expect(line).toBe("Concepcion Uno, Marikina City, Metro Manila")
-    expect(line).not.toContain("Sampaguita")
-    expect(line).not.toContain("Blk 4")
-  })
-
-  it("shows nothing at all when hidden", () => {
-    expect(
-      addressLine(business({ ...FULL_ADDRESS, address_visibility: "hidden" }))
-    ).toBeNull()
-  })
-
-  it("returns null rather than a line of commas when nothing is filled in", () => {
-    expect(addressLine(business())).toBeNull()
-  })
-})
-
 describe("BusinessFooter", () => {
   it("renders nothing when the business is empty", () => {
     const { container } = render(<BusinessFooter business={business()} />)
@@ -89,25 +56,16 @@ describe("BusinessFooter", () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it("never prints the street when the setting says area", () => {
+  it("leaves the one-line address to the header", () => {
+    // Printing it in both places would be the same fact twice, and two places
+    // that could disagree about the visibility setting.
     render(
       <BusinessFooter
-        business={business({ ...FULL_ADDRESS, address_visibility: "area" })}
-      />
-    )
-    expect(screen.getByText(/Concepcion Uno/)).toBeInTheDocument()
-    expect(screen.queryByText(/Sampaguita/)).not.toBeInTheDocument()
-  })
-
-  it("never prints any of it when the setting says hidden", () => {
-    render(
-      <BusinessFooter
-        business={business({ ...FULL_ADDRESS, address_visibility: "hidden" })}
+        business={business({ ...FULL_ADDRESS, address_visibility: "full" })}
       />
     )
     expect(screen.queryByText(/Sampaguita/)).not.toBeInTheDocument()
     expect(screen.queryByText(/Concepcion Uno/)).not.toBeInTheDocument()
-    expect(screen.queryByText(/Marikina/)).not.toBeInTheDocument()
   })
 
   it("turns the one number into the chat apps that were ticked", () => {
@@ -157,49 +115,6 @@ describe("BusinessFooter", () => {
     render(<BusinessFooter business={business({ mobile_number: "09171234567" })} />)
     const link = screen.getByRole("link", { name: /09171234567/ })
     expect(link).not.toHaveAttribute("target")
-  })
-})
-
-describe("BusinessHeader", () => {
-  it("renders nothing rather than an empty banner", () => {
-    // Most rakets fill this in over time; an empty box above every booking
-    // page would be worse than the compact header that was there before.
-    const { container } = render(
-      <BusinessHeader business={business()} fallbackName="Gupit ni Nena" />
-    )
-    expect(container).toBeEmptyDOMElement()
-  })
-
-  it("falls back to the calendar's name when the business has none", () => {
-    render(
-      <BusinessHeader
-        business={business({ tagline: "Home salon sa Marikina" })}
-        fallbackName="Gupit ni Nena"
-      />
-    )
-    expect(screen.getByText("Gupit ni Nena")).toBeInTheDocument()
-    expect(screen.getByText("Home salon sa Marikina")).toBeInTheDocument()
-  })
-
-  it("prefers the business name once there is one", () => {
-    render(
-      <BusinessHeader
-        business={business({ business_name: "Salon ni Nena" })}
-        fallbackName="Gupit ni Nena"
-      />
-    )
-    expect(screen.getByText("Salon ni Nena")).toBeInTheDocument()
-    expect(screen.queryByText("Gupit ni Nena")).not.toBeInTheDocument()
-  })
-
-  it("shows initials until there is a logo", () => {
-    render(
-      <BusinessHeader
-        business={business({ business_name: "Salon ni Nena" })}
-        fallbackName="x"
-      />
-    )
-    expect(screen.getByText("SN")).toBeInTheDocument()
   })
 })
 
