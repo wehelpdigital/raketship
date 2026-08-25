@@ -7,6 +7,7 @@ import { SetupNotice } from "@/components/shell/setup-notice"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { supabaseConfigured } from "@/lib/env"
 import { cn } from "@/lib/utils"
+import { assignModuleAccents, oklchHue } from "@/lib/flow/accents"
 import {
   bookingGlance,
   businessGlance,
@@ -16,6 +17,7 @@ import { rowToCanvasEdge, rowToCanvasNode } from "@/lib/flow/mappers"
 import { getLocale, getT } from "@/lib/i18n/server"
 import { countUpcomingBookings } from "@/lib/queries/booking"
 import { getBusinessProfile } from "@/lib/queries/business"
+import { getPalette } from "@/lib/theme/palettes"
 import {
   getRaketCanvas,
   getWorkspace,
@@ -155,23 +157,27 @@ export default async function RaketPage() {
     a module with no row falls back to the registry's generic look.
   */
   /*
-    chart-1 is aliased to the shop's primary, which the start card already
-    wears — a module shipping chart-1 would twin the root. Those take a stable
-    substitute instead, so every element on the board has its own colour.
+    Every element wears its own colour, assigned per account: the primary
+    MOVES with the chosen palette, so a fixed catalog accent can twin the
+    start card on one shop and be fine on another (lila sits five degrees
+    from chart-4). See lib/flow/accents.ts for the rules.
   */
-  const substitutes = ["chart-5", "chart-2", "chart-4", "chart-3"]
+  const primaryHue =
+    oklchHue(getPalette(profile?.theme_preset).light.primary) ?? 27
+  const catalog = workspace.modules.flatMap((activated) =>
+    activated.module
+      ? [{ id: activated.module.id, accent: activated.module.accent }]
+      : []
+  )
+  const accents = assignModuleAccents(catalog, primaryHue)
   const dress: Record<
     string,
     { accent?: string; icon?: string; tagline?: string }
   > = {}
   for (const activated of workspace.modules) {
     if (!activated.module) continue
-    const accent =
-      activated.module.accent === "chart-1"
-        ? (substitutes.shift() ?? "chart-5")
-        : activated.module.accent
     dress[activated.module.id] = {
-      accent,
+      accent: accents[activated.module.id],
       icon: activated.module.icon,
       tagline: activated.module.tagline ?? undefined,
     }

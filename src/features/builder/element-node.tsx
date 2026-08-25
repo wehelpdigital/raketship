@@ -154,10 +154,9 @@ export function ElementCard({
         "group relative w-62 rounded-xl bg-card p-4 text-left shadow-node ring-1 ring-border lg:w-52 lg:rounded-lg lg:p-3",
         "transition-[box-shadow,translate,scale] duration-200 hover:-translate-y-0.5 hover:shadow-node-hover active:scale-[0.99] active:shadow-node motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100",
         enterIndex !== undefined && "node-arrive",
-        // A module card is a door, and a door reads wider than a step. The
-        // business card is the front of the whole shop, and reads widest.
-        glance && "w-64 lg:w-60",
-        glance && isStart && "w-72 lg:w-64",
+        // A module card is a door, and a door reads wider than a step —
+        // wide enough that a catalog tagline fits on its one line.
+        glance && "w-72 lg:w-64",
         /*
           The heart of the board dresses like it: a quiet gradient of the
           shop's own colour over bg-card (background-image over
@@ -190,7 +189,7 @@ export function ElementCard({
         </span>
       ) : null}
 
-      <div className="flex items-start gap-3">
+      <div className="flex items-center gap-3">
         <span className="relative shrink-0">
           {glance?.logoUrl || glance?.logoName ? (
             /* The shop's own mark, framed the way the owner framed it — the
@@ -226,7 +225,9 @@ export function ElementCard({
             ) : null}
           </div>
           {isModule && tagline ? (
-            <p className="line-clamp-2 text-xs text-pretty text-muted-foreground lg:text-[11px]">
+            /* A catalog tagline is a label, not prose: one line, truncated —
+               the owner's OWN sentence on the start card keeps its two. */
+            <p className="truncate text-xs text-muted-foreground lg:text-[11px]">
               {tagline}
             </p>
           ) : null}
@@ -264,7 +265,7 @@ export function ElementCard({
 
         {isModule ? (
           <ChevronRight
-            className="mt-2 size-4 shrink-0 text-muted-foreground transition-[translate,color] duration-200 group-hover:translate-x-0.5 group-hover:text-foreground motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
+            className="size-4 shrink-0 text-muted-foreground transition-[translate,color] duration-200 group-hover:translate-x-0.5 group-hover:text-foreground motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
             aria-hidden="true"
           />
         ) : null}
