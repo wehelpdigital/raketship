@@ -45,7 +45,7 @@ describe("the module's own dress", () => {
       />
     )
 
-    const badge = screen.getByText("Business")
+    const badge = screen.getByText("Your business")
     const name = screen.getByText("Salon ni Nena")
     // Same column as the name, not the footer row.
     expect(badge.parentElement).toBe(name.closest("[class*=min-w-0]"))

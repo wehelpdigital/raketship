@@ -133,7 +133,7 @@ export function ElementCard({
       ? `${tier.charAt(0).toUpperCase()}${tier.slice(1)}`
       : "Module"
     : isStart
-      ? def.short
+      ? def.label
       : CATEGORY_LABELS[def.category]
 
   return (
@@ -232,7 +232,7 @@ export function ElementCard({
           ) : null}
           {glance ? (
             <>
-              {isStart ? (
+              {isStart && labelOf(def, values) !== def.label ? (
                 <Badge variant="outline" className="mt-1 mb-0.5 font-normal">
                   {badgeText}
                 </Badge>

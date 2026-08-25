@@ -177,12 +177,26 @@ export default async function RaketPage() {
     }
   }
 
+  const shopName = profile?.business_name?.trim()
   const nodes = canvas.nodes.map((row, index) => {
     const node = rowToCanvasNode(row)
+    /*
+      The start card leads with the shop's NAME; "Your business" drops to the
+      tag beneath it. Only while the node still wears its stock label — an
+      owner who renamed it on the canvas said something on purpose. Display
+      only; nothing is written back.
+    */
+    const values =
+      row.type === "start" &&
+      shopName &&
+      node.data.values.label === "Your business"
+        ? { ...node.data.values, label: shopName }
+        : node.data.values
     return {
       ...node,
       data: {
         ...node.data,
+        values,
         glance: glances[row.node_key],
         enterIndex: index,
         ...(row.module_id ? (dress[row.module_id] ?? {}) : {}),
