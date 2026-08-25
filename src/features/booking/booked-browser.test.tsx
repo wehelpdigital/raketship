@@ -474,24 +474,32 @@ describe("in English", () => {
 })
 
 describe("the day's rows", () => {
-  it("share one card, with an inset rule between the rows", () => {
-    // Separate cards spent a gap of page on every row; a schedule is a ruled
-    // list. The rule is inset to the rows' padding — full-bleed reads as the
-    // card ending, inset as the list continuing.
-    const { container } = renderBrowser({ rows: [row(1), row(21)] })
+  it("rules the whole tab as one list, a hairline above every booking", () => {
+    // A card per day meant a shop with one booking a day — the common case —
+    // never saw a single divider. Now the days are bands inside ONE card and
+    // every row carries an inset rule above it.
+    const { container } = renderBrowser({ rows: [row(1), row(21), row(2)] })
 
-    const list = container.querySelector("section ul")
-    expect(list?.className).toContain("rounded-lg")
-    expect(list?.className).toContain("bg-card")
-    expect(list?.querySelectorAll("li")).toHaveLength(2)
+    const card = container.querySelector("section")?.parentElement
+    expect(card?.className).toContain("rounded-lg")
+    expect(card?.className).toContain("bg-card")
 
-    const rules = list?.querySelectorAll("li > div[aria-hidden]") ?? []
-    // One fewer rule than rows: a rule above the first would double the
-    // card's own edge.
-    expect(rules).toHaveLength(1)
-    expect(rules[0].className).toContain("border-t")
-    expect(rules[0].className).toContain("mx-4")
+    // Three bookings, three rules — every booking gets its line.
+    const rules = card?.querySelectorAll("li > div[aria-hidden]") ?? []
+    expect(rules).toHaveLength(3)
+    for (const rule of rules) {
+      expect(rule.className).toContain("border-t")
+      expect(rule.className).toContain("mx-4")
+    }
+
+    // The day headers live inside the card, and a NEW day announces itself
+    // with a full-width rule while the first does not double the card's edge.
+    const headers = card?.querySelectorAll("h3") ?? []
+    expect(headers).toHaveLength(2)
+    expect(headers[0].className).not.toContain("border-t")
+    expect(headers[1].className).toContain("border-t")
   })
+
 
   it("no longer paints a card each", () => {
     const { container } = renderBrowser({ rows: [row(1)] })

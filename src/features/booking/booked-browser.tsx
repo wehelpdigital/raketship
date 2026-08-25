@@ -277,9 +277,17 @@ export function BookedBrowser({
           {filtering ? t("booked.noMatch") : emptyLabel}
         </p>
       ) : (
-        <div className="space-y-5">
-          {groups.map((group) => (
-            <section key={group.key} className="space-y-2">
+        /*
+          ONE ruled card for the whole tab, the day headers inside it as
+          tinted bands. A card per day meant a shop whose bookings land one to
+          a day — the common case — never saw a single divider; now every
+          booking has a hairline above it, inset to the rows' own padding
+          (full-bleed reads as an edge, inset as the list continuing), and a
+          new day announces itself with a full-width rule under its band.
+        */
+        <div className="overflow-hidden rounded-lg bg-card ring-1 ring-border">
+          {groups.map((group, groupIndex) => (
+            <section key={group.key}>
               {/*
                 How near the day is depends on what day it is now, so a render
                 that straddles midnight can disagree with the one the server
@@ -288,7 +296,10 @@ export function BookedBrowser({
               */}
               <h3
                 suppressHydrationWarning
-                className="flex flex-wrap items-center gap-x-2 gap-y-1 px-1"
+                className={cn(
+                  "flex flex-wrap items-center gap-x-2 gap-y-1 bg-muted/40 px-4 py-2.5 sm:px-5",
+                  groupIndex > 0 && "border-t"
+                )}
               >
                 {group.near ? (
                   <span
@@ -308,26 +319,10 @@ export function BookedBrowser({
                 </span>
               </h3>
 
-              {/*
-                One card for the day, hairlines between its rows. Separate cards
-                per booking spent a gap of page on every row and made a busy day
-                look like a stack of unrelated things; a ruled list is what a
-                schedule looks like.
-              */}
-              {/*
-                The hairline is inset to the rows' own padding rather than
-                running edge to edge — a full-bleed rule reads as the card
-                ending, an inset one as the list continuing.
-              */}
-              <ul className="overflow-hidden rounded-lg bg-card ring-1 ring-border">
-                {group.rows.map((row, index) => (
+              <ul>
+                {group.rows.map((row) => (
                   <li key={row.id}>
-                    {index > 0 ? (
-                      <div
-                        aria-hidden="true"
-                        className="mx-4 border-t sm:mx-5"
-                      />
-                    ) : null}
+                    <div aria-hidden="true" className="mx-4 border-t sm:mx-5" />
                     <BookedRowCard
                       row={row}
                       fields={fieldsByCalendar[row.calendarId] ?? []}
