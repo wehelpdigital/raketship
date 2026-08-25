@@ -374,12 +374,17 @@ function CanvasInner({
           proOptions={{ hideAttribution: true }}
           className="h-full w-full"
         >
-          <Background
-            variant={BackgroundVariant.Dots}
-            gap={20}
-            size={1.5}
-            color="color-mix(in oklab, var(--color-primary) 18%, var(--color-border))"
-          />
+          {/* No grid in space: a dot lattice under a starfield reads as a
+              thousand fake stars. The inner builders keep theirs — a grid
+              helps arrange steps, and they have no sky to confuse. */}
+          {scope !== "raket" ? (
+            <Background
+              variant={BackgroundVariant.Dots}
+              gap={20}
+              size={1.5}
+              color="color-mix(in oklab, var(--color-primary) 18%, var(--color-border))"
+            />
+          ) : null}
           {/* React Flow's stylesheet is unlayered, so `.react-flow__controls
               { display: flex }` beats Tailwind's layered `hidden`. */}
           <Controls
