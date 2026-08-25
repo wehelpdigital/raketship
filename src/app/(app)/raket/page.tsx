@@ -149,7 +149,6 @@ export default async function RaketPage() {
     }
   }
 
-  const shopName = profile?.business_name?.trim()
   /*
     Each module's own icon and accent, read off its catalog row so the node
     wears the same dress as the nav and the marketplace. Keyed by module id;
@@ -180,23 +179,10 @@ export default async function RaketPage() {
 
   const nodes = canvas.nodes.map((row, index) => {
     const node = rowToCanvasNode(row)
-    /*
-      The start card is the shop, so it wears the shop's NAME as its title —
-      but only while the node still has its stock label. An owner who renamed
-      the node on the canvas said something on purpose, and it stays said.
-      Display only; nothing is written back.
-    */
-    const values =
-      row.type === "start" &&
-      shopName &&
-      node.data.values.label === "Your business"
-        ? { ...node.data.values, label: shopName }
-        : node.data.values
     return {
       ...node,
       data: {
         ...node.data,
-        values,
         glance: glances[row.node_key],
         enterIndex: index,
         ...(row.module_id ? (dress[row.module_id] ?? {}) : {}),
