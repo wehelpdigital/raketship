@@ -50,8 +50,16 @@ export default async function RaketPartsPage() {
     workspace.modules.map((activated) => [activated.module_id, activated])
   )
 
+  /*
+    Only what is YOURS. Shopping for new modules is the marketplace's job;
+    this page manages what is already in the raket. The one exception is the
+    Client Manager: it ships with Booking as a follow-on and its only switch
+    lives here, so hiding it while off would leave no way to turn it on.
+  */
   const rows = catalog
-    .filter((mod) => mod.is_available || activatedByModule.has(mod.id))
+    .filter(
+      (mod) => activatedByModule.has(mod.id) || mod.id === "client-manager"
+    )
     .map((mod) => {
       const activated = activatedByModule.get(mod.id)
       return {
@@ -90,6 +98,17 @@ export default async function RaketPartsPage() {
       </div>
 
       <PartsList rows={rows} />
+
+      <p className="text-sm text-muted-foreground">
+        May hanap ka pang module?{" "}
+        <Link
+          href="/marketplace"
+          className="font-medium text-primary underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        >
+          Pumunta sa Raket Market
+        </Link>
+        .
+      </p>
     </PageContainer>
   )
 }
