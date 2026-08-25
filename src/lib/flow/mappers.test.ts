@@ -280,6 +280,10 @@ describe("moduleNodeHref", () => {
     expect(moduleNodeHref("booking", "abc-123")).toBe("/modules/booking/booked")
   })
 
+  it("opens the Website's own page", () => {
+    expect(moduleNodeHref("website", "abc-123")).toBe("/modules/website")
+  })
+
   it("opens the Client Manager's own page", () => {
     expect(moduleNodeHref("client-manager", "abc-123")).toBe(
       "/modules/client-manager"

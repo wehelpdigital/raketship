@@ -52,13 +52,14 @@ export default async function RaketPartsPage() {
 
   /*
     Only what is YOURS. Shopping for new modules is the marketplace's job;
-    this page manages what is already in the raket. The one exception is the
-    Client Manager: it ships with Booking as a follow-on and its only switch
-    lives here, so hiding it while off would leave no way to turn it on.
+    this page manages what is already in the raket. The exceptions are the
+    ADD-ONS — Client Manager, Website — whose only switches live here, so
+    hiding one while off would leave no way to turn it on.
   */
+  const ADDON_IDS = ["client-manager", "website"]
   const rows = catalog
     .filter(
-      (mod) => activatedByModule.has(mod.id) || mod.id === "client-manager"
+      (mod) => activatedByModule.has(mod.id) || ADDON_IDS.includes(mod.id)
     )
     .map((mod) => {
       const activated = activatedByModule.get(mod.id)

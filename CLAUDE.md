@@ -190,7 +190,10 @@ module is turned on, off and upgraded; Booking's What's next tab only
 DESCRIBES it and links there). NOT bought in the marketplace, and deliberately
 not through `activateModule()` — that spends a plan's module slot, and this
 is what happens AFTER a booking, not a separate raket.
-`setClientManager()` (features/clients/actions.ts) writes three things:
+Add-ons live in `features/raket/addons.ts` — one generic setAddon() behind
+`setClientManager()` and `setWebsite()` (Website is the second add-on: an
+empty page for now, wired FROM the START node because a website is the
+business showing itself). Each switch writes three things:
 the `user_modules` row (nav + everything else follows), a `flow_nodes` row
 `module-client-manager` on the raket board, and an edge FROM
 `module-booking`. Off removes all three; the bookings are untouched. Its

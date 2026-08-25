@@ -7,6 +7,7 @@ import {
   ChartLine,
   CreditCard,
   GitBranch,
+  Globe,
   Mail,
   MessageSquare,
   Package,
@@ -29,6 +30,7 @@ import {
  * Everything the seed data and the registry can name lives here.
  */
 const ICONS: Record<string, LucideIcon> = {
+  Globe,
   Blocks,
   Boxes,
   CalendarCheck,

@@ -165,7 +165,9 @@ export default async function RaketPage() {
   const primaryHue =
     oklchHue(getPalette(profile?.theme_preset).light.primary) ?? 27
   const catalog = workspace.modules.flatMap((activated) =>
-    activated.module
+    // The business module has no node of its own — the start card wears the
+    // primary for it — so it must not consume one of the four accents.
+    activated.module && activated.module.id !== "business"
       ? [{ id: activated.module.id, accent: activated.module.accent }]
       : []
   )

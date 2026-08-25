@@ -9,12 +9,22 @@ import { accentChip } from "@/components/shell/module-nav"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
-import { setClientManager } from "@/features/clients/actions"
+import { setClientManager, setWebsite } from "@/features/raket/addons"
 import {
   activateModule,
   deactivateModule,
 } from "@/features/marketplace/actions"
 import { cn } from "@/lib/utils"
+
+/** The add-ons and their slot-free switches. One lever each, shared with
+ *  nothing — a second path to the same rows would eventually disagree. */
+const ADDON_ACTIONS: Record<
+  string,
+  (on: boolean) => Promise<{ ok: boolean; message?: string }>
+> = {
+  "client-manager": setClientManager,
+  website: setWebsite,
+}
 
 export interface PartRow {
   id: string
@@ -117,13 +127,13 @@ function PartRowItem({ row }: { row: PartRow }) {
       ) : null}
 
       {/* The one lever that fits this module; a default carries none. */}
-      {row.id === "client-manager" ? (
+      {ADDON_ACTIONS[row.id] ? (
         <Switch
           checked={row.active}
           disabled={busy}
           onCheckedChange={(next) =>
             run(
-              () => setClientManager(Boolean(next)),
+              () => ADDON_ACTIONS[row.id](Boolean(next)),
               "Hindi na-save. Pakisubukan ulit."
             )
           }

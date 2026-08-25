@@ -5,12 +5,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { PartsList, type PartRow } from "./parts-list"
 
 const setClientManager = vi.fn()
+const setWebsite = vi.fn()
 const activateModule = vi.fn()
 const deactivateModule = vi.fn()
 const setModuleTier = vi.fn()
 
-vi.mock("@/features/clients/actions", () => ({
+vi.mock("@/features/raket/addons", () => ({
   setClientManager: (...args: unknown[]) => setClientManager(...args),
+  setWebsite: (...args: unknown[]) => setWebsite(...args),
 }))
 vi.mock("@/features/marketplace/actions", () => ({
   activateModule: (...args: unknown[]) => activateModule(...args),
@@ -43,6 +45,7 @@ function row(overrides: Partial<PartRow> = {}): PartRow {
 beforeEach(() => {
   vi.clearAllMocks()
   setClientManager.mockResolvedValue({ ok: true })
+  setWebsite.mockResolvedValue({ ok: true })
   activateModule.mockResolvedValue({ ok: true })
   deactivateModule.mockResolvedValue({ ok: true })
   setModuleTier.mockResolvedValue({ ok: true })
@@ -109,6 +112,30 @@ describe("PartsList", () => {
     const card = container.firstElementChild
     expect(card?.className).toContain("divide-y")
     expect(card?.className).toContain("rounded-lg")
+  })
+
+  it("switches the Website the slot-free way, off Booking's path entirely", async () => {
+    const user = userEvent.setup()
+    render(
+      <PartsList
+        rows={[
+          row({
+            id: "website",
+            name: "Website",
+            isDefault: false,
+            active: false,
+            tierId: null,
+            tiers: [],
+          }),
+        ]}
+      />
+    )
+
+    await user.click(screen.getByRole("switch", { name: "Website" }))
+
+    await waitFor(() => expect(setWebsite).toHaveBeenCalledWith(true))
+    expect(activateModule).not.toHaveBeenCalled()
+    expect(setClientManager).not.toHaveBeenCalled()
   })
 
   it("switches the Client Manager the slot-free way", async () => {
