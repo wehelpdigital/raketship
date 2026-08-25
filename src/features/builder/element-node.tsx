@@ -318,7 +318,7 @@ function ClientsMarker({
   return (
     <div
       className={cn(
-        "flex w-44 flex-col items-center text-center",
+        "flex size-36 flex-col items-center justify-center gap-1.5 rounded-lg bg-card px-3 text-center shadow-node ring-1 ring-border",
         enterIndex !== undefined && "node-arrive"
       )}
       style={
@@ -334,11 +334,11 @@ function ClientsMarker({
         className="pointer-events-none! opacity-0!"
         aria-hidden="true"
       />
-      <span className="flex size-16 items-center justify-center rounded-full border-2 border-dashed border-primary/50 bg-primary/10 text-primary">
-        <Users className="size-7" aria-hidden="true" />
+      <span className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <Users className="size-5" aria-hidden="true" />
       </span>
-      <p className="mt-2 text-sm font-semibold">Clients</p>
-      <p className="text-xs text-pretty text-muted-foreground">{note}</p>
+      <p className="text-sm font-semibold">Clients</p>
+      <p className="text-[11px] leading-tight text-muted-foreground">{note}</p>
     </div>
   )
 }

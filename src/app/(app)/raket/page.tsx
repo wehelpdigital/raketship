@@ -231,14 +231,8 @@ export default async function RaketPage() {
     draws while its door is closed.
   */
   const DOOR_SOURCES = [
-    {
-      doorId: "module-booking",
-      note: "Mga naka-receive ng booking link mo — sa chat, sa post, kahit saan mo i-share.",
-    },
-    {
-      doorId: "module-website",
-      note: "Organic visitors — mga nakadiskubre ng page ng negosyo mo.",
-    },
+    { doorId: "module-booking", note: "Thru Booking Link" },
+    { doorId: "module-website", note: "Organic Visitors" },
   ]
   for (const source of DOOR_SOURCES) {
     const door = nodes.find((node) => node.id === source.doorId)
@@ -246,11 +240,11 @@ export default async function RaketPage() {
     nodes.push({
       id: `clients-${source.doorId}`,
       type: "element",
-      // Cards are ~300 wide, the marker ~176: +62 aligns their centres, and
-      // 430 up puts the marker a full row above the start card's row.
+      // Cards are ~300 wide, the square ~144: +78 aligns their centres, and
+      // 400 up keeps it a clear row above the start card.
       position: {
-        x: door.position.x + 62,
-        y: door.position.y - 430,
+        x: door.position.x + 78,
+        y: door.position.y - 400,
       },
       data: {
         nodeType: "clients",
@@ -259,7 +253,10 @@ export default async function RaketPage() {
         values: { note: source.note },
         enterIndex: nodes.length,
       },
-      draggable: false,
+      // Draggable so a presentation can be arranged by hand — but never
+      // stored, so a reload tidies it back to its place. Still not
+      // selectable or connectable: there is nothing to open or wire.
+      draggable: true,
       selectable: false,
       connectable: false,
     })

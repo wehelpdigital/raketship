@@ -324,6 +324,9 @@ function CanvasInner({
             });
           }}
           onNodeDragStop={(_, node) => {
+            // The Clients markers are injected, not stored — there is no row
+            // to move.
+            if (node.data.nodeType === "clients") return;
             void updateNodePosition({
               flowId,
               nodeKey: node.id,
