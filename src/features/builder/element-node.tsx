@@ -363,6 +363,73 @@ function SideTarget({ side }: { side: "left" | "right" }) {
   )
 }
 
+/**
+ * The raket dressed as its homophone: a translucent nose cone riding on the
+ * start card, a booster with a live flame under it. Pure decoration — no
+ * pointer events, positioned around the card so the wires and handles keep
+ * working exactly as before. The flame's flicker is a transform, and stands
+ * down with everything else under prefers-reduced-motion.
+ */
+function RocketDress() {
+  return (
+    <>
+      <svg
+        viewBox="0 0 120 64"
+        aria-hidden="true"
+        className="pointer-events-none absolute bottom-full left-1/2 h-16 w-30 -translate-x-1/2 text-primary"
+      >
+        <path
+          d="M60 2 C 76 18 88 40 92 64 L 28 64 C 32 40 44 18 60 2 Z"
+          fill="currentColor"
+          fillOpacity="0.16"
+          stroke="currentColor"
+          strokeOpacity="0.4"
+          strokeWidth="1.5"
+        />
+        <circle
+          cx="60"
+          cy="42"
+          r="8"
+          fill="currentColor"
+          fillOpacity="0.25"
+          stroke="currentColor"
+          strokeOpacity="0.45"
+          strokeWidth="1.5"
+        />
+      </svg>
+
+      <svg
+        viewBox="0 0 140 96"
+        aria-hidden="true"
+        className="pointer-events-none absolute top-full left-1/2 h-24 w-35 -translate-x-1/2"
+      >
+        {/* The bell. */}
+        <path
+          d="M48 2 L92 2 L108 30 L32 30 Z"
+          fill="var(--color-primary)"
+          fillOpacity="0.16"
+          stroke="var(--color-primary)"
+          strokeOpacity="0.4"
+          strokeWidth="1.5"
+        />
+        {/* The flame: outer heat, inner tongue. */}
+        <g className="flame-flicker">
+          <path
+            d="M70 34 C 88 48 88 66 70 92 C 52 66 52 48 70 34 Z"
+            fill="var(--color-destructive)"
+            fillOpacity="0.4"
+          />
+          <path
+            d="M70 38 C 81 50 81 62 70 78 C 59 62 59 50 70 38 Z"
+            fill="var(--color-warning)"
+            fillOpacity="0.8"
+          />
+        </g>
+      </svg>
+    </>
+  )
+}
+
 export function ElementNode({ data, selected }: NodeProps<BuilderNode>) {
   if (data.nodeType === "clients") {
     return (
@@ -391,6 +458,7 @@ export function ElementNode({ data, selected }: NodeProps<BuilderNode>) {
           aria-label="Connect a step above"
         />
       ) : null}
+      {data.nodeType === "start" ? <RocketDress /> : null}
       {data.sideTarget ? <SideTarget side={data.sideTarget} /> : null}
       <ElementCard
         nodeType={data.nodeType}

@@ -221,6 +221,114 @@
   }
 }
 
+/* ---------------------------------------------------------------------------
+   The raket in flight. Stars fall past the board top-to-bottom — the rocket
+   climbing — on two parallax layers. Each layer is one repeating tile
+   translated by an EXACT multiple of its tile height, so the loop's reset
+   lands on an identical frame at any screen size. transform-only, so the
+   animation composites; no paint per frame.
+--------------------------------------------------------------------------- */
+@keyframes stars-fall-far {
+  to {
+    transform: translateY(540px);
+  }
+}
+
+@keyframes stars-fall-near {
+  to {
+    transform: translateY(520px);
+  }
+}
+
+@keyframes flame-flicker {
+  from {
+    transform: scaleY(0.85);
+    opacity: 0.75;
+  }
+  to {
+    transform: scaleY(1.15);
+    opacity: 1;
+  }
+}
+
+@layer utilities {
+  .star-field-far,
+  .star-field-near {
+    position: absolute;
+    left: 0;
+    right: 0;
+    pointer-events: none;
+    background-repeat: repeat;
+  }
+
+  /* Far stars: small, dim, slow. */
+  .star-field-far {
+    top: -540px;
+    height: calc(100% + 540px);
+    background-image:
+      radial-gradient(
+        1px 1px at 25px 35px,
+        color-mix(in oklab, var(--color-foreground) 40%, transparent) 50%,
+        transparent 51%
+      ),
+      radial-gradient(
+        1px 1px at 105px 140px,
+        color-mix(in oklab, var(--color-foreground) 30%, transparent) 50%,
+        transparent 51%
+      ),
+      radial-gradient(
+        1px 1px at 160px 80px,
+        color-mix(in oklab, var(--color-foreground) 35%, transparent) 50%,
+        transparent 51%
+      );
+    background-size: 180px 180px;
+    animation: stars-fall-far 70s linear infinite;
+  }
+
+  /* Near stars: bigger, brighter, faster — the parallax that sells motion. */
+  .star-field-near {
+    top: -520px;
+    height: calc(100% + 520px);
+    background-image:
+      radial-gradient(
+        1.5px 1.5px at 60px 40px,
+        color-mix(in oklab, var(--color-foreground) 55%, transparent) 50%,
+        transparent 51%
+      ),
+      radial-gradient(
+        2px 2px at 190px 190px,
+        color-mix(in oklab, var(--color-primary) 55%, transparent) 50%,
+        transparent 51%
+      ),
+      radial-gradient(
+        1.5px 1.5px at 130px 110px,
+        color-mix(in oklab, var(--color-foreground) 45%, transparent) 50%,
+        transparent 51%
+      ),
+      radial-gradient(
+        1px 1px at 20px 220px,
+        color-mix(in oklab, var(--color-foreground) 50%, transparent) 50%,
+        transparent 51%
+      );
+    background-size: 260px 260px;
+    animation: stars-fall-near 32s linear infinite;
+  }
+
+  /* The booster's flame breathes fast — an engine, not an alarm. */
+  .flame-flicker {
+    transform-origin: 50% 0%;
+    animation: flame-flicker 0.5s ease-in-out infinite alternate;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .star-field-far,
+    .star-field-near,
+    .flame-flicker {
+      animation: none;
+    }
+  }
+}
+
 @keyframes node-arrive {
   from {
     opacity: 0;

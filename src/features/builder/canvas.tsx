@@ -293,6 +293,14 @@ function CanvasInner({
       )}
       style={CANVAS_THEME}
     >
+      {/* Space belongs to the raket in flight, not the inner builders. */}
+      {scope === "raket" ? (
+        <>
+          <div className="star-field-far" aria-hidden="true" />
+          <div className="star-field-near" aria-hidden="true" />
+        </>
+      ) : null}
+
       <div
         className="absolute inset-0 touch-none"
         onDragOver={(event) => {
