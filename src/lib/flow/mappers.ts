@@ -28,6 +28,10 @@ export interface CanvasNode {
   type: string
   position: { x: number; y: number }
   data: CanvasNodeData
+  /** Presentational nodes refuse every interaction React Flow offers. */
+  draggable?: boolean
+  selectable?: boolean
+  connectable?: boolean
 }
 
 export interface CanvasEdge {

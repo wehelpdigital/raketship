@@ -74,6 +74,27 @@ const num = (v: unknown, fallback = 0): number =>
 // -----------------------------------------------------------------------------
 // Outer canvas — "Build your Raket"
 // -----------------------------------------------------------------------------
+/**
+ * Presentational only: the marker the raket board draws to show WHERE
+ * CUSTOMERS COME IN. It is never stored — the page injects it — so it has no
+ * fields, cannot be added from any palette, and exists here only so the
+ * renderer can resolve it like everything else.
+ */
+const CLIENTS: NodeTypeDef = {
+  type: "clients",
+  label: "Clients",
+  short: "Clients",
+  description: "Dito papasok ang mga suki.",
+  icon: "Users",
+  category: "trigger",
+  accent: "chart-1",
+  scope: "raket",
+  maxPerFlow: 0,
+  fields: [],
+  defaults: {},
+  summary: () => "Dito papasok ang mga suki.",
+}
+
 const START: NodeTypeDef = {
   type: "start",
   label: "Your business",
@@ -401,6 +422,7 @@ const WEBHOOK: NodeTypeDef = {
 // -----------------------------------------------------------------------------
 
 export const NODE_TYPES: readonly NodeTypeDef[] = [
+  CLIENTS,
   START,
   MODULE,
   BOOKING,

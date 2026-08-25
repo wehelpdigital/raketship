@@ -36,6 +36,9 @@ describe("NODE_TYPES", () => {
 
   it("gives every configurable element at least one field", () => {
     for (const def of NODE_TYPES) {
+      // The clients marker is presentational: never stored, never opened in
+      // an inspector — the one element with legitimately nothing to configure.
+      if (def.type === "clients") continue
       expect(def.fields.length, `${def.type} fields`).toBeGreaterThan(0)
       for (const field of def.fields) {
         expect(field.key.length, `${def.type}.${field.key}`).toBeGreaterThan(0)

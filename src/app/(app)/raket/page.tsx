@@ -13,7 +13,11 @@ import {
   businessGlance,
   type ModuleGlance,
 } from "@/lib/flow/glance"
-import { rowToCanvasEdge, rowToCanvasNode } from "@/lib/flow/mappers"
+import {
+  rowToCanvasEdge,
+  rowToCanvasNode,
+  type CanvasNode,
+} from "@/lib/flow/mappers"
 import { getLocale, getT } from "@/lib/i18n/server"
 import { countUpcomingBookings } from "@/lib/queries/booking"
 import { getBusinessProfile } from "@/lib/queries/business"
@@ -186,7 +190,7 @@ export default async function RaketPage() {
   }
 
   const shopName = profile?.business_name?.trim()
-  const nodes = canvas.nodes.map((row, index) => {
+  const nodes: CanvasNode[] = canvas.nodes.map((row, index) => {
     const node = rowToCanvasNode(row)
     /*
       The start card leads with the shop's NAME; "Your business" drops to the
@@ -212,6 +216,47 @@ export default async function RaketPage() {
     }
   })
   const edges = canvas.edges.map(rowToCanvasEdge)
+
+  /*
+    The Clients marker: presentation, not data. Injected here rather than
+    stored, so no account has to be provisioned with it, nobody can drag it
+    half off the board, and removing it someday is deleting this block. It
+    sits centred BELOW the public-facing modules with its arrows flowing UP
+    into them — customers entering — and only exists while there is at least
+    one door for them to enter.
+  */
+  const doors = nodes.filter(
+    (node) => node.id === "module-booking" || node.id === "module-website"
+  )
+  if (doors.length > 0) {
+    const cx =
+      doors.reduce((sum, door) => sum + door.position.x, 0) / doors.length
+    const cy = Math.max(...doors.map((door) => door.position.y))
+    nodes.push({
+      id: "clients",
+      type: "element",
+      // Cards are ~300 wide, the marker ~176: +70 keeps centres aligned.
+      position: { x: cx + 70, y: cy + 280 },
+      data: {
+        nodeType: "clients",
+        moduleId: null,
+        locked: false,
+        values: {},
+        enterIndex: nodes.length,
+      },
+      draggable: false,
+      selectable: false,
+      connectable: false,
+    })
+    for (const door of doors) {
+      edges.push({
+        id: `clients->${door.id}`,
+        source: "clients",
+        target: door.id,
+        animated: true,
+      })
+    }
+  }
   const nodeIds: Record<string, string> = Object.fromEntries(
     canvas.nodes.map((row): [string, string] => [row.node_key, row.id])
   )

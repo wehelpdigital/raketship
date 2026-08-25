@@ -10,6 +10,7 @@ import {
   GitBranch,
   Globe,
   Lock,
+  Users,
   Mail,
   MessageSquare,
   Rocket,
@@ -36,6 +37,7 @@ const ICONS: Record<string, LucideIcon> = {
   GitBranch,
   Globe,
   Mail,
+  Users,
   MessageSquare,
   Rocket,
   Timer,
@@ -299,7 +301,49 @@ export function ElementCard({
 const HANDLE_CLASS =
   "size-4! border-2! shadow-sm transition-[scale] duration-150 hover:scale-125 motion-reduce:transition-none motion-reduce:hover:scale-100 after:absolute after:-inset-2.5 after:rounded-full after:content-['']"
 
+/**
+ * The Clients marker: a circle, not a card — it is an ANNOTATION of the
+ * board, not a step on it. Dashed, because nothing about it is configured or
+ * configurable; its arrows into Booking and Website are the whole message.
+ * The one handle is invisible and disabled: React Flow needs it to anchor the
+ * edges, nobody needs to grab it.
+ */
+function ClientsMarker({ enterIndex }: { enterIndex?: number }) {
+  return (
+    <div
+      className={cn(
+        "flex w-44 flex-col items-center text-center",
+        enterIndex !== undefined && "node-arrive"
+      )}
+      style={
+        enterIndex !== undefined
+          ? ({ "--arrive-delay": `${enterIndex * 70}ms` } as React.CSSProperties)
+          : undefined
+      }
+    >
+      <Handle
+        type="source"
+        position={Position.Top}
+        isConnectable={false}
+        className="pointer-events-none! opacity-0!"
+        aria-hidden="true"
+      />
+      <span className="flex size-16 items-center justify-center rounded-full border-2 border-dashed border-primary/50 bg-primary/10 text-primary">
+        <Users className="size-7" aria-hidden="true" />
+      </span>
+      <p className="mt-2 text-sm font-semibold">Clients</p>
+      <p className="text-xs text-pretty text-muted-foreground">
+        Website visitors at booking suki — dito sila papasok.
+      </p>
+    </div>
+  )
+}
+
 export function ElementNode({ data, selected }: NodeProps<BuilderNode>) {
+  if (data.nodeType === "clients") {
+    return <ClientsMarker enterIndex={data.enterIndex} />
+  }
+
   return (
     <div className="relative">
       {/* The start node is the root: nothing connects INTO it, so it carries
