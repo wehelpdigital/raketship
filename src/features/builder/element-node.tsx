@@ -364,21 +364,50 @@ function SideTarget({ side }: { side: "left" | "right" }) {
 }
 
 /*
- * The rocket's two cut-off sections as glowing wireframes: a triangulated
- * mesh with lit vertices, layered neon drop-shadows, and a gradient plume —
- * plexus-style, in the shop's own colour so every palette gets its own neon.
- * The glow is a static CSS filter on a small SVG: composited once, no
- * animation cost. The dashed edge is still the cut — the body between the
- * sections is the elements themselves.
+ * The rocket's two cut-off sections as 3D wireframes: curved silhouettes,
+ * elliptical cross-section RINGS whose hidden halves are dashed — the
+ * draughtsman's trick that makes a flat drawing read as a solid — and
+ * meridian lines down the surface. The glow is deliberately tight: one
+ * crisp halo, one faint bloom at half strength, so the linework stays sharp.
+ * The sliced ellipse at each section's open end IS the cut; the body between
+ * the sections is the elements themselves.
  */
 
-/** One neon vertex. */
-function MeshDot({ x, y }: { x: number; y: number }) {
-  return <circle cx={x} cy={y} r="2" fill="currentColor" fillOpacity="0.9" />
-}
-
 const NEON =
-  "pointer-events-none text-primary [filter:drop-shadow(0_0_2px_var(--color-primary))_drop-shadow(0_0_10px_var(--color-primary))]"
+  "pointer-events-none text-primary [filter:drop-shadow(0_0_1px_var(--color-primary))_drop-shadow(0_0_5px_color-mix(in_oklab,var(--color-primary)_45%,transparent))]"
+
+/** A cross-section ring: solid where it faces you, dashed where it hides. */
+function Ring({
+  cx,
+  cy,
+  rx,
+  ry,
+}: {
+  cx: number
+  cy: number
+  rx: number
+  ry: number
+}) {
+  return (
+    <>
+      <path
+        d={`M ${cx - rx} ${cy} A ${rx} ${ry} 0 0 0 ${cx + rx} ${cy}`}
+        fill="none"
+        stroke="currentColor"
+        strokeOpacity="0.6"
+        strokeWidth="1.2"
+      />
+      <path
+        d={`M ${cx - rx} ${cy} A ${rx} ${ry} 0 0 1 ${cx + rx} ${cy}`}
+        fill="none"
+        stroke="currentColor"
+        strokeOpacity="0.25"
+        strokeWidth="1"
+        strokeDasharray="4 4"
+      />
+    </>
+  )
+}
 
 function RocketSection({
   part,
@@ -393,83 +422,55 @@ function RocketSection({
       : undefined
 
   if (part === "nose") {
-    /*
-      Vertices of the mesh: the tip, the base, and the mid-edge points the
-      triangulation hangs from.
-    */
-    const dots: [number, number][] = [
-      [150, 8],
-      [89, 80],
-      [211, 80],
-      [150, 96],
-      [28, 152],
-      [96, 152],
-      [204, 152],
-      [272, 152],
-    ]
     return (
       <svg
-        viewBox="0 0 300 160"
+        viewBox="0 0 300 176"
         width={300}
-        height={160}
+        height={176}
         aria-hidden="true"
         className={cn(NEON, enterIndex !== undefined && "node-arrive")}
         style={style}
       >
-        {/* A breath of fill so the mesh reads as a solid catching light. */}
-        <path d="M150 8 L28 152 L150 152 Z" fill="currentColor" fillOpacity="0.08" />
-        <path d="M150 8 L272 152 L150 152 Z" fill="currentColor" fillOpacity="0.04" />
-        {/* The outline. */}
+        {/* The lit and shaded halves of the cone. */}
         <path
-          d="M28 152 L150 8 L272 152"
-          fill="none"
-          stroke="currentColor"
-          strokeOpacity="0.8"
-          strokeWidth="1.5"
-          strokeLinejoin="round"
+          d="M150 8 C 118 22 62 70 28 152 L 150 152 Z"
+          fill="currentColor"
+          fillOpacity="0.1"
         />
-        {/* The mesh. */}
         <path
-          d="M150 8 L89 80 M150 8 L211 80 M150 8 L150 96 M89 80 L150 96 M211 80 L150 96 M89 80 L96 152 M211 80 L204 152 M150 96 L96 152 M150 96 L204 152 M89 80 L28 152 M211 80 L272 152"
+          d="M150 8 C 182 22 238 70 272 152 L 150 152 Z"
+          fill="currentColor"
+          fillOpacity="0.04"
+        />
+        {/* The silhouette: a rocket tip, not a pyramid. */}
+        <path
+          d="M28 152 C 62 70 118 22 150 8 C 182 22 238 70 272 152"
           fill="none"
           stroke="currentColor"
-          strokeOpacity="0.45"
+          strokeOpacity="0.85"
+          strokeWidth="1.5"
+        />
+        {/* Meridians curving down the surface. */}
+        <path
+          d="M150 8 C 132 60 112 110 96 152 M150 8 C 168 60 188 110 204 152 M150 8 L150 152"
+          fill="none"
+          stroke="currentColor"
+          strokeOpacity="0.3"
           strokeWidth="1"
         />
-        {dots.map(([x, y]) => (
-          <MeshDot key={`${x}-${y}`} x={x} y={y} />
-        ))}
-        {/* The cut. */}
-        <line
-          x1="28"
-          y1="152"
-          x2="272"
-          y2="152"
-          stroke="currentColor"
-          strokeOpacity="0.5"
-          strokeWidth="1.5"
-          strokeDasharray="8 7"
-        />
+        {/* Cross-sections; the base ring is the CUT itself. */}
+        <Ring cx={150} cy={96} rx={78} ry={10} />
+        <Ring cx={150} cy={152} rx={122} ry={14} />
+        <circle cx="150" cy="8" r="2" fill="currentColor" fillOpacity="0.9" />
       </svg>
     )
   }
 
-  const dots: [number, number][] = [
-    [64, 6],
-    [176, 6],
-    [120, 6],
-    [52, 48],
-    [188, 48],
-    [120, 52],
-    [40, 92],
-    [120, 92],
-    [200, 92],
-  ]
   return (
     <svg
-      viewBox="0 0 240 200"
+      viewBox="0 0 240 210"
       width={240}
-      height={200}
+      height={210}
       aria-hidden="true"
       className={cn(NEON, enterIndex !== undefined && "node-arrive")}
       style={style}
@@ -481,48 +482,45 @@ function RocketSection({
           <stop offset="100%" stopColor="var(--color-destructive)" stopOpacity="0" />
         </radialGradient>
       </defs>
-      {/* The bell's faces. */}
-      <path d="M120 6 L64 6 L40 92 L120 92 Z" fill="currentColor" fillOpacity="0.08" />
-      <path d="M120 6 L176 6 L200 92 L120 92 Z" fill="currentColor" fillOpacity="0.04" />
-      {/* The outline. */}
+      {/* The bell's lit and shaded halves, flaring like a nozzle. */}
       <path
-        d="M64 6 L40 92 L200 92 L176 6"
-        fill="none"
-        stroke="currentColor"
-        strokeOpacity="0.8"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
+        d="M64 14 C 58 46 48 72 40 92 L 120 103 L 120 14 Z"
+        fill="currentColor"
+        fillOpacity="0.1"
       />
-      {/* The mesh. */}
       <path
-        d="M64 6 L52 48 M176 6 L188 48 M120 6 L120 52 M52 48 L120 52 M188 48 L120 52 M52 48 L40 92 M188 48 L200 92 M120 52 L120 92 M52 48 L120 92 M120 52 L40 92 M120 52 L200 92"
+        d="M176 14 C 182 46 192 72 200 92 L 120 103 L 120 14 Z"
+        fill="currentColor"
+        fillOpacity="0.04"
+      />
+      {/* The silhouette. */}
+      <path
+        d="M64 14 C 58 46 48 72 40 92 M176 14 C 182 46 192 72 200 92"
         fill="none"
         stroke="currentColor"
-        strokeOpacity="0.45"
+        strokeOpacity="0.85"
+        strokeWidth="1.5"
+      />
+      {/* Meridians. */}
+      <path
+        d="M92 12 C 88 44 82 74 78 98 M148 12 C 152 44 158 74 162 98 M120 14 L120 102"
+        fill="none"
+        stroke="currentColor"
+        strokeOpacity="0.3"
         strokeWidth="1"
       />
-      {dots.map(([x, y]) => (
-        <MeshDot key={`${x}-${y}`} x={x} y={y} />
-      ))}
-      {/* The cut. */}
-      <line
-        x1="64"
-        y1="6"
-        x2="176"
-        y2="6"
-        stroke="currentColor"
-        strokeOpacity="0.5"
-        strokeWidth="1.5"
-        strokeDasharray="8 7"
-      />
+      {/* Rings: the top one is the CUT, the lip is the exhaust's mouth. */}
+      <Ring cx={120} cy={14} rx={56} ry={8} />
+      <Ring cx={120} cy={58} rx={68} ry={9} />
+      <Ring cx={120} cy={92} rx={80} ry={11} />
       {/* The plume: a gradient glow with a hot core. */}
       <g className="flame-flicker">
         <path
-          d="M120 96 C 152 118 148 152 120 196 C 92 152 88 118 120 96 Z"
+          d="M120 104 C 150 126 146 158 120 204 C 94 158 90 126 120 104 Z"
           fill="url(#raket-plume)"
         />
         <path
-          d="M120 100 C 134 114 133 134 120 160 C 107 134 106 114 120 100 Z"
+          d="M120 108 C 133 122 132 142 120 168 C 108 142 107 122 120 108 Z"
           fill="var(--color-warning)"
           fillOpacity="0.9"
         />
