@@ -17,7 +17,7 @@ import {
   type ModuleNavItem,
   type NavBadges,
 } from "@/components/shell/module-nav"
-import { Blocks } from "lucide-react"
+import { Blocks, ChevronRight as RaketChevron } from "lucide-react"
 
 import { useT } from "@/components/shell/locale-provider"
 import { cn } from "@/lib/utils"
@@ -52,6 +52,10 @@ export function SideNav({
   const [openModules, setOpenModules] = React.useState<Record<string, boolean>>(
     {}
   ) ?? ""
+  // Open by default, like the module sub-navs: the child is how the parts
+  // page is FOUND, and hiding it until someone finds the chevron would hide
+  // the feature.
+  const [raketOpen, setRaketOpen] = React.useState(true)
 
   return (
     <aside
@@ -92,23 +96,50 @@ export function SideNav({
 
               return (
                 <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                      active
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    )}
-                  >
-                    <Icon className="size-4.5 shrink-0" aria-hidden="true" />
-                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                    <NavPending />
-                  </Link>
+                  {/* A row, not a link with a button inside it — an anchor may
+                      not contain one, and the two do different things: the
+                      label navigates, the chevron only folds. Same shape as
+                      the module rows below. */}
+                  <div className="flex items-center gap-1">
+                    <Link
+                      href={item.href}
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
+                        "flex h-11 min-w-0 flex-1 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                        active
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <Icon className="size-4.5 shrink-0" aria-hidden="true" />
+                      <span className="min-w-0 flex-1 truncate">
+                        {item.label}
+                      </span>
+                      <NavPending />
+                    </Link>
 
-                  {isRaket ? (
-                    <ul className="mt-1 space-y-1 pl-8">
+                    {isRaket ? (
+                      <button
+                        type="button"
+                        aria-expanded={raketOpen}
+                        aria-controls="side-nav-raket-pages"
+                        aria-label={`${raketOpen ? "Itago" : "Ipakita"} ang mga pahina ng ${item.label}`}
+                        onClick={() => setRaketOpen((was) => !was)}
+                        className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                      >
+                        <RaketChevron
+                          className={cn(
+                            "size-4 transition-transform motion-reduce:transition-none",
+                            raketOpen && "rotate-90"
+                          )}
+                          aria-hidden="true"
+                        />
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {isRaket && raketOpen ? (
+                    <ul id="side-nav-raket-pages" className="mt-1 space-y-1 pl-8">
                       <li>
                         <Link
                           href="/raket/parts"

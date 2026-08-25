@@ -188,6 +188,30 @@ describe("module pages, and folding them away", () => {
 })
 
 describe("the raket's own sub-navigation", () => {
+  it("folds My raket parts away and brings it back", async () => {
+    const user = userEvent.setup()
+    renderAt("/dashboard")
+
+    const chevron = screen.getByRole("button", {
+      name: /pahina ng Build your Raket/,
+    })
+    expect(chevron).toHaveAttribute("aria-expanded", "true")
+    expect(
+      screen.getByRole("link", { name: /My raket parts/ })
+    ).toBeInTheDocument()
+
+    await user.click(chevron)
+    expect(chevron).toHaveAttribute("aria-expanded", "false")
+    expect(
+      screen.queryByRole("link", { name: /My raket parts/ })
+    ).not.toBeInTheDocument()
+
+    await user.click(chevron)
+    expect(
+      screen.getByRole("link", { name: /My raket parts/ })
+    ).toBeInTheDocument()
+  })
+
   it("offers My raket parts under Build your Raket", () => {
     renderAt("/dashboard")
     const parts = screen.getByRole("link", { name: /My raket parts/ })
