@@ -42,6 +42,8 @@ export interface UpdateCalendarInput {
   horizonDays?: number
   timezone?: string
   country?: string
+  sendConfirmationEmail?: boolean
+  sendReminderEmail?: boolean
 }
 
 /** One weekly window. Minutes count from midnight in the calendar's timezone. */
@@ -483,6 +485,22 @@ export async function updateCalendar(
     const parsed = horizonSchema.safeParse(input.horizonDays)
     if (!parsed.success) return fail(firstIssue(parsed.error))
     patch.booking_horizon_days = parsed.data
+  }
+
+  // Booleans, not zod: there is no way to be almost-a-boolean, and a
+  // truthy string sneaking in as "true" is exactly what Boolean() would bless.
+  if (input.sendConfirmationEmail !== undefined) {
+    if (typeof input.sendConfirmationEmail !== "boolean") {
+      return fail("That setting did not come through right. Pakisubukan ulit.")
+    }
+    patch.send_confirmation_email = input.sendConfirmationEmail
+  }
+
+  if (input.sendReminderEmail !== undefined) {
+    if (typeof input.sendReminderEmail !== "boolean") {
+      return fail("That setting did not come through right. Pakisubukan ulit.")
+    }
+    patch.send_reminder_email = input.sendReminderEmail
   }
 
   if (input.timezone !== undefined) {

@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { AvailabilityEditor } from "@/features/booking/availability-editor"
 import { CalendarForm } from "@/features/booking/calendar-form"
 import { FormBuilder } from "@/features/booking/form-builder"
+import { EmailsPanel } from "@/features/booking/emails-panel"
 import { LengthPanel } from "@/features/booking/length-panel"
 import { SharePanel } from "@/features/booking/share-panel"
 import { bookingUrl } from "@/lib/booking/slug"
@@ -90,7 +91,7 @@ export default async function CalendarEditorPage({ params }: PageProps) {
       </div>
 
       <Tabs defaultValue="details" className="gap-4 lg:gap-6">
-        {/* Full-bleed scroller: five labels do not fit across a 320px phone,
+        {/* Full-bleed scroller: seven labels do not fit across a 320px phone,
             and widening the page instead would break every other screen. */}
         <div className="-mx-4 overflow-x-auto px-4 no-scrollbar sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
           <TabsList className="w-max group-data-[orientation=horizontal]/tabs:h-auto">
@@ -106,8 +107,14 @@ export default async function CalendarEditorPage({ params }: PageProps) {
             <TabsTrigger value="questions" className="h-11 px-3 lg:h-9">
               Questions
             </TabsTrigger>
+            <TabsTrigger value="emails" className="h-11 px-3 lg:h-9">
+              Emails
+            </TabsTrigger>
             <TabsTrigger value="share" className="h-11 px-3 lg:h-9">
               Share
+            </TabsTrigger>
+            <TabsTrigger value="whats-next" className="h-11 px-3 lg:h-9">
+              What&apos;s next
             </TabsTrigger>
           </TabsList>
         </div>
@@ -136,9 +143,17 @@ export default async function CalendarEditorPage({ params }: PageProps) {
           <FormBuilder calendarId={calendar.id} fields={fields} />
         </TabsContent>
 
+        <TabsContent value="emails" keepMounted>
+          <EmailsPanel calendar={calendar} />
+        </TabsContent>
+
         <TabsContent value="share" keepMounted>
           <SharePanel calendar={calendar} />
         </TabsContent>
+
+        {/* Deliberately empty for now — the tab holds the space while what
+            goes here is decided. */}
+        <TabsContent value="whats-next" keepMounted />
       </Tabs>
     </PageContainer>
   )

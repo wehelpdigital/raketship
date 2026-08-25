@@ -630,6 +630,8 @@ const CALENDAR: BookingCalendarRow = {
   buffer_minutes: 0,
   notice_hours: 2,
   cancel_notice_hours: 24,
+  send_confirmation_email: true,
+  send_reminder_email: true,
   booking_horizon_days: 14,
   length_mode: "fixed" as const,
   is_published: false,

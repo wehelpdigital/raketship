@@ -175,6 +175,9 @@ export type BookingCalendarRow = {
   cancel_notice_hours: number
   /** How many days ahead the public page offers, today counting as day 1. */
   booking_horizon_days: number
+  /** Owner switches; the sender checks them at send time. */
+  send_confirmation_email: boolean
+  send_reminder_email: boolean
   length_mode: BookingLengthMode
   is_published: boolean
   created_at: string
