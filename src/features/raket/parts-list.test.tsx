@@ -6,6 +6,7 @@ import { PartsList, type PartRow } from "./parts-list"
 
 const setClientManager = vi.fn()
 const setWebsite = vi.fn()
+const setProductCatalog = vi.fn()
 const activateModule = vi.fn()
 const deactivateModule = vi.fn()
 const setModuleTier = vi.fn()
@@ -13,6 +14,7 @@ const setModuleTier = vi.fn()
 vi.mock("@/features/raket/addons", () => ({
   setClientManager: (...args: unknown[]) => setClientManager(...args),
   setWebsite: (...args: unknown[]) => setWebsite(...args),
+  setProductCatalog: (...args: unknown[]) => setProductCatalog(...args),
 }))
 vi.mock("@/features/marketplace/actions", () => ({
   activateModule: (...args: unknown[]) => activateModule(...args),
@@ -46,6 +48,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   setClientManager.mockResolvedValue({ ok: true })
   setWebsite.mockResolvedValue({ ok: true })
+  setProductCatalog.mockResolvedValue({ ok: true })
   activateModule.mockResolvedValue({ ok: true })
   deactivateModule.mockResolvedValue({ ok: true })
   setModuleTier.mockResolvedValue({ ok: true })
@@ -167,8 +170,8 @@ describe("PartsList", () => {
       <PartsList
         rows={[
           row({
-            id: "product-catalog",
-            name: "Product Catalog",
+            id: "invoicing",
+            name: "Invoices",
             isDefault: false,
             active: false,
             tierId: null,
@@ -181,7 +184,7 @@ describe("PartsList", () => {
     await user.click(screen.getByRole("button", { name: "I-activate" }))
 
     await waitFor(() =>
-      expect(activateModule).toHaveBeenCalledWith("product-catalog")
+      expect(activateModule).toHaveBeenCalledWith("invoicing")
     )
   })
 

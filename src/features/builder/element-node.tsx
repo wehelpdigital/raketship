@@ -13,6 +13,7 @@ import {
   Users,
   Mail,
   MessageSquare,
+  Package,
   Rocket,
   Timer,
   UserCheck,
@@ -30,6 +31,7 @@ import { cn } from "@/lib/utils"
 export type BuilderNode = Node<CanvasNodeData>
 
 const ICONS: Record<string, LucideIcon> = {
+  Package,
   Boxes,
   CalendarCheck,
   CalendarPlus,

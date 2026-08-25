@@ -9,7 +9,11 @@ import { accentChip } from "@/components/shell/module-nav"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
-import { setClientManager, setWebsite } from "@/features/raket/addons"
+import {
+  setClientManager,
+  setProductCatalog,
+  setWebsite,
+} from "@/features/raket/addons"
 import {
   activateModule,
   deactivateModule,
@@ -24,6 +28,7 @@ const ADDON_ACTIONS: Record<
 > = {
   "client-manager": setClientManager,
   website: setWebsite,
+  "product-catalog": setProductCatalog,
 }
 
 export interface PartRow {

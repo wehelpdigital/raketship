@@ -280,6 +280,12 @@ describe("moduleNodeHref", () => {
     expect(moduleNodeHref("booking", "abc-123")).toBe("/modules/booking/booked")
   })
 
+  it("opens the Product Catalog's own page", () => {
+    expect(moduleNodeHref("product-catalog", "abc-123")).toBe(
+      "/modules/product-catalog"
+    )
+  })
+
   it("opens the Website's own page", () => {
     expect(moduleNodeHref("website", "abc-123")).toBe("/modules/website")
   })
@@ -291,7 +297,7 @@ describe("moduleNodeHref", () => {
   })
 
   it("opens every other module's inner canvas", () => {
-    expect(moduleNodeHref("product-catalog", "abc-123")).toBe("/raket/abc-123")
+    expect(moduleNodeHref("invoicing", "abc-123")).toBe("/raket/abc-123")
     expect(moduleNodeHref(null, "abc-123")).toBe("/raket/abc-123")
   })
 })

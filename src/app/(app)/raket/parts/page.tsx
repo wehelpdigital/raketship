@@ -56,7 +56,7 @@ export default async function RaketPartsPage() {
     ADD-ONS — Client Manager, Website — whose only switches live here, so
     hiding one while off would leave no way to turn it on.
   */
-  const ADDON_IDS = ["client-manager", "website"]
+  const ADDON_IDS = ["client-manager", "website", "product-catalog"]
   const rows = catalog
     .filter(
       (mod) => activatedByModule.has(mod.id) || ADDON_IDS.includes(mod.id)

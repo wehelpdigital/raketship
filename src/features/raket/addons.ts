@@ -56,12 +56,27 @@ const ADDONS: Record<string, AddonSpec> = {
     // node — not off Booking.
     sourceKey: "start",
     label: "Website",
-    // The start card fans: Booking down-left, Website down-right.
-    fallback: { x: 230, y: 234 },
-    offset: { x: 190, y: 210 },
+    // The start card fans three ways: Booking left, Product Catalog under,
+    // Website right.
+    fallback: { x: 420, y: 254 },
+    offset: { x: 380, y: 230 },
     pagePath: "/modules/website",
     onMessage: "Bukas na ang Website — nasa raket board mo na, mula sa negosyo mo.",
     offMessage: "Sarado na ang Website.",
+  },
+  "product-catalog": {
+    moduleId: "product-catalog",
+    nodeKey: "module-product-catalog",
+    // What the business SELLS — it hangs off the business itself, the
+    // middle branch of the start card's fan.
+    sourceKey: "start",
+    label: "Product Catalog",
+    fallback: { x: 40, y: 254 },
+    offset: { x: 0, y: 230 },
+    pagePath: "/modules/product-catalog",
+    onMessage:
+      "Bukas na ang Product Catalog — nasa raket board mo na, mula sa negosyo mo.",
+    offMessage: "Sarado na ang Product Catalog.",
   },
 }
 
@@ -185,4 +200,10 @@ export async function setClientManager(
 
 export async function setWebsite(on: boolean): Promise<AddonActionResult> {
   return setAddon("website", on)
+}
+
+export async function setProductCatalog(
+  on: boolean
+): Promise<AddonActionResult> {
+  return setAddon("product-catalog", on)
 }
