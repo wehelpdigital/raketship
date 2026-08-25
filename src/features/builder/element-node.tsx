@@ -310,9 +310,11 @@ const HANDLE_CLASS =
  */
 function ClientsMarker({
   note,
+  handleSide,
   enterIndex,
 }: {
   note: string
+  handleSide: "left" | "right"
   enterIndex?: number
 }) {
   return (
@@ -329,7 +331,7 @@ function ClientsMarker({
     >
       <Handle
         type="source"
-        position={Position.Bottom}
+        position={handleSide === "right" ? Position.Right : Position.Left}
         isConnectable={false}
         className="pointer-events-none! opacity-0!"
         aria-hidden="true"
@@ -352,6 +354,7 @@ export function ElementNode({ data, selected }: NodeProps<BuilderNode>) {
             ? data.values.note
             : "Dito papasok ang mga suki."
         }
+        handleSide={data.values.handle === "right" ? "right" : "left"}
         enterIndex={data.enterIndex}
       />
     )

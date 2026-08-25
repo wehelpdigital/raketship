@@ -224,15 +224,22 @@ export default async function RaketPage() {
 
     One marker PER DOOR, because the doors have different clients: the
     Website's are organic visitors, Booking's are the people a link was
-    shared with. Both sit on the TOP row, each directly above its own door,
-    so every arrow falls straight down into its entry and never crosses the
-    start card's own wires — the doors sit left and right of the start's
-    column, so a vertical line above a door is clear of everything. None
-    draws while its door is closed.
+    shared with. The BUSINESS is the highest thing on its own board — so the
+    markers flank the doors from the OUTSIDE, level with them, each arrow
+    curving inward and up into its door's top. Outside the fan there is
+    nothing to cross. None draws while its door is closed.
   */
   const DOOR_SOURCES = [
-    { doorId: "module-booking", note: "Thru Booking Link" },
-    { doorId: "module-website", note: "Organic Visitors" },
+    {
+      doorId: "module-booking",
+      note: "Thru Booking Link",
+      side: "left" as const,
+    },
+    {
+      doorId: "module-website",
+      note: "Organic Visitors",
+      side: "right" as const,
+    },
   ]
   for (const source of DOOR_SOURCES) {
     const door = nodes.find((node) => node.id === source.doorId)
@@ -240,17 +247,23 @@ export default async function RaketPage() {
     nodes.push({
       id: `clients-${source.doorId}`,
       type: "element",
-      // Cards are ~300 wide, the square ~144: +78 aligns their centres, and
-      // 400 up keeps it a clear row above the start card.
+      // Door cards are ~300 wide, the square ~144. 60px of air between the
+      // marker and its door, sitting level with it.
       position: {
-        x: door.position.x + 78,
-        y: door.position.y - 400,
+        x:
+          source.side === "left"
+            ? door.position.x - 204
+            : door.position.x + 360,
+        y: door.position.y - 14,
       },
       data: {
         nodeType: "clients",
         moduleId: null,
         locked: false,
-        values: { note: source.note },
+        values: {
+          note: source.note,
+          handle: source.side === "left" ? "right" : "left",
+        },
         enterIndex: nodes.length,
       },
       // Draggable so a presentation can be arranged by hand — but never
