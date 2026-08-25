@@ -49,6 +49,39 @@ beforeEach(() => {
 })
 
 describe("PartsList", () => {
+  it("lets the Client Manager's switch speak alone — no Bukas beside it", () => {
+    render(
+      <PartsList
+        rows={[
+          row({
+            id: "client-manager",
+            name: "Client Manager",
+            isDefault: false,
+            active: true,
+            tierId: null,
+            tiers: [],
+          }),
+        ]}
+      />
+    )
+
+    expect(screen.getByRole("switch")).toBeChecked()
+    expect(screen.queryByText("Bukas")).not.toBeInTheDocument()
+    expect(screen.queryByText("Sarado")).not.toBeInTheDocument()
+  })
+
+  it("wears the tier as a tag in its own column", () => {
+    render(<PartsList rows={[row()]} />)
+
+    const tag = screen.getByText("Starter", { selector: "span" })
+    expect(tag.className).toContain("rounded-full")
+    // Its own column: the title cluster no longer whispers the tier.
+    const titleCluster = screen
+      .getByText("Booking")
+      .closest("[class*='flex-1']")
+    expect(titleCluster?.textContent).not.toContain("Starter")
+  })
+
   it("gives a default module no off switch, only its ladder", () => {
     render(<PartsList rows={[row()]} />)
 

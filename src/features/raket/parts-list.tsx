@@ -116,18 +116,15 @@ function PartRowItem({ row }: { row: PartRow }) {
               <Badge variant="outline" className="font-normal">
                 Kasama lagi
               </Badge>
-            ) : row.active ? (
+            ) : row.id === "client-manager" ? null : row.active ? (
+              /* The Client Manager's switch already says on/off; a badge
+                 beside it would say the same thing twice. */
               <Badge className="font-normal">Bukas</Badge>
             ) : (
               <Badge variant="outline" className="font-normal">
                 Sarado
               </Badge>
             )}
-            {currentTier ? (
-              <span className="text-xs text-muted-foreground">
-                {currentTier.name}
-              </span>
-            ) : null}
           </div>
           {row.tagline ? (
             <p className="truncate text-xs text-muted-foreground">
@@ -135,6 +132,16 @@ function PartRowItem({ row }: { row: PartRow }) {
             </p>
           ) : null}
         </div>
+
+        {/* The tier as its own column: a tag, not a whisper in the title. */}
+        {currentTier ? (
+          <Badge
+            variant="outline"
+            className="shrink-0 rounded-full px-2.5 font-normal"
+          >
+            {currentTier.name}
+          </Badge>
+        ) : null}
 
         {/* The one lever that fits this module. */}
         {row.id === "client-manager" ? (
