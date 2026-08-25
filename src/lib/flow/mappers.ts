@@ -122,6 +122,8 @@ export function moduleNodeHref(
   nodeDbId: string
 ): string {
   if (moduleId === "booking") return "/modules/booking/booked"
+  // The Client Manager IS its page — it has no inner canvas to open.
+  if (moduleId === "client-manager") return "/modules/client-manager"
   return `/raket/${nodeDbId}`
 }
 

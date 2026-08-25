@@ -280,6 +280,12 @@ describe("moduleNodeHref", () => {
     expect(moduleNodeHref("booking", "abc-123")).toBe("/modules/booking/booked")
   })
 
+  it("opens the Client Manager's own page", () => {
+    expect(moduleNodeHref("client-manager", "abc-123")).toBe(
+      "/modules/client-manager"
+    )
+  })
+
   it("opens every other module's inner canvas", () => {
     expect(moduleNodeHref("product-catalog", "abc-123")).toBe("/raket/abc-123")
     expect(moduleNodeHref(null, "abc-123")).toBe("/raket/abc-123")

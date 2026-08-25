@@ -177,6 +177,27 @@ before the post does. Objects live under `<uid>/`, and the bucket needs a
 row before deleting it, and without select the owner's own remove came back 403
 while every replaced logo stayed behind as an orphan.
 
+## Client Manager
+
+A CRM that OWNS NO TABLES: clients are DERIVED from bookings on every visit
+(`lib/clients/derive.ts`, pure and tested) — same person's bookings folded by
+identity (email, else phone digits, else name), latest details win, cancelled
+bookings never count toward the total. A second copy would drift from the
+bookings the day one was cancelled in one place and not the other.
+
+Switched on from Booking's **What's next** tab, NOT bought in the marketplace,
+and deliberately not through `activateModule()` — that spends a plan's module
+slot, and this is what happens AFTER a booking, not a separate raket.
+`setClientManager()` (features/clients/actions.ts) writes three things:
+the `user_modules` row (nav + everything else follows), a `flow_nodes` row
+`module-client-manager` on the raket board, and an edge FROM
+`module-booking`. Off removes all three; the bookings are untouched. Its
+canvas node routes to `/modules/client-manager` (see `moduleNodeHref`),
+which is a static segment shadowing `/modules/[moduleId]` like booking and
+business. The table's fixed columns are who/contact/count/last/total; the
+owner's own form questions appear only in the expanded row, because a table
+whose columns change per account is a table nobody can learn.
+
 ## Language
 
 The app speaks Filipino by default and English by choice. The choice is a

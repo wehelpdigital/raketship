@@ -14,9 +14,11 @@ import { FormBuilder } from "@/features/booking/form-builder"
 import { EmailsPanel } from "@/features/booking/emails-panel"
 import { LengthPanel } from "@/features/booking/length-panel"
 import { SharePanel } from "@/features/booking/share-panel"
+import { WhatsNextPanel } from "@/features/booking/whats-next-panel"
 import { bookingUrl } from "@/lib/booking/slug"
 import { env, supabaseConfigured } from "@/lib/env"
 import { getCalendar } from "@/lib/queries/booking"
+import { getWorkspace } from "@/lib/queries/workspace"
 import { getCurrentUser } from "@/lib/supabase/server"
 
 interface PageProps {
@@ -52,6 +54,13 @@ export default async function CalendarEditorPage({ params }: PageProps) {
 
   const { calendar, availability, blackouts, fields, services } = detail
   const publicUrl = bookingUrl(calendar.slug, env.siteUrl)
+
+  // What's next options are account-level, not per-calendar: a client list
+  // over ALL bookings would be strange to switch on for one calendar only.
+  const workspace = await getWorkspace(user.id)
+  const clientManagerOn = workspace.modules.some(
+    (m) => m.module_id === "client-manager" && m.status === "active"
+  )
 
   return (
     <PageContainer>
@@ -151,9 +160,9 @@ export default async function CalendarEditorPage({ params }: PageProps) {
           <SharePanel calendar={calendar} />
         </TabsContent>
 
-        {/* Deliberately empty for now — the tab holds the space while what
-            goes here is decided. */}
-        <TabsContent value="whats-next" keepMounted />
+        <TabsContent value="whats-next" keepMounted>
+          <WhatsNextPanel clientManagerOn={clientManagerOn} />
+        </TabsContent>
       </Tabs>
     </PageContainer>
   )

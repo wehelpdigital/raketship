@@ -370,7 +370,7 @@ function countLabel(
  * The margin means the next rows are asked for while the last ones are still
  * on screen, so the list grows before it runs out rather than after.
  */
-function LoadMore({
+export function LoadMore({
   label,
   onReach,
 }: {
