@@ -364,73 +364,159 @@ function SideTarget({ side }: { side: "left" | "right" }) {
 }
 
 /**
- * The raket dressed as its homophone: a translucent nose cone riding on the
- * start card, a booster with a live flame under it. Pure decoration — no
- * pointer events, positioned around the card so the wires and handles keep
- * working exactly as before. The flame's flicker is a transform, and stands
- * down with everything else under prefers-reduced-motion.
+ * The rocket's two cut-off sections. The board's metaphor made literal: the
+ * nose rides above Your business, the booster below the last element, and
+ * everything between IS the body. Each section's cut edge is dashed, the way
+ * a cutaway diagram says "this continues". Sized by the page to the actual
+ * cluster, decorative only.
  */
-function RocketDress() {
-  return (
-    <>
-      <svg
-        viewBox="0 0 120 64"
-        aria-hidden="true"
-        className="pointer-events-none absolute bottom-full left-1/2 h-16 w-30 -translate-x-1/2 text-primary"
-      >
-        <path
-          d="M60 2 C 76 18 88 40 92 64 L 28 64 C 32 40 44 18 60 2 Z"
-          fill="currentColor"
-          fillOpacity="0.16"
-          stroke="currentColor"
-          strokeOpacity="0.4"
-          strokeWidth="1.5"
-        />
-        <circle
-          cx="60"
-          cy="42"
-          r="8"
-          fill="currentColor"
-          fillOpacity="0.25"
-          stroke="currentColor"
-          strokeOpacity="0.45"
-          strokeWidth="1.5"
-        />
-      </svg>
+function RocketSection({
+  part,
+  width,
+  enterIndex,
+}: {
+  part: "nose" | "booster"
+  width: number
+  enterIndex?: number
+}) {
+  const w = Math.max(width, 400)
+  const mid = w / 2
+  const style =
+    enterIndex !== undefined
+      ? ({ "--arrive-delay": `${enterIndex * 70}ms` } as React.CSSProperties)
+      : undefined
 
+  if (part === "nose") {
+    const h = 180
+    return (
       <svg
-        viewBox="0 0 140 96"
+        viewBox={`0 0 ${w} ${h}`}
+        width={w}
+        height={h}
         aria-hidden="true"
-        className="pointer-events-none absolute top-full left-1/2 h-24 w-35 -translate-x-1/2"
+        className={cn(
+          "pointer-events-none text-primary",
+          enterIndex !== undefined && "node-arrive"
+        )}
+        style={style}
       >
-        {/* The bell. */}
+        {/* The cone: shoulders as wide as the body below it. */}
         <path
-          d="M48 2 L92 2 L108 30 L32 30 Z"
-          fill="var(--color-primary)"
-          fillOpacity="0.16"
-          stroke="var(--color-primary)"
-          strokeOpacity="0.4"
-          strokeWidth="1.5"
+          d={`M ${mid} 6 C ${mid + w * 0.28} 40 ${w - 10} 110 ${w - 10} ${h} L 10 ${h} C 10 110 ${mid - w * 0.28} 40 ${mid} 6 Z`}
+          fill="currentColor"
+          fillOpacity="0.07"
+          stroke="none"
         />
-        {/* The flame: outer heat, inner tongue. */}
-        <g className="flame-flicker">
-          <path
-            d="M70 34 C 88 48 88 66 70 92 C 52 66 52 48 70 34 Z"
-            fill="var(--color-destructive)"
-            fillOpacity="0.4"
-          />
-          <path
-            d="M70 38 C 81 50 81 62 70 78 C 59 62 59 50 70 38 Z"
-            fill="var(--color-warning)"
-            fillOpacity="0.8"
-          />
-        </g>
+        <path
+          d={`M 10 ${h} C 10 110 ${mid - w * 0.28} 40 ${mid} 6 C ${mid + w * 0.28} 40 ${w - 10} 110 ${w - 10} ${h}`}
+          fill="none"
+          stroke="currentColor"
+          strokeOpacity="0.35"
+          strokeWidth="2"
+        />
+        {/* The porthole. */}
+        <circle
+          cx={mid}
+          cy={h - 70}
+          r="22"
+          fill="currentColor"
+          fillOpacity="0.12"
+          stroke="currentColor"
+          strokeOpacity="0.4"
+          strokeWidth="2"
+        />
+        {/* The cut. */}
+        <line
+          x1="10"
+          y1={h - 1}
+          x2={w - 10}
+          y2={h - 1}
+          stroke="currentColor"
+          strokeOpacity="0.35"
+          strokeWidth="2"
+          strokeDasharray="10 8"
+        />
       </svg>
-    </>
+    )
+  }
+
+  const h = 200
+  const bells = [mid - w * 0.28, mid, mid + w * 0.28]
+  return (
+    <svg
+      viewBox={`0 0 ${w} ${h}`}
+      width={w}
+      height={h}
+      aria-hidden="true"
+      className={cn(
+        "pointer-events-none text-primary",
+        enterIndex !== undefined && "node-arrive"
+      )}
+      style={style}
+    >
+      {/* The skirt, flaring from the cut. */}
+      <path
+        d={`M 10 1 L ${w - 10} 1 L ${w - 40} 70 L 40 70 Z`}
+        fill="currentColor"
+        fillOpacity="0.07"
+      />
+      <path
+        d={`M 10 1 L 40 70 M ${w - 10} 1 L ${w - 40} 70`}
+        fill="none"
+        stroke="currentColor"
+        strokeOpacity="0.35"
+        strokeWidth="2"
+      />
+      {/* The cut. */}
+      <line
+        x1="10"
+        y1="1"
+        x2={w - 10}
+        y2="1"
+        stroke="currentColor"
+        strokeOpacity="0.35"
+        strokeWidth="2"
+        strokeDasharray="10 8"
+      />
+      {/* Three bells, three flames. */}
+      {bells.map((cx) => (
+        <g key={cx}>
+          <path
+            d={`M ${cx - 22} 70 L ${cx + 22} 70 L ${cx + 34} 104 L ${cx - 34} 104 Z`}
+            fill="currentColor"
+            fillOpacity="0.14"
+            stroke="currentColor"
+            strokeOpacity="0.4"
+            strokeWidth="2"
+          />
+          <g className="flame-flicker">
+            <path
+              d={`M ${cx} 108 C ${cx + 20} 124 ${cx + 18} 148 ${cx} 182 C ${cx - 18} 148 ${cx - 20} 124 ${cx} 108 Z`}
+              fill="var(--color-destructive)"
+              fillOpacity="0.4"
+            />
+            <path
+              d={`M ${cx} 112 C ${cx + 12} 126 ${cx + 11} 142 ${cx} 164 C ${cx - 11} 142 ${cx - 12} 126 ${cx} 112 Z`}
+              fill="var(--color-warning)"
+              fillOpacity="0.8"
+            />
+          </g>
+        </g>
+      ))}
+    </svg>
   )
 }
 
 export function ElementNode({ data, selected }: NodeProps<BuilderNode>) {
+  if (data.nodeType === "rocket") {
+    return (
+      <RocketSection
+        part={data.values.part === "booster" ? "booster" : "nose"}
+        width={typeof data.values.w === "number" ? data.values.w : 700}
+        enterIndex={data.enterIndex}
+      />
+    )
+  }
   if (data.nodeType === "clients") {
     return (
       <ClientsMarker
@@ -458,7 +544,6 @@ export function ElementNode({ data, selected }: NodeProps<BuilderNode>) {
           aria-label="Connect a step above"
         />
       ) : null}
-      {data.nodeType === "start" ? <RocketDress /> : null}
       {data.sideTarget ? <SideTarget side={data.sideTarget} /> : null}
       <ElementCard
         nodeType={data.nodeType}

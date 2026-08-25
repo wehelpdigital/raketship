@@ -95,6 +95,22 @@ const CLIENTS: NodeTypeDef = {
   summary: () => "Dito papasok ang mga suki.",
 }
 
+/** Presentational, like CLIENTS: the rocket's cut-off nose and booster. */
+const ROCKET: NodeTypeDef = {
+  type: "rocket",
+  label: "Raket",
+  short: "Raket",
+  description: "Ang buong board ay isang rocket.",
+  icon: "Rocket",
+  category: "trigger",
+  accent: "chart-1",
+  scope: "raket",
+  maxPerFlow: 0,
+  fields: [],
+  defaults: {},
+  summary: () => "Ang buong board ay isang rocket.",
+}
+
 const START: NodeTypeDef = {
   type: "start",
   label: "Your business",
@@ -423,6 +439,7 @@ const WEBHOOK: NodeTypeDef = {
 
 export const NODE_TYPES: readonly NodeTypeDef[] = [
   CLIENTS,
+  ROCKET,
   START,
   MODULE,
   BOOKING,

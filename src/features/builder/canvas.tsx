@@ -343,8 +343,13 @@ function CanvasInner({
             }).catch(() => {});
           }}
           onNodeClick={(_, node) => {
-            // The Clients marker is an annotation; there is nothing to open.
-            if (node.data.nodeType === "clients") return;
+            // Annotations — the Clients markers and the rocket's sections —
+            // have nothing to open.
+            if (
+              node.data.nodeType === "clients" ||
+              node.data.nodeType === "rocket"
+            )
+              return;
             if (node.data.nodeType === "module") {
               onOpenModule?.(node.id, node.data.moduleId ?? null);
               return;

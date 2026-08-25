@@ -286,6 +286,44 @@ export default async function RaketPage() {
   const nodeIds: Record<string, string> = Object.fromEntries(
     canvas.nodes.map((row): [string, string] => [row.node_key, row.id])
   )
+  /*
+    The rocket's two cut-off sections. The METAPHOR is the board: the nose
+    above Your business, the booster below the last element, and everything
+    between — the elements themselves — is the body. Sized to the cluster's
+    real bounds so the shoulders reach as wide as the widest row, and
+    injected like the markers: never stored, never interactive.
+  */
+  const body = nodes.filter(
+    (node) => node.id === "start" || node.id.startsWith("module-")
+  )
+  if (body.length > 0) {
+    const CARD_W = 300
+    const CARD_H = 130
+    const minX = Math.min(...body.map((node) => node.position.x)) - 40
+    const maxX = Math.max(...body.map((node) => node.position.x)) + CARD_W + 40
+    const minY = Math.min(...body.map((node) => node.position.y))
+    const maxY = Math.max(...body.map((node) => node.position.y)) + CARD_H
+    const width = maxX - minX
+
+    const section = (part: "nose" | "booster", y: number): CanvasNode => ({
+      id: `rocket-${part}`,
+      type: "element",
+      position: { x: minX, y },
+      data: {
+        nodeType: "rocket",
+        moduleId: null,
+        locked: false,
+        values: { part, w: width },
+        enterIndex: nodes.length,
+      },
+      draggable: false,
+      selectable: false,
+      connectable: false,
+    })
+    nodes.push(section("nose", minY - 200))
+    nodes.push(section("booster", maxY + 30))
+  }
+
   const moduleCount = canvas.nodes.filter((row) => row.type === "module").length
 
   return (
