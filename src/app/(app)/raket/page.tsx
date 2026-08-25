@@ -218,44 +218,59 @@ export default async function RaketPage() {
   const edges = canvas.edges.map(rowToCanvasEdge)
 
   /*
-    The Clients marker: presentation, not data. Injected here rather than
-    stored, so no account has to be provisioned with it, nobody can drag it
-    half off the board, and removing it someday is deleting this block. It
-    sits centred BELOW the public-facing modules with its arrows flowing UP
-    into them — customers entering — and only exists while there is at least
-    one door for them to enter.
+    The Clients markers: presentation, not data. Injected here rather than
+    stored, so no account has to be provisioned with them, nobody can drag
+    one half off the board, and removing them someday is deleting this block.
+
+    One marker PER DOOR, because the doors have different clients: the
+    Website's are organic visitors, Booking's are the people a link was
+    shared with. Each flanks its own door on the outside and arcs INTO it —
+    customers entering — and none draws while its door is closed.
   */
-  const doors = nodes.filter(
-    (node) => node.id === "module-booking" || node.id === "module-website"
-  )
-  if (doors.length > 0) {
-    const cx =
-      doors.reduce((sum, door) => sum + door.position.x, 0) / doors.length
-    const cy = Math.max(...doors.map((door) => door.position.y))
+  const DOOR_SOURCES = [
+    {
+      doorId: "module-booking",
+      side: -1 as const,
+      note: "Mga naka-receive ng booking link mo — sa chat, sa post, kahit saan mo i-share.",
+    },
+    {
+      doorId: "module-website",
+      side: 1 as const,
+      note: "Organic visitors — mga nakadiskubre ng page ng negosyo mo.",
+    },
+  ]
+  for (const source of DOOR_SOURCES) {
+    const door = nodes.find((node) => node.id === source.doorId)
+    if (!door) continue
     nodes.push({
-      id: "clients",
+      id: `clients-${source.doorId}`,
       type: "element",
-      // Cards are ~300 wide, the marker ~176: +70 keeps centres aligned.
-      position: { x: cx + 70, y: cy + 280 },
+      // Cards are ~300 wide, the marker ~176: flank the door's outer side,
+      // level with it, and let the edge arc over into its top.
+      position: {
+        x:
+          source.side < 0
+            ? door.position.x - 260
+            : door.position.x + 340,
+        y: door.position.y + 10,
+      },
       data: {
         nodeType: "clients",
         moduleId: null,
         locked: false,
-        values: {},
+        values: { note: source.note },
         enterIndex: nodes.length,
       },
       draggable: false,
       selectable: false,
       connectable: false,
     })
-    for (const door of doors) {
-      edges.push({
-        id: `clients->${door.id}`,
-        source: "clients",
-        target: door.id,
-        animated: true,
-      })
-    }
+    edges.push({
+      id: `clients-${source.doorId}->${source.doorId}`,
+      source: `clients-${source.doorId}`,
+      target: source.doorId,
+      animated: true,
+    })
   }
   const nodeIds: Record<string, string> = Object.fromEntries(
     canvas.nodes.map((row): [string, string] => [row.node_key, row.id])

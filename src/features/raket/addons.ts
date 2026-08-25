@@ -42,8 +42,8 @@ const ADDONS: Record<string, AddonSpec> = {
     // It catches what Booking brings in, so it hangs off Booking.
     sourceKey: "module-booking",
     label: "Client Manager",
-    fallback: { x: 40, y: 344 },
-    offset: { x: 0, y: 160 },
+    fallback: { x: 40, y: 440 },
+    offset: { x: 0, y: 230 },
     pagePath: "/modules/client-manager",
     onMessage:
       "Bukas na ang Client Manager — nasa navigation at nasa raket board mo na.",
@@ -56,10 +56,9 @@ const ADDONS: Record<string, AddonSpec> = {
     // node — not off Booking.
     sourceKey: "start",
     label: "Website",
-    // Beside the booking column, so the start node fans out rather than
-    // stacking everything in one line.
-    fallback: { x: 360, y: 184 },
-    offset: { x: 320, y: 160 },
+    // The start card fans: Booking down-left, Website down-right.
+    fallback: { x: 230, y: 234 },
+    offset: { x: 190, y: 210 },
     pagePath: "/modules/website",
     onMessage: "Bukas na ang Website — nasa raket board mo na, mula sa negosyo mo.",
     offMessage: "Sarado na ang Website.",

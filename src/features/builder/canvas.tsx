@@ -260,7 +260,7 @@ function CanvasInner({
   const onEdgesDelete = useCallback(
     (deleted: Edge[]) => {
       for (const edge of deleted) {
-        if (edge.id.startsWith("clients->")) continue;
+        if (edge.id.startsWith("clients")) continue;
         void disconnectNodes({ flowId, edgeKey: edge.id }).catch(() => {});
       }
     },
@@ -318,7 +318,7 @@ function CanvasInner({
           onEdgesDelete={onEdgesDelete}
           onEdgeClick={(_, edge) => {
             // The presentation wires are not the user's to cut.
-            if (edge.id.startsWith("clients->")) return;
+            if (edge.id.startsWith("clients")) return;
             toast("Remove this line?", {
               action: { label: "Unlink", onClick: () => unlink(edge) },
             });

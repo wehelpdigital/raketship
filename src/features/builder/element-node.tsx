@@ -308,7 +308,13 @@ const HANDLE_CLASS =
  * The one handle is invisible and disabled: React Flow needs it to anchor the
  * edges, nobody needs to grab it.
  */
-function ClientsMarker({ enterIndex }: { enterIndex?: number }) {
+function ClientsMarker({
+  note,
+  enterIndex,
+}: {
+  note: string
+  enterIndex?: number
+}) {
   return (
     <div
       className={cn(
@@ -332,16 +338,23 @@ function ClientsMarker({ enterIndex }: { enterIndex?: number }) {
         <Users className="size-7" aria-hidden="true" />
       </span>
       <p className="mt-2 text-sm font-semibold">Clients</p>
-      <p className="text-xs text-pretty text-muted-foreground">
-        Website visitors at booking suki — dito sila papasok.
-      </p>
+      <p className="text-xs text-pretty text-muted-foreground">{note}</p>
     </div>
   )
 }
 
 export function ElementNode({ data, selected }: NodeProps<BuilderNode>) {
   if (data.nodeType === "clients") {
-    return <ClientsMarker enterIndex={data.enterIndex} />
+    return (
+      <ClientsMarker
+        note={
+          typeof data.values.note === "string"
+            ? data.values.note
+            : "Dito papasok ang mga suki."
+        }
+        enterIndex={data.enterIndex}
+      />
+    )
   }
 
   return (
