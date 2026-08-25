@@ -185,9 +185,11 @@ identity (email, else phone digits, else name), latest details win, cancelled
 bookings never count toward the total. A second copy would drift from the
 bookings the day one was cancelled in one place and not the other.
 
-Switched on from Booking's **What's next** tab, NOT bought in the marketplace,
-and deliberately not through `activateModule()` — that spends a plan's module
-slot, and this is what happens AFTER a booking, not a separate raket.
+Switched on from **My raket parts** (/raket/parts — the one page where every
+module is turned on, off and upgraded; Booking's What's next tab only
+DESCRIBES it and links there). NOT bought in the marketplace, and deliberately
+not through `activateModule()` — that spends a plan's module slot, and this
+is what happens AFTER a booking, not a separate raket.
 `setClientManager()` (features/clients/actions.ts) writes three things:
 the `user_modules` row (nav + everything else follows), a `flow_nodes` row
 `module-client-manager` on the raket board, and an edge FROM

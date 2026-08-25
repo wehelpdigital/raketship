@@ -17,6 +17,8 @@ import {
   type ModuleNavItem,
   type NavBadges,
 } from "@/components/shell/module-nav"
+import { Blocks } from "lucide-react"
+
 import { useT } from "@/components/shell/locale-provider"
 import { cn } from "@/lib/utils"
 
@@ -76,7 +78,16 @@ export function SideNav({
         <nav aria-label="Primary">
           <ul className="space-y-1">
             {NAV_ITEMS.map((item) => {
-              const active = isNavItemActive(pathname, item.href)
+              /*
+                Build your Raket carries one child: the parts page. The parent
+                must not light up with it — a highlight that covers two rows
+                stops meaning "you are here".
+              */
+              const isRaket = item.href === "/raket"
+              const partsActive =
+                isRaket && isNavItemActive(pathname, "/raket/parts")
+              const active =
+                isNavItemActive(pathname, item.href) && !partsActive
               const Icon = item.icon
 
               return (
@@ -95,6 +106,32 @@ export function SideNav({
                     <span className="min-w-0 flex-1 truncate">{item.label}</span>
                     <NavPending />
                   </Link>
+
+                  {isRaket ? (
+                    <ul className="mt-1 space-y-1 pl-8">
+                      <li>
+                        <Link
+                          href="/raket/parts"
+                          aria-current={partsActive ? "page" : undefined}
+                          className={cn(
+                            "flex h-10 items-center gap-2.5 rounded-lg px-3 text-sm transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                            partsActive
+                              ? "bg-primary/10 font-medium text-primary"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                          )}
+                        >
+                          <Blocks
+                            className="size-3.5 shrink-0"
+                            aria-hidden="true"
+                          />
+                          <span className="min-w-0 flex-1 truncate">
+                            My raket parts
+                          </span>
+                          <NavPending />
+                        </Link>
+                      </li>
+                    </ul>
+                  ) : null}
                 </li>
               )
             })}

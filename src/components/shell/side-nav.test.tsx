@@ -186,3 +186,32 @@ describe("module pages, and folding them away", () => {
     )
   })
 })
+
+describe("the raket's own sub-navigation", () => {
+  it("offers My raket parts under Build your Raket", () => {
+    renderAt("/dashboard")
+    const parts = screen.getByRole("link", { name: /My raket parts/ })
+    expect(parts).toHaveAttribute("href", "/raket/parts")
+  })
+
+  it("lights the child, not the parent, on the parts page", () => {
+    // A highlight covering two rows stops meaning "you are here".
+    renderAt("/raket/parts")
+    expect(
+      screen.getByRole("link", { name: /My raket parts/ })
+    ).toHaveAttribute("aria-current", "page")
+    expect(
+      screen.getByRole("link", { name: "Build your Raket" })
+    ).not.toHaveAttribute("aria-current")
+  })
+
+  it("lights the parent alone on the board itself", () => {
+    renderAt("/raket")
+    expect(
+      screen.getByRole("link", { name: "Build your Raket" })
+    ).toHaveAttribute("aria-current", "page")
+    expect(
+      screen.getByRole("link", { name: /My raket parts/ })
+    ).not.toHaveAttribute("aria-current")
+  })
+})

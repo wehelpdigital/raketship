@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { Rocket } from "lucide-react"
+import { Blocks, Rocket } from "lucide-react"
 
 import { PageContainer } from "@/components/shell/page-container"
 import { SetupNotice } from "@/components/shell/setup-notice"
@@ -241,6 +241,15 @@ export default async function RaketPage() {
                 )}
           </p>
         </div>
+        {/* The way in for phones and tablets, whose nav has no sub-rows. */}
+        <Link
+          href="/raket/parts"
+          className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        >
+          <Blocks className="size-4" aria-hidden="true" />
+          <span className="hidden sm:inline">My raket parts</span>
+          <span className="sr-only sm:hidden">My raket parts</span>
+        </Link>
         <RenameRaketDialog
           raketId={workspace.raket.id}
           name={workspace.raket.name}
