@@ -329,11 +329,13 @@ function ClientsMarker({
           : undefined
       }
     >
+      {/* Visible, like every other connector — but only an anchor: the
+          wire it holds is presentation, not the user's to redraw. */}
       <Handle
         type="source"
         position={handleSide === "right" ? Position.Right : Position.Left}
         isConnectable={false}
-        className="pointer-events-none! opacity-0!"
+        className="pointer-events-none! size-4! border-2! shadow-sm"
         aria-hidden="true"
       />
       <span className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -342,6 +344,20 @@ function ClientsMarker({
       <p className="text-sm font-semibold">Clients</p>
       <p className="text-[11px] leading-tight text-muted-foreground">{note}</p>
     </div>
+  )
+}
+
+/** The door-side connector a Clients wire enters, when this card has one. */
+function SideTarget({ side }: { side: "left" | "right" }) {
+  return (
+    <Handle
+      type="target"
+      id={`side-${side}`}
+      position={side === "left" ? Position.Left : Position.Right}
+      isConnectable={false}
+      className="pointer-events-none! size-4! border-2! shadow-sm"
+      aria-hidden="true"
+    />
   )
 }
 
@@ -373,6 +389,7 @@ export function ElementNode({ data, selected }: NodeProps<BuilderNode>) {
           aria-label="Connect a step above"
         />
       ) : null}
+      {data.sideTarget ? <SideTarget side={data.sideTarget} /> : null}
       <ElementCard
         nodeType={data.nodeType}
         values={data.values}

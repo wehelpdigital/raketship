@@ -21,6 +21,8 @@ export interface CanvasNodeData extends Record<string, unknown> {
   accent?: string
   icon?: string
   tagline?: string
+  /** Which side a Clients wire enters this card, if one does. */
+  sideTarget?: "left" | "right"
 }
 
 export interface CanvasNode {
@@ -40,6 +42,8 @@ export interface CanvasEdge {
   target: string
   label?: string
   animated: boolean
+  /** A named handle on the target — the presentation wires enter door SIDES. */
+  targetHandle?: string
 }
 
 /**

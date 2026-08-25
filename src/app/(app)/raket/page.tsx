@@ -244,6 +244,8 @@ export default async function RaketPage() {
   for (const source of DOOR_SOURCES) {
     const door = nodes.find((node) => node.id === source.doorId)
     if (!door) continue
+    // The door grows a visible connector on the side facing its marker.
+    door.data = { ...door.data, sideTarget: source.side }
     nodes.push({
       id: `clients-${source.doorId}`,
       type: "element",
@@ -277,6 +279,7 @@ export default async function RaketPage() {
       id: `clients-${source.doorId}->${source.doorId}`,
       source: `clients-${source.doorId}`,
       target: source.doorId,
+      targetHandle: `side-${source.side}`,
       animated: true,
     })
   }
