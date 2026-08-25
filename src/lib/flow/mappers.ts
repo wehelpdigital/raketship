@@ -17,9 +17,10 @@ export interface CanvasNodeData extends Record<string, unknown> {
   glance?: ModuleGlance
   /** Position in the entrance stagger; absent means arrive without ceremony. */
   enterIndex?: number
-  /** The module's own accent and icon, read off its catalog row server-side. */
+  /** The module's own accent, icon and tagline, off its catalog row. */
   accent?: string
   icon?: string
+  tagline?: string
 }
 
 export interface CanvasNode {

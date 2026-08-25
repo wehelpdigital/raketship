@@ -40,42 +40,13 @@ function profile(overrides: Partial<BusinessProfileRow> = {}): BusinessProfileRo
 }
 
 describe("bookingGlance", () => {
-  it("says there is nothing rather than counting to zero", () => {
-    const glance = bookingGlance(
-      { calendars: 0, published: 0, upcoming: 0 },
-      "fil"
-    )
-    expect(glance.lines).toEqual(["Wala pang calendar"])
-    expect(glance.live).toBe(false)
+  it("is nothing but the number that matters", () => {
+    expect(bookingGlance(5)).toEqual({ lines: [], count: 5 })
   })
 
-  it("counts the calendars and what is coming", () => {
-    const glance = bookingGlance(
-      { calendars: 2, published: 1, upcoming: 5 },
-      "fil"
-    )
-    expect(glance.lines[0]).toBe("2 calendar · 1 live")
-    expect(glance.lines[1]).toBe("5 paparating na booking")
-    expect(glance.live).toBe(true)
-  })
-
-  it("is not live while everything is a draft", () => {
-    const glance = bookingGlance(
-      { calendars: 1, published: 0, upcoming: 0 },
-      "fil"
-    )
-    expect(glance.lines[0]).toBe("1 calendar · draft pa")
-    expect(glance.lines[1]).toBe("Walang paparating")
-    expect(glance.live).toBe(false)
-  })
-
-  it("speaks English when asked", () => {
-    const glance = bookingGlance(
-      { calendars: 2, published: 2, upcoming: 1 },
-      "en"
-    )
-    expect(glance.lines[0]).toBe("2 calendars · 2 live")
-    expect(glance.lines[1]).toBe("1 upcoming booking")
+  it("counts zero as no badge, not a zero badge", () => {
+    expect(bookingGlance(0).count).toBe(0)
+    // The card hides a zero — an empty badge would look like a bug.
   })
 })
 
@@ -115,7 +86,4 @@ describe("businessGlance", () => {
     expect(glance.logoCrop).toEqual({ zoom: 2, x: 30, y: 60 })
   })
 
-  it("leaves live to the Booking card", () => {
-    expect(businessGlance(profile(), "fil").live).toBe(false)
-  })
 })

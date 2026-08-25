@@ -100,9 +100,10 @@ export interface ElementCardProps {
   glance?: ModuleGlance
   /** Position in the entrance stagger; absent means no ceremony. */
   enterIndex?: number
-  /** The module's own accent and icon; the registry's defaults otherwise. */
+  /** The module's own accent, icon and tagline; registry defaults otherwise. */
   accent?: string | null
   icon?: string | null
+  tagline?: string | null
   className?: string
 }
 
@@ -119,6 +120,7 @@ export function ElementCard({
   enterIndex,
   accent,
   icon,
+  tagline,
   className,
 }: ElementCardProps) {
   const def = resolveNodeType(nodeType)
@@ -170,13 +172,23 @@ export function ElementCard({
         className
       )}
     >
+      {/* A floating pill rather than a painted edge: at the card's corner a
+          full-height bar fought the border radius and read as overlap. */}
       <span
         aria-hidden="true"
         className={cn(
-          "absolute inset-y-0 left-0 w-1 rounded-l-xl lg:rounded-l-lg",
+          "absolute top-3 bottom-3 left-1.5 w-1 rounded-full",
           accentEdgeClass(edgeAccent)
         )}
       />
+
+      {glance?.count ? (
+        /* Same dress as the nav badge: red because it asks to be dealt with,
+           gone at zero so an empty badge never looks like a bug. */
+        <span className="absolute -top-2 -right-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[11px] font-semibold text-destructive-foreground tabular-nums ring-2 ring-background">
+          {glance.count > 99 ? "99+" : glance.count}
+        </span>
+      ) : null}
 
       <div className="flex items-start gap-3">
         <span className="relative shrink-0">
@@ -199,14 +211,6 @@ export function ElementCard({
               <NodeIcon name={icon ?? def.icon} className="size-5 lg:size-4" />
             </span>
           )}
-          {glance?.live ? (
-            /* Breathing, not blinking: it means "open", not "alarm". The word
-               is in the glance line; this is the mark for it. */
-            <span
-              className="live-dot absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-success ring-2 ring-card"
-              aria-hidden="true"
-            />
-          ) : null}
         </span>
 
         <div className="min-w-0 flex-1">
@@ -221,6 +225,11 @@ export function ElementCard({
               />
             ) : null}
           </div>
+          {isModule && tagline ? (
+            <p className="line-clamp-2 text-xs text-pretty text-muted-foreground lg:text-[11px]">
+              {tagline}
+            </p>
+          ) : null}
           {glance ? (
             <>
               {isStart ? (
@@ -246,7 +255,7 @@ export function ElementCard({
                 </p>
               ))}
             </>
-          ) : (
+          ) : isModule ? null : (
             <p className="truncate text-xs text-muted-foreground lg:text-[11px]">
               {summarise(nodeType, values)}
             </p>
@@ -261,18 +270,20 @@ export function ElementCard({
         ) : null}
       </div>
 
-      {isStart ? null : (
-      <div className="mt-3 flex items-center gap-2">
-        <Badge variant="outline" className="font-normal">
-          {badgeText}
-        </Badge>
-        {isModule ? (
-          <span className="text-xs text-muted-foreground">Tap to open</span>
-        ) : null}
-        {locked ? (
-          <span className="text-xs text-muted-foreground">Upgrade to use</span>
-        ) : null}
-      </div>
+      {/* Modules and the start card carry no footer: the tier tag and "Tap
+          to open" were chrome about the app, not facts about the shop. The
+          inner builder's elements keep their category and lock hints. */}
+      {isStart || isModule ? null : (
+        <div className="mt-3 flex items-center gap-2">
+          <Badge variant="outline" className="font-normal">
+            {badgeText}
+          </Badge>
+          {locked ? (
+            <span className="text-xs text-muted-foreground">
+              Upgrade to use
+            </span>
+          ) : null}
+        </div>
       )}
     </div>
   )
@@ -286,12 +297,17 @@ const HANDLE_CLASS =
 export function ElementNode({ data, selected }: NodeProps<BuilderNode>) {
   return (
     <div className="relative">
-      <Handle
-        type="target"
-        position={Position.Top}
-        className={HANDLE_CLASS}
-        aria-label="Connect a step above"
-      />
+      {/* The start node is the root: nothing connects INTO it, so it carries
+          no target handle — the half-circle on its top edge was a socket for
+          a plug that cannot exist. */}
+      {data.nodeType !== "start" ? (
+        <Handle
+          type="target"
+          position={Position.Top}
+          className={HANDLE_CLASS}
+          aria-label="Connect a step above"
+        />
+      ) : null}
       <ElementCard
         nodeType={data.nodeType}
         values={data.values}
@@ -301,6 +317,7 @@ export function ElementNode({ data, selected }: NodeProps<BuilderNode>) {
         enterIndex={data.enterIndex}
         accent={data.accent}
         icon={data.icon}
+        tagline={data.tagline}
       />
       <Handle
         type="source"

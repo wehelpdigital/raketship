@@ -14,7 +14,7 @@ describe("the module's own dress", () => {
     )
     const edge = container.querySelector("[aria-hidden]")
     expect(edge?.className).toContain("from-chart-3")
-    expect(edge?.className).toContain("left-0")
+    expect(edge?.className).toContain("rounded-full")
   })
 
   it("wears the shop's colour on the start card's edge", () => {
@@ -41,7 +41,7 @@ describe("the module's own dress", () => {
       <ElementCard
         nodeType="start"
         values={{ label: "Salon ni Nena" }}
-        glance={{ lines: [], live: false, logoName: "Salon ni Nena", tagline: "Gupit at kulay." }}
+        glance={{ lines: [], logoName: "Salon ni Nena", tagline: "Gupit at kulay." }}
       />
     )
 
@@ -55,37 +55,53 @@ describe("the module's own dress", () => {
 })
 
 describe("a module card with a glance", () => {
-  const glance = {
-    lines: ["2 calendar · 1 live", "5 paparating na booking"],
-    live: true,
-  }
-
-  it("shows the module's own numbers instead of the stock sentence", () => {
+  it("says what the module IS, not what the dashboard counts", () => {
     render(
-      <ElementCard nodeType="module" values={{ label: "Booking" }} glance={glance} />
-    )
-
-    expect(screen.getByText("2 calendar · 1 live")).toBeInTheDocument()
-    expect(screen.getByText("5 paparating na booking")).toBeInTheDocument()
-    expect(
-      screen.queryByText(/A feature you activated/)
-    ).not.toBeInTheDocument()
-  })
-
-  it("wears the live mark only while something is live", () => {
-    const { container, rerender } = render(
-      <ElementCard nodeType="module" values={{}} glance={glance} />
-    )
-    expect(container.querySelector(".live-dot")).toBeInTheDocument()
-
-    rerender(
       <ElementCard
         nodeType="module"
-        values={{}}
-        glance={{ ...glance, live: false }}
+        values={{ label: "Booking" }}
+        tagline="Take appointments online"
+        glance={{ lines: [], count: 0 }}
       />
     )
-    expect(container.querySelector(".live-dot")).not.toBeInTheDocument()
+
+    expect(screen.getByText("Take appointments online")).toBeInTheDocument()
+    expect(screen.queryByText(/calendar ·/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/paparating/)).not.toBeInTheDocument()
+    expect(screen.queryByText("Tap to open")).not.toBeInTheDocument()
+    expect(screen.queryByText("Starter")).not.toBeInTheDocument()
+    expect(screen.queryByText("Module")).not.toBeInTheDocument()
+  })
+
+  it("wears the pending count in its corner, and hides a zero", () => {
+    const { container, rerender } = render(
+      <ElementCard nodeType="module" values={{}} glance={{ lines: [], count: 3 }} />
+    )
+    expect(screen.getByText("3")).toBeInTheDocument()
+    expect(screen.getByText("3").className).toContain("bg-destructive")
+
+    rerender(
+      <ElementCard nodeType="module" values={{}} glance={{ lines: [], count: 0 }} />
+    )
+    expect(container.textContent).not.toContain("0")
+  })
+
+  it("caps a runaway count", () => {
+    render(
+      <ElementCard nodeType="module" values={{}} glance={{ lines: [], count: 250 }} />
+    )
+    expect(screen.getByText("99+")).toBeInTheDocument()
+  })
+
+  it("keeps the edge line clear of the card's border", () => {
+    const { container } = render(
+      <ElementCard nodeType="module" values={{}} accent="chart-3" />
+    )
+    const edge = container.querySelector("[aria-hidden]")
+    // A floating pill, inset on every side it could touch.
+    expect(edge?.className).toContain("rounded-full")
+    expect(edge?.className).toContain("left-1.5")
+    expect(edge?.className).toContain("top-3")
   })
 
   it("gives the tagline room for a second line, unlike the facts", () => {
@@ -96,7 +112,6 @@ describe("a module card with a glance", () => {
         values={{ label: "Gupit ni Nena" }}
         glance={{
           lines: [],
-          live: false,
           logoName: "Gupit ni Nena",
           tagline: "Gupit, kulay at rebond sa puso ng QC.",
         }}
@@ -117,7 +132,6 @@ describe("a module card with a glance", () => {
         values={{}}
         glance={{
           lines: [],
-          live: false,
           logoName: "Gupit ni Nena",
           logoUrl: null,
         }}
@@ -128,7 +142,12 @@ describe("a module card with a glance", () => {
 
   it("arrives in turn, not all at once", () => {
     const { container } = render(
-      <ElementCard nodeType="module" values={{}} glance={glance} enterIndex={3} />
+      <ElementCard
+        nodeType="module"
+        values={{}}
+        glance={{ lines: [] }}
+        enterIndex={3}
+      />
     )
     const card = container.querySelector("[data-slot=element-card]")
     expect(card?.className).toContain("node-arrive")
@@ -179,13 +198,14 @@ describe("ElementCard", () => {
     expect(screen.queryByText("Upgrade to use")).not.toBeInTheDocument()
   })
 
-  it("invites a tap on a module node", () => {
+  it("carries no chrome about the app", () => {
+    // "Tap to open" and the tier tag were the app talking about itself.
     render(
       <ElementCard nodeType="module" values={{ label: "Booking", tier: "starter" }} />
     )
 
-    expect(screen.getByText("Tap to open")).toBeInTheDocument()
-    expect(screen.getByText("Starter")).toBeInTheDocument()
+    expect(screen.queryByText("Tap to open")).not.toBeInTheDocument()
+    expect(screen.queryByText("Starter")).not.toBeInTheDocument()
   })
 
   it("marks the selected card with a ring", () => {

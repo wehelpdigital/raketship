@@ -223,35 +223,6 @@ export async function listUpcomingBookings(
  * the same way the Booked page splits its lists — otherwise the badge and the
  * page it points at would disagree about the one in progress.
  */
-export interface CalendarCounts {
-  total: number
-  published: number
-}
-
-/**
- * How many calendars the owner has, and how many face the public.
- *
- * For the canvas card: two numbers, not the rows — a glance has no use for
- * availability or form fields, and the canvas renders on every visit.
- */
-export const countCalendars = cache(async function countCalendars(
-  userId: string
-): Promise<CalendarCounts> {
-  const supabase = await getSupabaseServerClient()
-  if (!supabase) return { total: 0, published: 0 }
-
-  const { data } = await supabase
-    .from("booking_calendars")
-    .select("is_published")
-    .eq("user_id", userId)
-
-  const rows = (data ?? []) as { is_published: boolean }[]
-  return {
-    total: rows.length,
-    published: rows.filter((row) => row.is_published).length,
-  }
-})
-
 export const countUpcomingBookings = cache(async function countUpcomingBookings(
   userId: string
 ): Promise<number> {

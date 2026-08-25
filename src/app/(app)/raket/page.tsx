@@ -14,10 +14,7 @@ import {
 } from "@/lib/flow/glance"
 import { rowToCanvasEdge, rowToCanvasNode } from "@/lib/flow/mappers"
 import { getLocale, getT } from "@/lib/i18n/server"
-import {
-  countCalendars,
-  countUpcomingBookings,
-} from "@/lib/queries/booking"
+import { countUpcomingBookings } from "@/lib/queries/booking"
 import { getBusinessProfile } from "@/lib/queries/business"
 import {
   getRaketCanvas,
@@ -144,17 +141,8 @@ export default async function RaketPage() {
     }
     if (row.type !== "module") continue
     if (row.module_id === "booking") {
-      const [calendars, upcoming] = await Promise.all([
-        countCalendars(user.id),
-        countUpcomingBookings(user.id),
-      ])
       glances[row.node_key] = bookingGlance(
-        {
-          calendars: calendars.total,
-          published: calendars.published,
-          upcoming,
-        },
-        locale
+        await countUpcomingBookings(user.id)
       )
     } else if (row.module_id === "business") {
       glances[row.node_key] = businessGlance(profile, locale)
@@ -167,13 +155,26 @@ export default async function RaketPage() {
     wears the same dress as the nav and the marketplace. Keyed by module id;
     a module with no row falls back to the registry's generic look.
   */
-  const dress: Record<string, { accent?: string; icon?: string }> = {}
+  /*
+    chart-1 is aliased to the shop's primary, which the start card already
+    wears — a module shipping chart-1 would twin the root. Those take a stable
+    substitute instead, so every element on the board has its own colour.
+  */
+  const substitutes = ["chart-5", "chart-2", "chart-4", "chart-3"]
+  const dress: Record<
+    string,
+    { accent?: string; icon?: string; tagline?: string }
+  > = {}
   for (const activated of workspace.modules) {
-    if (activated.module) {
-      dress[activated.module.id] = {
-        accent: activated.module.accent,
-        icon: activated.module.icon,
-      }
+    if (!activated.module) continue
+    const accent =
+      activated.module.accent === "chart-1"
+        ? (substitutes.shift() ?? "chart-5")
+        : activated.module.accent
+    dress[activated.module.id] = {
+      accent,
+      icon: activated.module.icon,
+      tagline: activated.module.tagline ?? undefined,
     }
   }
 

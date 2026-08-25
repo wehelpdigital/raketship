@@ -15,27 +15,6 @@ export const raket = {
     en: "{n} modules · tap one to open its builder",
   },
 
-  "raket.booking.noCalendars": {
-    fil: "Wala pang calendar",
-    en: "No calendars yet",
-  },
-  "raket.booking.calendars.one": { fil: "{n} calendar", en: "{n} calendar" },
-  "raket.booking.calendars.many": { fil: "{n} calendar", en: "{n} calendars" },
-  "raket.booking.live": { fil: "{n} live", en: "{n} live" },
-  "raket.booking.draft": { fil: "draft pa", en: "still draft" },
-  "raket.booking.upcoming.none": {
-    fil: "Walang paparating",
-    en: "Nothing upcoming",
-  },
-  "raket.booking.upcoming.one": {
-    fil: "{n} paparating na booking",
-    en: "{n} upcoming booking",
-  },
-  "raket.booking.upcoming.many": {
-    fil: "{n} paparating na booking",
-    en: "{n} upcoming bookings",
-  },
-
   "raket.business.unset": {
     fil: "I-set up ang detalye ng negosyo",
     en: "Set up your business details",
