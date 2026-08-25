@@ -364,35 +364,31 @@ function SideTarget({ side }: { side: "left" | "right" }) {
 }
 
 /**
- * The rocket's two cut-off sections. The board's metaphor made literal: the
- * nose rides above Your business, the booster below the last element, and
- * everything between IS the body. Each section's cut edge is dashed, the way
- * a cutaway diagram says "this continues". Sized by the page to the actual
- * cluster, decorative only.
+ * The rocket's two cut-off sections, drawn as faceted prisms: each shape is
+ * split down its middle into a lit face and a shaded face, low-poly style,
+ * with a bright ridge line where they meet — flat SVG pretending to be 3D
+ * the way modern logo marks do. The dashed edge is the cut: the body between
+ * the sections is the elements themselves.
  */
 function RocketSection({
   part,
-  width,
   enterIndex,
 }: {
   part: "nose" | "booster"
-  width: number
   enterIndex?: number
 }) {
-  const w = Math.max(width, 400)
-  const mid = w / 2
   const style =
     enterIndex !== undefined
       ? ({ "--arrive-delay": `${enterIndex * 70}ms` } as React.CSSProperties)
       : undefined
 
   if (part === "nose") {
-    const h = 180
+    // 300 wide, ridge at 150: lit left face, shaded right face.
     return (
       <svg
-        viewBox={`0 0 ${w} ${h}`}
-        width={w}
-        height={h}
+        viewBox="0 0 300 160"
+        width={300}
+        height={160}
         aria-hidden="true"
         className={cn(
           "pointer-events-none text-primary",
@@ -400,53 +396,44 @@ function RocketSection({
         )}
         style={style}
       >
-        {/* The cone: shoulders as wide as the body below it. */}
+        <path d="M150 8 L28 152 L150 152 Z" fill="currentColor" fillOpacity="0.22" />
+        <path d="M150 8 L272 152 L150 152 Z" fill="currentColor" fillOpacity="0.09" />
+        {/* The ridge, catching the light. */}
         <path
-          d={`M ${mid} 6 C ${mid + w * 0.28} 40 ${w - 10} 110 ${w - 10} ${h} L 10 ${h} C 10 110 ${mid - w * 0.28} 40 ${mid} 6 Z`}
-          fill="currentColor"
-          fillOpacity="0.07"
-          stroke="none"
-        />
-        <path
-          d={`M 10 ${h} C 10 110 ${mid - w * 0.28} 40 ${mid} 6 C ${mid + w * 0.28} 40 ${w - 10} 110 ${w - 10} ${h}`}
-          fill="none"
+          d="M150 8 L150 152"
           stroke="currentColor"
-          strokeOpacity="0.35"
-          strokeWidth="2"
+          strokeOpacity="0.5"
+          strokeWidth="1.5"
         />
-        {/* The porthole. */}
-        <circle
-          cx={mid}
-          cy={h - 70}
-          r="22"
-          fill="currentColor"
-          fillOpacity="0.12"
+        <path
+          d="M28 152 L150 8 L272 152"
+          fill="none"
           stroke="currentColor"
           strokeOpacity="0.4"
           strokeWidth="2"
+          strokeLinejoin="round"
         />
         {/* The cut. */}
         <line
-          x1="10"
-          y1={h - 1}
-          x2={w - 10}
-          y2={h - 1}
+          x1="28"
+          y1="152"
+          x2="272"
+          y2="152"
           stroke="currentColor"
           strokeOpacity="0.35"
           strokeWidth="2"
-          strokeDasharray="10 8"
+          strokeDasharray="8 7"
         />
       </svg>
     )
   }
 
-  const h = 200
-  const bells = [mid - w * 0.28, mid, mid + w * 0.28]
+  // One bell, faceted the same way, one flame.
   return (
     <svg
-      viewBox={`0 0 ${w} ${h}`}
-      width={w}
-      height={h}
+      viewBox="0 0 240 190"
+      width={240}
+      height={190}
       aria-hidden="true"
       className={cn(
         "pointer-events-none text-primary",
@@ -454,55 +441,47 @@ function RocketSection({
       )}
       style={style}
     >
-      {/* The skirt, flaring from the cut. */}
+      {/* The bell: lit and shaded faces meeting at the ridge. */}
+      <path d="M120 6 L64 6 L40 92 L120 92 Z" fill="currentColor" fillOpacity="0.22" />
+      <path d="M120 6 L176 6 L200 92 L120 92 Z" fill="currentColor" fillOpacity="0.09" />
       <path
-        d={`M 10 1 L ${w - 10} 1 L ${w - 40} 70 L 40 70 Z`}
-        fill="currentColor"
-        fillOpacity="0.07"
+        d="M120 6 L120 92"
+        stroke="currentColor"
+        strokeOpacity="0.5"
+        strokeWidth="1.5"
       />
       <path
-        d={`M 10 1 L 40 70 M ${w - 10} 1 L ${w - 40} 70`}
+        d="M64 6 L40 92 L200 92 L176 6"
         fill="none"
         stroke="currentColor"
-        strokeOpacity="0.35"
+        strokeOpacity="0.4"
         strokeWidth="2"
+        strokeLinejoin="round"
       />
       {/* The cut. */}
       <line
-        x1="10"
-        y1="1"
-        x2={w - 10}
-        y2="1"
+        x1="64"
+        y1="6"
+        x2="176"
+        y2="6"
         stroke="currentColor"
         strokeOpacity="0.35"
         strokeWidth="2"
-        strokeDasharray="10 8"
+        strokeDasharray="8 7"
       />
-      {/* Three bells, three flames. */}
-      {bells.map((cx) => (
-        <g key={cx}>
-          <path
-            d={`M ${cx - 22} 70 L ${cx + 22} 70 L ${cx + 34} 104 L ${cx - 34} 104 Z`}
-            fill="currentColor"
-            fillOpacity="0.14"
-            stroke="currentColor"
-            strokeOpacity="0.4"
-            strokeWidth="2"
-          />
-          <g className="flame-flicker">
-            <path
-              d={`M ${cx} 108 C ${cx + 20} 124 ${cx + 18} 148 ${cx} 182 C ${cx - 18} 148 ${cx - 20} 124 ${cx} 108 Z`}
-              fill="var(--color-destructive)"
-              fillOpacity="0.4"
-            />
-            <path
-              d={`M ${cx} 112 C ${cx + 12} 126 ${cx + 11} 142 ${cx} 164 C ${cx - 11} 142 ${cx - 12} 126 ${cx} 112 Z`}
-              fill="var(--color-warning)"
-              fillOpacity="0.8"
-            />
-          </g>
-        </g>
-      ))}
+      {/* The flame. */}
+      <g className="flame-flicker">
+        <path
+          d="M120 98 C 140 114 138 140 120 178 C 102 140 100 114 120 98 Z"
+          fill="var(--color-destructive)"
+          fillOpacity="0.4"
+        />
+        <path
+          d="M120 102 C 132 116 131 134 120 158 C 109 134 108 116 120 102 Z"
+          fill="var(--color-warning)"
+          fillOpacity="0.8"
+        />
+      </g>
     </svg>
   )
 }
@@ -512,7 +491,6 @@ export function ElementNode({ data, selected }: NodeProps<BuilderNode>) {
     return (
       <RocketSection
         part={data.values.part === "booster" ? "booster" : "nose"}
-        width={typeof data.values.w === "number" ? data.values.w : 700}
         enterIndex={data.enterIndex}
       />
     )

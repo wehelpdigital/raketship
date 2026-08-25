@@ -299,29 +299,33 @@ export default async function RaketPage() {
   if (body.length > 0) {
     const CARD_W = 300
     const CARD_H = 130
-    const minX = Math.min(...body.map((node) => node.position.x)) - 40
-    const maxX = Math.max(...body.map((node) => node.position.x)) + CARD_W + 40
+    const minX = Math.min(...body.map((node) => node.position.x))
+    const maxX = Math.max(...body.map((node) => node.position.x)) + CARD_W
     const minY = Math.min(...body.map((node) => node.position.y))
     const maxY = Math.max(...body.map((node) => node.position.y)) + CARD_H
-    const width = maxX - minX
+    const centerX = (minX + maxX) / 2
 
-    const section = (part: "nose" | "booster", y: number): CanvasNode => ({
+    const section = (
+      part: "nose" | "booster",
+      width: number,
+      y: number
+    ): CanvasNode => ({
       id: `rocket-${part}`,
       type: "element",
-      position: { x: minX, y },
+      position: { x: centerX - width / 2, y },
       data: {
         nodeType: "rocket",
         moduleId: null,
         locked: false,
-        values: { part, w: width },
+        values: { part },
         enterIndex: nodes.length,
       },
       draggable: false,
       selectable: false,
       connectable: false,
     })
-    nodes.push(section("nose", minY - 200))
-    nodes.push(section("booster", maxY + 30))
+    nodes.push(section("nose", 300, minY - 184))
+    nodes.push(section("booster", 240, maxY + 24))
   }
 
   const moduleCount = canvas.nodes.filter((row) => row.type === "module").length
