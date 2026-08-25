@@ -100,12 +100,13 @@ export function ElementCard({
 }: ElementCardProps) {
   const def = resolveNodeType(nodeType)
   const isModule = def.type === "module"
+  const isStart = def.type === "start"
   const tier = typeof values.tier === "string" ? values.tier : null
   const badgeText = isModule
     ? tier
       ? `${tier.charAt(0).toUpperCase()}${tier.slice(1)}`
       : "Module"
-    : def.type === "start"
+    : isStart
       ? def.short
       : CATEGORY_LABELS[def.category]
 
@@ -124,14 +125,23 @@ export function ElementCard({
           : undefined
       }
       className={cn(
-        "w-62 rounded-xl bg-card p-4 text-left shadow-sm ring-1 ring-border lg:w-52 lg:rounded-lg lg:p-3",
-        "transition-[box-shadow,translate] duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0",
+        "group w-62 rounded-xl bg-card p-4 text-left shadow-node ring-1 ring-border lg:w-52 lg:rounded-lg lg:p-3",
+        "transition-[box-shadow,translate,scale] duration-200 hover:-translate-y-0.5 hover:shadow-node-hover active:scale-[0.99] active:shadow-node motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100",
         enterIndex !== undefined && "node-arrive",
         // A module card is a door, and a door reads wider than a step. The
         // business card is the front of the whole shop, and reads widest.
         glance && "w-64 lg:w-60",
-        glance && def.type === "start" && "w-72 lg:w-64",
-        selected && "ring-2 ring-primary",
+        glance && isStart && "w-72 lg:w-64",
+        /*
+          The heart of the board dresses like it: a quiet gradient of the
+          shop's own colour over bg-card (background-image over
+          background-color — different properties, no conflict), fading to
+          primary/0 rather than transparent to dodge oklab's muddy
+          transparent-black midpoint. Selection sits later in this list, so
+          its ring still wins.
+        */
+        isStart && "bg-linear-to-br from-primary/10 to-primary/0 ring-primary/25",
+        selected && "ring-2 ring-primary shadow-node-selected hover:shadow-node-selected",
         locked && "opacity-70",
         className
       )}
@@ -208,7 +218,7 @@ export function ElementCard({
 
         {isModule ? (
           <ChevronRight
-            className="mt-2 size-4 shrink-0 text-muted-foreground"
+            className="mt-2 size-4 shrink-0 text-muted-foreground transition-[translate,color] duration-200 group-hover:translate-x-0.5 group-hover:text-foreground motion-reduce:transition-none motion-reduce:group-hover:translate-x-0"
             aria-hidden="true"
           />
         ) : null}
@@ -232,7 +242,7 @@ export function ElementCard({
 // Fingertip-sized: 16px of visible dot with a ~36px invisible hit area. The
 // `!` suffixes beat React Flow's own unlayered stylesheet.
 const HANDLE_CLASS =
-  "size-4! border-2! shadow-sm after:absolute after:-inset-2.5 after:rounded-full after:content-['']"
+  "size-4! border-2! shadow-sm transition-[scale] duration-150 hover:scale-125 motion-reduce:transition-none motion-reduce:hover:scale-100 after:absolute after:-inset-2.5 after:rounded-full after:content-['']"
 
 export function ElementNode({ data, selected }: NodeProps<BuilderNode>) {
   return (

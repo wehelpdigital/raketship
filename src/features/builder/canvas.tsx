@@ -65,7 +65,8 @@ const FIT_VIEW_OPTIONS = { padding: 0.25 };
  */
 const CANVAS_THEME = {
   "--xy-background-color": "transparent",
-  "--xy-edge-stroke": "var(--color-primary)",
+  "--xy-edge-stroke":
+    "color-mix(in oklab, var(--color-primary) 55%, var(--color-border))",
   "--xy-edge-stroke-selected": "var(--color-primary)",
   "--xy-edge-stroke-width": "2",
   "--xy-connectionline-stroke": "var(--color-primary)",
@@ -76,7 +77,7 @@ const CANVAS_THEME = {
   "--xy-controls-button-color": "var(--color-foreground)",
   "--xy-controls-button-color-hover": "var(--color-foreground)",
   "--xy-controls-button-border-color": "var(--color-border)",
-  "--xy-controls-box-shadow": "none",
+  "--xy-controls-box-shadow": "0 4px 16px -8px oklch(0 0 0 / 0.25)",
   "--xy-attribution-background-color": "transparent",
 } as CSSProperties;
 
@@ -285,7 +286,7 @@ function CanvasInner({
   return (
     <div
       className={cn(
-        "relative h-full w-full overflow-hidden bg-muted/30",
+        "board-wash relative h-full w-full overflow-hidden",
         className,
       )}
       style={CANVAS_THEME}
@@ -354,7 +355,7 @@ function CanvasInner({
             variant={BackgroundVariant.Dots}
             gap={20}
             size={1.5}
-            color="var(--color-border)"
+            color="color-mix(in oklab, var(--color-primary) 18%, var(--color-border))"
           />
           {/* React Flow's stylesheet is unlayered, so `.react-flow__controls
               { display: flex }` beats Tailwind's layered `hidden`. */}
@@ -368,8 +369,8 @@ function CanvasInner({
 
       {nodes.length === 0 ? (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center p-4">
-          <div className="pointer-events-auto w-full max-w-xs rounded-xl bg-card p-4 text-center shadow-sm ring-1 ring-border sm:p-5 lg:max-w-sm lg:p-6">
-            <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary lg:size-14">
+          <div className="step-enter pointer-events-auto w-full max-w-xs rounded-xl bg-card p-4 text-center shadow-node ring-1 ring-border sm:p-5 lg:max-w-sm lg:p-6">
+            <span className="mx-auto flex size-12 items-center justify-center rounded-full bg-linear-to-br from-primary/15 to-primary/5 text-primary ring-8 ring-primary/5 lg:size-14">
               <Sparkles className="size-6 lg:size-7" />
             </span>
             <h2 className="mt-3 text-base font-medium text-balance lg:mt-4 lg:text-lg">
@@ -421,7 +422,7 @@ function CanvasInner({
         ) : null}
         {canAddElements ? (
           <Button
-            className="pointer-events-auto size-14 rounded-full p-0 shadow-lg"
+            className="pointer-events-auto size-14 rounded-full p-0 shadow-lg shadow-primary/25 active:scale-95 motion-reduce:active:scale-100"
             onClick={() => setPaletteOpen(true)}
             aria-label="Add a step"
           >

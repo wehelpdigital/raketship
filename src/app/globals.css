@@ -148,6 +148,20 @@
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* Node depth: tight key + soft ambient. Shadow ink stays neutral black,
+     like Tailwind's own shadow-sm — a token-derived ink would glow white in
+     dark mode. In dark the ring-border carries the edge, exactly as today.
+     The selected shadow is the one place the ink is the shop's own colour. */
+  --shadow-node:
+    0 1px 2px oklch(0 0 0 / 0.05),
+    0 10px 20px -14px oklch(0 0 0 / 0.14);
+  --shadow-node-hover:
+    0 2px 4px oklch(0 0 0 / 0.05),
+    0 16px 32px -16px oklch(0 0 0 / 0.2);
+  --shadow-node-selected:
+    0 1px 2px oklch(0 0 0 / 0.05),
+    0 8px 24px -8px color-mix(in oklab, var(--color-primary) 40%, transparent);
 }
 
 @layer base {
@@ -173,6 +187,37 @@
     textarea {
       font-size: max(16px, 1em);
     }
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   React Flow edge motion. The library's own dashdraw runs at 0.5s and never
+   asks about reduced motion; this replaces it with a slower drift and a
+   stand-down. Unlayered on purpose: React Flow's stylesheet is unlayered, so
+   this must out-specify it rather than out-layer it (same trick as the
+   Controls note in canvas.tsx). -10 is one full dash period (6 + 4), so the
+   loop is seamless.
+--------------------------------------------------------------------------- */
+@keyframes edge-flow {
+  to {
+    stroke-dashoffset: -10;
+  }
+}
+
+.react-flow__edge.animated .react-flow__edge-path {
+  stroke-dasharray: 6 4;
+  animation: edge-flow 1.4s linear infinite;
+}
+
+.react-flow__controls {
+  overflow: clip;
+  border-radius: var(--radius-md);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .react-flow__edge.animated .react-flow__edge-path {
+    animation: none;
+    stroke-dasharray: none;
   }
 }
 
@@ -291,6 +336,31 @@
   .min-h-dvh-safe {
     min-height: 100dvh;
   }
+  /*
+    The board wears the shop's colour: a faint wash of --primary over the
+    muted ground. Everything is color-mix from tokens, so the .dark values and
+    a chosen palette both flow through with no extra rules. Two static radial
+    gradients on one element — one paint, no blur, nothing animates.
+  */
+  .board-wash {
+    background-color: color-mix(
+      in oklab,
+      var(--color-muted) 30%,
+      var(--color-background)
+    );
+    background-image:
+      radial-gradient(
+        120% 75% at 50% 0%,
+        color-mix(in oklab, var(--color-primary) 6%, transparent),
+        transparent 60%
+      ),
+      radial-gradient(
+        100% 60% at 100% 100%,
+        color-mix(in oklab, var(--color-primary) 4%, transparent),
+        transparent 55%
+      );
+  }
+
   .no-scrollbar {
     scrollbar-width: none;
     -ms-overflow-style: none;

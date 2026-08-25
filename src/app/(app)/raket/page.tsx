@@ -202,7 +202,9 @@ export default async function RaketPage() {
      * bar (3.5rem, 4rem at lg), this bar (~3.75rem) and, on a phone, the tab bar.
      */
     <div className="flex h-[calc(100dvh-10.75rem)] min-h-96 flex-col md:h-[calc(100dvh-7.25rem)] lg:h-[calc(100dvh-7.75rem)]">
-      <div className="flex shrink-0 items-center gap-3 border-b px-4 py-3 sm:px-6 lg:px-8">
+      {/* The hairline starts in the shop's colour and dissolves into the
+          ordinary border — one pixel tying the chrome to the board below. */}
+      <div className="relative flex shrink-0 items-center gap-3 px-4 py-3 after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-linear-to-r after:from-primary/50 after:via-border after:to-border sm:px-6 lg:px-8">
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-base font-semibold text-balance lg:text-lg">
             {workspace.raket.name}
