@@ -44,6 +44,7 @@ export interface UpdateCalendarInput {
   country?: string
   sendConfirmationEmail?: boolean
   sendReminderEmail?: boolean
+  reminderLeadMinutes?: number
 }
 
 /** One weekly window. Minutes count from midnight in the calendar's timezone. */
@@ -201,6 +202,12 @@ const horizonSchema = z
  * Mirrors the booking_calendars_cancel_notice check constraint. The database is
  * the real guard; this is so the owner gets a sentence rather than an error code.
  */
+const reminderLeadSchema = z
+  .number({ message: "Pick when the reminder goes out." })
+  .int()
+  .min(10, "A reminder needs at least ten minutes of lead.")
+  .max(10080, "A reminder more than a week out is a different kind of email.")
+
 const cancelNoticeSchema = z
   .number()
   .int("Hours need to be a whole number.")
@@ -489,6 +496,12 @@ export async function updateCalendar(
 
   // Booleans, not zod: there is no way to be almost-a-boolean, and a
   // truthy string sneaking in as "true" is exactly what Boolean() would bless.
+  if (input.reminderLeadMinutes !== undefined) {
+    const parsed = reminderLeadSchema.safeParse(input.reminderLeadMinutes)
+    if (!parsed.success) return fail(firstIssue(parsed.error))
+    patch.reminder_lead_minutes = parsed.data
+  }
+
   if (input.sendConfirmationEmail !== undefined) {
     if (typeof input.sendConfirmationEmail !== "boolean") {
       return fail("That setting did not come through right. Pakisubukan ulit.")

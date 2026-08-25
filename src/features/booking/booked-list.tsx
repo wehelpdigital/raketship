@@ -181,7 +181,7 @@ export function BookedRowCard({
         having to know anything about its own contents — and it animates CLOSED
         as well as open, which a panel that only exists while it is open cannot.
       */}
-      <Collapsible.Panel className="h-[var(--collapsible-panel-height)] overflow-hidden transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none">
+      <Collapsible.Panel className="h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none">
         <div className="space-y-4 border-t px-4 pt-4 pb-5 sm:px-5">
           {/*
             Written out as "Label: value" rather than a grid of headings above

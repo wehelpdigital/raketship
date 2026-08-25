@@ -301,7 +301,7 @@ function NoticeBar({
 }) {
   return (
     <Collapsible.Root open={open}>
-      <Collapsible.Panel className="h-[var(--collapsible-panel-height)] overflow-hidden transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none">
+      <Collapsible.Panel className="h-(--collapsible-panel-height) overflow-hidden transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none">
         <p className="flex items-start gap-2 rounded-lg bg-primary/8 px-3 py-2 text-sm text-pretty ring-1 ring-primary/20">
           {icon}
           <span className="min-w-0 flex-1 text-muted-foreground">{text}</span>

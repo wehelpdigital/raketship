@@ -632,6 +632,7 @@ const CALENDAR: BookingCalendarRow = {
   cancel_notice_hours: 24,
   send_confirmation_email: true,
   send_reminder_email: true,
+  reminder_lead_minutes: 1440,
   booking_horizon_days: 14,
   length_mode: "fixed" as const,
   is_published: false,

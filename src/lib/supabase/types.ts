@@ -178,6 +178,8 @@ export type BookingCalendarRow = {
   /** Owner switches; the sender checks them at send time. */
   send_confirmation_email: boolean
   send_reminder_email: boolean
+  /** Minutes before the appointment that the reminder goes out. */
+  reminder_lead_minutes: number
   length_mode: BookingLengthMode
   is_published: boolean
   created_at: string

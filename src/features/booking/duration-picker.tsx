@@ -25,6 +25,11 @@ export interface DurationPickerProps {
   disabled?: boolean
   /** Rendered under the two selects. Pass null to omit the readout. */
   hint?: React.ReactNode
+  /**
+   * The hours worth offering. Booking lengths stop at 8; a reminder's lead
+   * reaches for "the day before", which needs 24 and 48 on the list.
+   */
+  hours?: readonly number[]
   onChange: (minutes: number) => void
   className?: string
 }
@@ -42,6 +47,7 @@ export function DurationPicker({
   value,
   disabled = false,
   hint,
+  hours: offeredHours = HOUR_STEPS,
   onChange,
   className,
 }: DurationPickerProps) {
@@ -56,9 +62,9 @@ export function DurationPicker({
     ? [...MINUTE_STEPS]
     : [...MINUTE_STEPS, minutes].sort((a, b) => a - b)
 
-  const hourChoices = HOUR_STEPS.includes(hours as (typeof HOUR_STEPS)[number])
-    ? [...HOUR_STEPS]
-    : [...HOUR_STEPS, hours].sort((a, b) => a - b)
+  const hourChoices = offeredHours.includes(hours)
+    ? [...offeredHours]
+    : [...offeredHours, hours].sort((a, b) => a - b)
 
   const hoursId = `${uid}-hours`
   const minutesId = `${uid}-minutes`

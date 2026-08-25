@@ -33,6 +33,7 @@ function calendar(overrides: Partial<BookingCalendarRow> = {}): BookingCalendarR
     cancel_notice_hours: 24,
     send_confirmation_email: true,
     send_reminder_email: true,
+    reminder_lead_minutes: 1440,
     booking_horizon_days: 30,
     length_mode: "fixed",
     is_published: true,
@@ -92,6 +93,68 @@ describe("EmailsPanel", () => {
     )
     expect(screen.getByLabelText("Reminder email")).not.toBeChecked()
     expect(screen.getByLabelText("Confirmation email")).toBeChecked()
+  })
+
+  it("offers the reminder's lead while the reminder is on", () => {
+    render(<EmailsPanel calendar={calendar()} />)
+
+    // 1440 splits to 24 hours 0 minutes, and the readout says so.
+    expect(screen.getByText("Kailan ipapadala")).toBeInTheDocument()
+    expect(screen.getByText("24 hrs")).toBeInTheDocument()
+    expect(screen.getByText(/bago ang appointment/)).toBeInTheDocument()
+  })
+
+  it("saves a new lead the moment it is picked", async () => {
+    const user = userEvent.setup()
+    render(<EmailsPanel calendar={calendar()} />)
+
+    await user.click(screen.getByLabelText("Hours"))
+    await user.click(await screen.findByRole("option", { name: "48" }))
+
+    await waitFor(() =>
+      expect(updateCalendar).toHaveBeenCalledWith({
+        calendarId: "cal-1",
+        reminderLeadMinutes: 2880,
+      })
+    )
+  })
+
+  it("snaps the lead back when the save is refused", async () => {
+    updateCalendar.mockResolvedValue({ ok: false, message: "Ang aga naman." })
+    const user = userEvent.setup()
+    render(<EmailsPanel calendar={calendar()} />)
+
+    await user.click(screen.getByLabelText("Hours"))
+    await user.click(await screen.findByRole("option", { name: "72" }))
+
+    await waitFor(() =>
+      expect(screen.getByText("24 hrs")).toBeInTheDocument()
+    )
+  })
+
+  it("shows a stored lead the list does not offer, rather than rounding it", () => {
+    render(
+      <EmailsPanel calendar={calendar({ reminder_lead_minutes: 18 * 60 })} />
+    )
+    // 18 is not on the offer, but it is what the owner has.
+    expect(screen.getByText("18 hrs")).toBeInTheDocument()
+  })
+
+  it("folds the lead away with its switch", async () => {
+    const user = userEvent.setup()
+    render(<EmailsPanel calendar={calendar()} />)
+
+    const panel = screen
+      .getByText("Kailan ipapadala")
+      .closest("[class*='collapsible']") ??
+      screen.getByText("Kailan ipapadala").parentElement?.parentElement
+
+    await user.click(screen.getByLabelText("Reminder email"))
+    await waitFor(() => {
+      // Folded, not removed: the setting is asleep, not gone.
+      expect(screen.getByText("Kailan ipapadala")).toBeInTheDocument()
+      expect(panel?.closest("[hidden]") ?? panel).toBeTruthy()
+    })
   })
 
   it("reads a pre-migration row as the default, never as off", () => {
