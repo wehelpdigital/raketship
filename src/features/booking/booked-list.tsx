@@ -124,7 +124,7 @@ export function BookedRowCard({
     >
       {/* The whole row is the control. One large target beats a chevron the
           size of a fingernail, which is what this is on a phone. */}
-      <Collapsible.Trigger className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:gap-4 sm:px-5">
+      <Collapsible.Trigger className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:gap-4 sm:px-5">
         {/*
           The whole range on ONE line, at a fixed width so the times line up
           down the page and the eye can run along one column instead of

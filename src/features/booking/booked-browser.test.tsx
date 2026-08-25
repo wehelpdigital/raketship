@@ -474,16 +474,23 @@ describe("in English", () => {
 })
 
 describe("the day's rows", () => {
-  it("share one card, ruled between them", () => {
+  it("share one card, with an inset rule between the rows", () => {
     // Separate cards spent a gap of page on every row; a schedule is a ruled
-    // list, not a stack of unrelated things.
+    // list. The rule is inset to the rows' padding — full-bleed reads as the
+    // card ending, inset as the list continuing.
     const { container } = renderBrowser({ rows: [row(1), row(21)] })
 
     const list = container.querySelector("section ul")
-    expect(list?.className).toContain("divide-y")
-    expect(list?.className).toContain("rounded-xl")
+    expect(list?.className).toContain("rounded-lg")
     expect(list?.className).toContain("bg-card")
     expect(list?.querySelectorAll("li")).toHaveLength(2)
+
+    const rules = list?.querySelectorAll("li > div[aria-hidden]") ?? []
+    // One fewer rule than rows: a rule above the first would double the
+    // card's own edge.
+    expect(rules).toHaveLength(1)
+    expect(rules[0].className).toContain("border-t")
+    expect(rules[0].className).toContain("mx-4")
   })
 
   it("no longer paints a card each", () => {

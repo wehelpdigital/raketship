@@ -273,7 +273,7 @@ export function BookedBrowser({
 
       {/* --- the list ------------------------------------------------------ */}
       {shown.length === 0 ? (
-        <p className="rounded-xl bg-card px-4 py-10 text-center text-sm text-pretty text-muted-foreground ring-1 ring-border">
+        <p className="rounded-lg bg-card px-4 py-10 text-center text-sm text-pretty text-muted-foreground ring-1 ring-border">
           {filtering ? t("booked.noMatch") : emptyLabel}
         </p>
       ) : (
@@ -314,9 +314,20 @@ export function BookedBrowser({
                 look like a stack of unrelated things; a ruled list is what a
                 schedule looks like.
               */}
-              <ul className="divide-y overflow-hidden rounded-xl bg-card ring-1 ring-border">
-                {group.rows.map((row) => (
+              {/*
+                The hairline is inset to the rows' own padding rather than
+                running edge to edge — a full-bleed rule reads as the card
+                ending, an inset one as the list continuing.
+              */}
+              <ul className="overflow-hidden rounded-lg bg-card ring-1 ring-border">
+                {group.rows.map((row, index) => (
                   <li key={row.id}>
+                    {index > 0 ? (
+                      <div
+                        aria-hidden="true"
+                        className="mx-4 border-t sm:mx-5"
+                      />
+                    ) : null}
                     <BookedRowCard
                       row={row}
                       fields={fieldsByCalendar[row.calendarId] ?? []}
@@ -400,7 +411,7 @@ function LoadMore({
       ref={ref}
       type="button"
       onClick={() => reach.current()}
-      className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      className="flex w-full items-center justify-center gap-2 rounded-lg px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
     >
       <span
         className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent motion-reduce:animate-none"
