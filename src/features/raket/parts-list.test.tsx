@@ -82,28 +82,33 @@ describe("PartsList", () => {
     expect(titleCluster?.textContent).not.toContain("Starter")
   })
 
-  it("gives a default module no off switch, only its ladder", () => {
+  it("gives a default module no controls and no badge — being here IS the statement", () => {
     render(<PartsList rows={[row()]} />)
 
-    expect(screen.getByText("Kasama lagi")).toBeInTheDocument()
+    expect(screen.queryByText("Kasama lagi")).not.toBeInTheDocument()
     expect(screen.queryByRole("switch")).not.toBeInTheDocument()
     expect(screen.queryByText("Alisin")).not.toBeInTheDocument()
-    // The ladder names its prices — "Plus" with no number is a question.
-    expect(screen.getByText("Starter — Libre")).toBeInTheDocument()
+    // The ladder select is gone too — upgrading is the marketplace's
+    // conversation, with prices and features in front of it.
+    expect(screen.queryByText("Starter — Libre")).not.toBeInTheDocument()
+    expect(setModuleTier).not.toHaveBeenCalled()
   })
 
-  it("moves a tier through the marketplace's own action", async () => {
-    const user = userEvent.setup()
-    render(<PartsList rows={[row()]} />)
-
-    await user.click(screen.getByLabelText("Booking subscription"))
-    await user.click(
-      await screen.findByRole("option", { name: /Plus — ₱149/ })
+  it("stripes every second row like a ledger", () => {
+    const { container } = render(
+      <PartsList
+        rows={[
+          row(),
+          row({ id: "client-manager", name: "Client Manager", isDefault: false, tiers: [], tierId: null }),
+        ]}
+      />
     )
 
-    await waitFor(() =>
-      expect(setModuleTier).toHaveBeenCalledWith("booking", "t2")
-    )
+    const rows = container.querySelectorAll("[class*='even:bg-muted']")
+    expect(rows.length).toBe(2)
+    const card = container.firstElementChild
+    expect(card?.className).toContain("divide-y")
+    expect(card?.className).toContain("rounded-lg")
   })
 
   it("switches the Client Manager the slot-free way", async () => {
@@ -176,8 +181,4 @@ describe("PartsList", () => {
     )
   })
 
-  it("hides the ladder while the module is off", () => {
-    render(<PartsList rows={[row({ isDefault: false, active: false })]} />)
-    expect(screen.queryByText("Starter — Libre")).not.toBeInTheDocument()
-  })
 })
