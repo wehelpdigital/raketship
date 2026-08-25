@@ -9,27 +9,48 @@ import { toast } from "sonner"
 import { Card, CardContent } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { updateCalendar } from "@/features/booking/actions"
-import { DurationPicker } from "@/features/booking/duration-picker"
-import { formatDuration } from "@/lib/booking/slots"
 import type { BookingCalendarRow } from "@/lib/supabase/types"
 
 /**
- * The hours a reminder's lead is picked from.
+ * The reminder times on offer — a fixed menu, not a picker.
  *
- * Booking lengths stop at 8; a reminder reaches for "the day before" and "two
- * days before", which is 24 and 48 — and nothing between 12 and 24, because
- * "18 hours before" is not a thing anybody plans.
+ * Reminders come at the times reminders come: the day before, the same
+ * shift, and just before. A free hours-and-minutes picker put the owner in
+ * charge of a number nobody plans in numbers; three switches cannot be held
+ * wrong.
  */
-const REMINDER_HOURS = [0, 1, 2, 3, 4, 6, 12, 24, 48, 72] as const
+const REMINDER_TIMES = [
+  {
+    field: "reminder24h",
+    column: "reminder_24h",
+    label: "24 hours before",
+    description: "Isang araw bago — panahong mag-ayos o magpaalam.",
+    fallback: true,
+  },
+  {
+    field: "reminder8h",
+    column: "reminder_8h",
+    label: "8 hours before",
+    description: "Sa umaga ng appointment.",
+    fallback: false,
+  },
+  {
+    field: "reminder15m",
+    column: "reminder_15m",
+    label: "15 minutes before",
+    description: "Paalala na malapit na — papunta na dapat.",
+    fallback: false,
+  },
+] as const
 
 /**
  * The calendar's email switches.
  *
  * Two, not a config tree: the confirmation that goes out when a booking
  * lands, and the reminder that goes out before the appointment. Each switch
- * saves the moment it is flipped — a Save button under two toggles is a form
- * pretending to be bigger than it is — and flips back if the save fails, so
- * the screen never claims a setting the database does not hold.
+ * saves the moment it is flipped — a Save button under a stack of toggles is
+ * a form pretending to be bigger than it is — and flips back if the save
+ * fails, so the screen never claims a setting the database does not hold.
  */
 export function EmailsPanel({ calendar }: { calendar: BookingCalendarRow }) {
   return (
@@ -53,10 +74,21 @@ export function EmailsPanel({ calendar }: { calendar: BookingCalendarRow }) {
           description="Padadalhan ang suki bago dumating ang appointment nila, para hindi malimutan."
           initial={calendar.send_reminder_email ?? true}
         >
-          <ReminderLead
-            calendarId={calendar.id}
-            initial={calendar.reminder_lead_minutes ?? 1440}
-          />
+          <div className="space-y-1">
+            <p className="text-xs font-medium text-muted-foreground">
+              Kailan ipapadala
+            </p>
+            {REMINDER_TIMES.map((time) => (
+              <ReminderTime
+                key={time.field}
+                calendarId={calendar.id}
+                field={time.field}
+                label={time.label}
+                description={time.description}
+                initial={calendar[time.column] ?? time.fallback}
+              />
+            ))}
+          </div>
         </EmailToggle>
       </CardContent>
     </Card>
@@ -150,65 +182,57 @@ function EmailToggle({
   )
 }
 
-/**
- * How long before the appointment the reminder goes out.
- *
- * Saved per pick like the switches above it, and snapped back on failure. A
- * zero pick (0 hours, 0 minutes) is refused by the server's floor of ten
- * minutes — a reminder sent at the appointment IS the appointment — so the
- * picker snaps back rather than pretending it saved.
- */
-function ReminderLead({
+/** One of the fixed reminder times, with its own switch. */
+function ReminderTime({
   calendarId,
+  field,
+  label,
+  description,
   initial,
 }: {
   calendarId: string
-  initial: number
+  field: "reminder24h" | "reminder8h" | "reminder15m"
+  label: string
+  description: string
+  initial: boolean
 }) {
   const router = useRouter()
-  const [lead, setLead] = React.useState(initial)
+  const [on, setOn] = React.useState(initial)
   const [busy, startBusy] = React.useTransition()
+  const id = React.useId()
 
-  function pick(next: number) {
-    const previous = lead
-    setLead(next)
+  function flip(next: boolean) {
+    setOn(next)
     startBusy(async () => {
       try {
-        const result = await updateCalendar({
-          calendarId,
-          reminderLeadMinutes: next,
-        })
+        const result = await updateCalendar({ calendarId, [field]: next })
         if (!result.ok) {
-          setLead(previous)
+          setOn(!next)
           toast.error(result.message ?? "Hindi na-save. Pakisubukan ulit.")
           return
         }
         router.refresh()
       } catch {
-        setLead(previous)
+        setOn(!next)
         toast.error("Something went wrong. Pakisubukan ulit.")
       }
     })
   }
 
   return (
-    <div className="space-y-1.5">
-      <p className="text-xs font-medium text-muted-foreground">
-        Kailan ipapadala
-      </p>
-      <DurationPicker
-        value={lead}
+    <div className="flex items-center gap-3 py-2">
+      <label htmlFor={id} className="min-w-0 flex-1 cursor-pointer select-none">
+        <span className="block text-sm">{label}</span>
+        <span className="block text-xs text-pretty text-muted-foreground">
+          {description}
+        </span>
+      </label>
+      <Switch
+        id={id}
+        checked={on}
         disabled={busy}
-        hours={REMINDER_HOURS}
-        onChange={pick}
-        hint={
-          <>
-            <span className="font-medium text-foreground">
-              {formatDuration(lead)}
-            </span>{" "}
-            bago ang appointment
-          </>
-        }
+        onCheckedChange={(next) => flip(Boolean(next))}
+        aria-label={label}
       />
     </div>
   )

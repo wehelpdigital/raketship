@@ -33,7 +33,9 @@ function calendar(overrides: Partial<BookingCalendarRow> = {}): BookingCalendarR
     cancel_notice_hours: 24,
     send_confirmation_email: true,
     send_reminder_email: true,
-    reminder_lead_minutes: 1440,
+    reminder_24h: true,
+    reminder_8h: false,
+    reminder_15m: false,
     booking_horizon_days: 30,
     length_mode: "fixed",
     is_published: true,
@@ -95,66 +97,57 @@ describe("EmailsPanel", () => {
     expect(screen.getByLabelText("Confirmation email")).toBeChecked()
   })
 
-  it("offers the reminder's lead while the reminder is on", () => {
+  it("offers the three fixed times while the reminder is on", () => {
     render(<EmailsPanel calendar={calendar()} />)
 
-    // 1440 splits to 24 hours 0 minutes, and the readout says so.
     expect(screen.getByText("Kailan ipapadala")).toBeInTheDocument()
-    expect(screen.getByText("24 hrs")).toBeInTheDocument()
-    expect(screen.getByText(/bago ang appointment/)).toBeInTheDocument()
+    // The day before carries the old promise; the rest start off.
+    expect(screen.getByLabelText("24 hours before")).toBeChecked()
+    expect(screen.getByLabelText("8 hours before")).not.toBeChecked()
+    expect(screen.getByLabelText("15 minutes before")).not.toBeChecked()
+    // The free picker is gone.
+    expect(screen.queryByLabelText("Hours")).not.toBeInTheDocument()
+    expect(screen.queryByLabelText("Minutes")).not.toBeInTheDocument()
   })
 
-  it("saves a new lead the moment it is picked", async () => {
+  it("saves a time the moment its switch is flipped", async () => {
     const user = userEvent.setup()
     render(<EmailsPanel calendar={calendar()} />)
 
-    await user.click(screen.getByLabelText("Hours"))
-    await user.click(await screen.findByRole("option", { name: "48" }))
+    await user.click(screen.getByLabelText("8 hours before"))
 
     await waitFor(() =>
       expect(updateCalendar).toHaveBeenCalledWith({
         calendarId: "cal-1",
-        reminderLeadMinutes: 2880,
+        reminder8h: true,
       })
     )
+    // The others were not dragged along.
+    expect(screen.getByLabelText("24 hours before")).toBeChecked()
+    expect(screen.getByLabelText("15 minutes before")).not.toBeChecked()
   })
 
-  it("snaps the lead back when the save is refused", async () => {
-    updateCalendar.mockResolvedValue({ ok: false, message: "Ang aga naman." })
+  it("snaps a time back when the save is refused", async () => {
+    updateCalendar.mockResolvedValue({ ok: false, message: "Hindi na-save." })
     const user = userEvent.setup()
     render(<EmailsPanel calendar={calendar()} />)
 
-    await user.click(screen.getByLabelText("Hours"))
-    await user.click(await screen.findByRole("option", { name: "72" }))
+    await user.click(screen.getByLabelText("15 minutes before"))
 
     await waitFor(() =>
-      expect(screen.getByText("24 hrs")).toBeInTheDocument()
+      expect(screen.getByLabelText("15 minutes before")).not.toBeChecked()
     )
   })
 
-  it("shows a stored lead the list does not offer, rather than rounding it", () => {
+  it("shows what the row actually holds for each time", () => {
     render(
-      <EmailsPanel calendar={calendar({ reminder_lead_minutes: 18 * 60 })} />
+      <EmailsPanel
+        calendar={calendar({ reminder_24h: false, reminder_15m: true })}
+      />
     )
-    // 18 is not on the offer, but it is what the owner has.
-    expect(screen.getByText("18 hrs")).toBeInTheDocument()
-  })
-
-  it("folds the lead away with its switch", async () => {
-    const user = userEvent.setup()
-    render(<EmailsPanel calendar={calendar()} />)
-
-    const panel = screen
-      .getByText("Kailan ipapadala")
-      .closest("[class*='collapsible']") ??
-      screen.getByText("Kailan ipapadala").parentElement?.parentElement
-
-    await user.click(screen.getByLabelText("Reminder email"))
-    await waitFor(() => {
-      // Folded, not removed: the setting is asleep, not gone.
-      expect(screen.getByText("Kailan ipapadala")).toBeInTheDocument()
-      expect(panel?.closest("[hidden]") ?? panel).toBeTruthy()
-    })
+    expect(screen.getByLabelText("24 hours before")).not.toBeChecked()
+    expect(screen.getByLabelText("8 hours before")).not.toBeChecked()
+    expect(screen.getByLabelText("15 minutes before")).toBeChecked()
   })
 
   it("reads a pre-migration row as the default, never as off", () => {
@@ -163,9 +156,14 @@ describe("EmailsPanel", () => {
     // simply absent from the row.
     delete (row as Record<string, unknown>).send_confirmation_email
     delete (row as Record<string, unknown>).send_reminder_email
+    delete (row as Record<string, unknown>).reminder_24h
+    delete (row as Record<string, unknown>).reminder_8h
+    delete (row as Record<string, unknown>).reminder_15m
 
     render(<EmailsPanel calendar={row} />)
     expect(screen.getByLabelText("Confirmation email")).toBeChecked()
     expect(screen.getByLabelText("Reminder email")).toBeChecked()
+    expect(screen.getByLabelText("24 hours before")).toBeChecked()
+    expect(screen.getByLabelText("8 hours before")).not.toBeChecked()
   })
 })
