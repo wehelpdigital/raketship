@@ -49,13 +49,6 @@ export interface BookedRowCardProps {
   row: BookedRow
   fields: BookingFormFieldRow[]
   variant: "active" | "cancelled"
-  /**
-   * Whether the row has to name its calendar.
-   *
-   * With one calendar it is the same word on every row; with several it is the
-   * only thing telling two identical-looking bookings apart.
-   */
-  showCalendar?: boolean
   open: boolean
   onToggle: () => void
 }
@@ -76,7 +69,6 @@ export function BookedRowCard({
   row,
   fields,
   variant,
-  showCalendar = false,
   open,
   onToggle,
 }: BookedRowCardProps) {
@@ -137,20 +129,30 @@ export function BookedRowCard({
           The whole range on ONE line, at a fixed width so the times line up
           down the page and the eye can run along one column instead of
           tracking ragged text. The DAY is on the heading above this row.
+
+          One size across the row: the end time and the calendar are secondary,
+          and colour says so — a second SIZE on the same line just looks like a
+          mistake.
         */}
-        <span className="w-32 shrink-0 whitespace-nowrap sm:w-[8.5rem]">
-          <span className="text-sm font-semibold tabular-nums">{when.time}</span>
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {` – ${until.time}`}
-          </span>
+        <span className="w-[9.5rem] shrink-0 text-sm whitespace-nowrap tabular-nums">
+          <span className="font-semibold">{when.time}</span>
+          <span className="text-muted-foreground">{` – ${until.time}`}</span>
         </span>
 
-        <span className="min-w-0 flex-1 truncate">
-          <span className="text-sm font-medium">{row.customerName}</span>
-          <span className="text-xs text-muted-foreground">
-            {` · ${row.serviceName ?? row.calendarName}`}
-            {showCalendar && row.serviceName ? ` · ${row.calendarName}` : ""}
-          </span>
+        <span className="min-w-0 flex-1 truncate text-sm">
+          <span className="font-medium">{row.customerName}</span>
+          {row.serviceName ? (
+            <span className="text-muted-foreground">{` · ${row.serviceName}`}</span>
+          ) : null}
+        </span>
+
+        {/*
+          The calendar is DIFFERENT information from who booked — it is where
+          the booking landed — so it keeps its own column on the right instead
+          of hanging off the name.
+        */}
+        <span className="min-w-0 max-w-[38%] shrink truncate text-right text-sm text-muted-foreground">
+          {row.calendarName}
         </span>
 
         {/* Dropped on the narrowest phones, where the name has to win. */}

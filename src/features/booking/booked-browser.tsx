@@ -321,7 +321,6 @@ export function BookedBrowser({
                       row={row}
                       fields={fieldsByCalendar[row.calendarId] ?? []}
                       variant={variant}
-                      showCalendar={calendars.length > 1}
                       open={openId === row.id}
                       onToggle={() =>
                         setOpenId((previous) =>

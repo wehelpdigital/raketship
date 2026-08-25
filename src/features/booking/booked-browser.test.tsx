@@ -333,18 +333,44 @@ describe("the collapsed row", () => {
     expect(rowButtons()[0].textContent).toContain("Suki 1 · Gupit lang")
   })
 
-  it("names the calendar only when there is more than one", () => {
+  it("gives the calendar its own slot on the right", () => {
+    // Different information from who booked — it is where the booking landed.
     renderBrowser({ rows: [row(1)] })
-    expect(rowButtons()[0].textContent).not.toContain("Gupit ni Nena")
 
-    renderBrowser({
-      rows: [row(1)],
-      calendars: [
-        { id: CAL_A, name: "Gupit ni Nena" },
-        { id: CAL_B, name: "Kulay" },
-      ],
-    })
-    expect(rowButtons()[1].textContent).toContain("Gupit ni Nena")
+    const button = rowButtons()[0]
+    expect(button.textContent).toContain("Gupit ni Nena")
+    // Its own element, not glued onto the name.
+    const calendar = [...button.querySelectorAll("span")].find(
+      (el) => el.textContent === "Gupit ni Nena"
+    )
+    expect(calendar?.className).toContain("text-right")
+    expect(calendar?.textContent).not.toContain("Suki 1")
+  })
+
+  it("keeps the secondary text the same size and weight across the row", () => {
+    // The end time and the calendar are both secondary. Colour marks that; a
+    // second SIZE on one line just looks like a mistake.
+    renderBrowser({ rows: [row(1)] })
+
+    const button = rowButtons()[0]
+    // The exact leaf, not the container that also holds the start time.
+    const endTime = [...button.querySelectorAll("span")].find(
+      (el) => el.textContent?.trim() === "– 9:30 AM"
+    )
+    const calendar = [...button.querySelectorAll("span")].find(
+      (el) => el.textContent === "Gupit ni Nena"
+    )
+
+    for (const el of [endTime, calendar]) {
+      expect(el?.className).not.toContain("text-xs")
+      expect(el?.className).not.toMatch(/font-(medium|semibold|bold)/)
+      expect(el?.className).toContain("text-muted-foreground")
+    }
+    // Both inherit or state text-sm — neither is smaller than the row.
+    expect(
+      (endTime?.className ?? "") + (endTime?.parentElement?.className ?? "")
+    ).toContain("text-sm")
+    expect(calendar?.className).toContain("text-sm")
   })
 })
 
