@@ -484,12 +484,13 @@ describe("the day's rows", () => {
     expect(card?.className).toContain("rounded-lg")
     expect(card?.className).toContain("bg-card")
 
-    // Three bookings, three rules — every booking gets its line.
+    // Three bookings, three rules — every booking gets its line, edge to
+    // edge like a table's rule.
     const rules = card?.querySelectorAll("li > div[aria-hidden]") ?? []
     expect(rules).toHaveLength(3)
     for (const rule of rules) {
       expect(rule.className).toContain("border-t")
-      expect(rule.className).toContain("mx-4")
+      expect(rule.className).not.toContain("mx-")
     }
 
     // The day headers live inside the card, and a NEW day announces itself

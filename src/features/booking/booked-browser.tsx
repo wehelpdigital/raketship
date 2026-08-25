@@ -281,9 +281,8 @@ export function BookedBrowser({
           ONE ruled card for the whole tab, the day headers inside it as
           tinted bands. A card per day meant a shop whose bookings land one to
           a day — the common case — never saw a single divider; now every
-          booking has a hairline above it, inset to the rows' own padding
-          (full-bleed reads as an edge, inset as the list continuing), and a
-          new day announces itself with a full-width rule under its band.
+          booking has a hairline above it, edge to edge like a table's rule,
+          and a new day announces itself with its band.
         */
         <div className="overflow-hidden rounded-lg bg-card ring-1 ring-border">
           {groups.map((group, groupIndex) => (
@@ -322,7 +321,7 @@ export function BookedBrowser({
               <ul>
                 {group.rows.map((row) => (
                   <li key={row.id}>
-                    <div aria-hidden="true" className="mx-4 border-t sm:mx-5" />
+                    <div aria-hidden="true" className="border-t" />
                     <BookedRowCard
                       row={row}
                       fields={fieldsByCalendar[row.calendarId] ?? []}
