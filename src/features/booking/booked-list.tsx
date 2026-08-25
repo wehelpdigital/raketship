@@ -130,13 +130,11 @@ export function BookedRowCard({
           down the page and the eye can run along one column instead of
           tracking ragged text. The DAY is on the heading above this row.
 
-          One size across the row: the end time and the calendar are secondary,
-          and colour says so — a second SIZE on the same line just looks like a
-          mistake.
+          One piece, one style: "10:30 AM – 11:00 AM" is a single fact, and
+          splitting its styling down the middle made it read as two.
         */}
-        <span className="w-[9.5rem] shrink-0 text-sm whitespace-nowrap tabular-nums">
-          <span className="font-semibold">{when.time}</span>
-          <span className="text-muted-foreground">{` – ${until.time}`}</span>
+        <span className="w-[9.5rem] shrink-0 text-sm font-semibold whitespace-nowrap tabular-nums">
+          {when.time} – {until.time}
         </span>
 
         <span className="min-w-0 flex-1 truncate text-sm">

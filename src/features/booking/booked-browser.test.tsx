@@ -347,30 +347,35 @@ describe("the collapsed row", () => {
     expect(calendar?.textContent).not.toContain("Suki 1")
   })
 
-  it("keeps the secondary text the same size and weight across the row", () => {
-    // The end time and the calendar are both secondary. Colour marks that; a
-    // second SIZE on one line just looks like a mistake.
+  it("writes the time range as one piece, one style", () => {
+    // "9:00 AM – 9:30 AM" is a single fact; splitting its styling down the
+    // middle made it read as two.
     renderBrowser({ rows: [row(1)] })
 
     const button = rowButtons()[0]
-    // The exact leaf, not the container that also holds the start time.
-    const endTime = [...button.querySelectorAll("span")].find(
-      (el) => el.textContent?.trim() === "– 9:30 AM"
-    )
-    const calendar = [...button.querySelectorAll("span")].find(
-      (el) => el.textContent === "Gupit ni Nena"
+    const range = [...button.querySelectorAll("span")].find((el) =>
+      /9:00 AM – 9:30 AM|9:00 AM – 9:30 AM/.test(
+        el.textContent?.replace(/s+/g, " ") ?? ""
+      )
     )
 
-    for (const el of [endTime, calendar]) {
-      expect(el?.className).not.toContain("text-xs")
-      expect(el?.className).not.toMatch(/font-(medium|semibold|bold)/)
-      expect(el?.className).toContain("text-muted-foreground")
-    }
-    // Both inherit or state text-sm — neither is smaller than the row.
-    expect(
-      (endTime?.className ?? "") + (endTime?.parentElement?.className ?? "")
-    ).toContain("text-sm")
+    expect(range).toBeDefined()
+    // One leaf — no half of it wrapped in its own styling.
+    expect(range?.querySelector("span")).toBeNull()
+    expect(range?.className).toContain("text-sm")
+    expect(range?.className).toContain("font-semibold")
+  })
+
+  it("keeps the calendar readable but clearly secondary", () => {
+    renderBrowser({ rows: [row(1)] })
+
+    const calendar = [...rowButtons()[0].querySelectorAll("span")].find(
+      (el) => el.textContent === "Gupit ni Nena"
+    )
     expect(calendar?.className).toContain("text-sm")
+    expect(calendar?.className).toContain("text-muted-foreground")
+    expect(calendar?.className).not.toContain("text-xs")
+    expect(calendar?.className).not.toMatch(/font-(medium|semibold|bold)/)
   })
 })
 
