@@ -58,6 +58,11 @@
 
   /* Flow-builder node hues. The brand owns red, so the rest keep their
      distance — nothing else sits in the 0-60 range. */
+  /* The raket board's sky. Space does not have a light mode: the same
+     ground and star ink serve both themes, which is the point. */
+  --space-ground: oklch(0.16 0.015 285);
+  --space-star: oklch(0.94 0.01 285);
+
   --chart-1: oklch(0.56 0.208 27);   /* trigger  — red    */
   --chart-2: oklch(0.79 0.15 92);    /* delay    — yellow */
   --chart-3: oklch(0.58 0.145 152);  /* action   — green  */
@@ -268,17 +273,17 @@
     background-image:
       radial-gradient(
         1px 1px at 25px 35px,
-        color-mix(in oklab, var(--color-foreground) 40%, transparent) 50%,
+        color-mix(in oklab, var(--space-star) 50%, transparent) 50%,
         transparent 51%
       ),
       radial-gradient(
         1px 1px at 105px 140px,
-        color-mix(in oklab, var(--color-foreground) 30%, transparent) 50%,
+        color-mix(in oklab, var(--space-star) 38%, transparent) 50%,
         transparent 51%
       ),
       radial-gradient(
         1px 1px at 160px 80px,
-        color-mix(in oklab, var(--color-foreground) 35%, transparent) 50%,
+        color-mix(in oklab, var(--space-star) 44%, transparent) 50%,
         transparent 51%
       );
     background-size: 180px 180px;
@@ -292,7 +297,7 @@
     background-image:
       radial-gradient(
         1.5px 1.5px at 60px 40px,
-        color-mix(in oklab, var(--color-foreground) 55%, transparent) 50%,
+        color-mix(in oklab, var(--space-star) 66%, transparent) 50%,
         transparent 51%
       ),
       radial-gradient(
@@ -302,12 +307,12 @@
       ),
       radial-gradient(
         1.5px 1.5px at 130px 110px,
-        color-mix(in oklab, var(--color-foreground) 45%, transparent) 50%,
+        color-mix(in oklab, var(--space-star) 55%, transparent) 50%,
         transparent 51%
       ),
       radial-gradient(
         1px 1px at 20px 220px,
-        color-mix(in oklab, var(--color-foreground) 50%, transparent) 50%,
+        color-mix(in oklab, var(--space-star) 60%, transparent) 50%,
         transparent 51%
       );
     background-size: 260px 260px;
@@ -450,6 +455,23 @@
     a chosen palette both flow through with no extra rules. Two static radial
     gradients on one element — one paint, no blur, nothing animates.
   */
+  /* The raket board: space, whatever the theme. The wash of the shop's
+     primary stays — neon needs something to tint. */
+  .board-space {
+    background-color: var(--space-ground);
+    background-image:
+      radial-gradient(
+        120% 75% at 50% 0%,
+        color-mix(in oklab, var(--color-primary) 12%, transparent),
+        transparent 60%
+      ),
+      radial-gradient(
+        100% 60% at 100% 100%,
+        color-mix(in oklab, var(--color-primary) 7%, transparent),
+        transparent 55%
+      );
+  }
+
   .board-wash {
     background-color: color-mix(
       in oklab,

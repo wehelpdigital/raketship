@@ -411,15 +411,80 @@ function Ring({
 
 function RocketSection({
   part,
+  w = 700,
+  h = 700,
   enterIndex,
 }: {
-  part: "nose" | "booster"
+  part: "nose" | "booster" | "hull"
+  w?: number
+  h?: number
   enterIndex?: number
 }) {
   const style =
     enterIndex !== undefined
       ? ({ "--arrive-delay": `${enterIndex * 70}ms` } as React.CSSProperties)
       : undefined
+
+  if (part === "hull") {
+    /*
+      The fuselage, barely there: a capsule wrapped around wherever the
+      elements actually sit, with the same ring-and-meridian grammar as the
+      sections above and below it — at opacities low enough to be felt more
+      than seen. No glow: a glow would lift it forward, and it lives behind.
+    */
+    const r = Math.min(w, h) * 0.14
+    const rings = [0.28, 0.55, 0.82]
+    return (
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        width={w}
+        height={h}
+        aria-hidden="true"
+        className="pointer-events-none text-primary"
+      >
+        <rect
+          x="1.5"
+          y="1.5"
+          width={w - 3}
+          height={h - 3}
+          rx={r}
+          fill="currentColor"
+          fillOpacity="0.022"
+          stroke="currentColor"
+          strokeOpacity="0.12"
+          strokeWidth="1.5"
+        />
+        {/* Meridians bowing with the hull. */}
+        <path
+          d={`M ${w * 0.3} 6 C ${w * 0.26} ${h * 0.33} ${w * 0.26} ${h * 0.66} ${w * 0.3} ${h - 6} M ${w * 0.7} 6 C ${w * 0.74} ${h * 0.33} ${w * 0.74} ${h * 0.66} ${w * 0.7} ${h - 6}`}
+          fill="none"
+          stroke="currentColor"
+          strokeOpacity="0.07"
+          strokeWidth="1"
+        />
+        {/* Cross-section rings, hidden halves dashed. */}
+        {rings.map((t) => (
+          <g key={t}>
+            <path
+              d={`M 8 ${h * t} A ${w / 2 - 8} 12 0 0 0 ${w - 8} ${h * t}`}
+              fill="none"
+              stroke="currentColor"
+              strokeOpacity="0.09"
+              strokeWidth="1"
+            />
+            <path
+              d={`M 8 ${h * t} A ${w / 2 - 8} 12 0 0 1 ${w - 8} ${h * t}`}
+              fill="none"
+              stroke="currentColor"
+              strokeOpacity="0.05"
+              strokeWidth="1"
+              strokeDasharray="4 5"
+            />
+          </g>
+        ))}
+      </svg>
+    )
+  }
 
   if (part === "nose") {
     return (
@@ -468,9 +533,9 @@ function RocketSection({
 
   return (
     <svg
-      viewBox="0 0 240 210"
+      viewBox="0 0 240 242"
       width={240}
-      height={210}
+      height={242}
       aria-hidden="true"
       className={cn(NEON, enterIndex !== undefined && "node-arrive")}
       style={style}
@@ -513,14 +578,14 @@ function RocketSection({
       <Ring cx={120} cy={14} rx={56} ry={8} />
       <Ring cx={120} cy={58} rx={68} ry={9} />
       <Ring cx={120} cy={92} rx={80} ry={11} />
-      {/* The plume: a gradient glow with a hot core. */}
+      {/* The plume: a gradient glow with a hot core, well clear of the bell. */}
       <g className="flame-flicker">
         <path
-          d="M120 104 C 150 126 146 158 120 204 C 94 158 90 126 120 104 Z"
+          d="M120 132 C 150 154 146 190 120 236 C 94 190 90 154 120 132 Z"
           fill="url(#raket-plume)"
         />
         <path
-          d="M120 108 C 133 122 132 142 120 168 C 108 142 107 122 120 108 Z"
+          d="M120 136 C 133 150 132 172 120 198 C 108 172 107 150 120 136 Z"
           fill="var(--color-warning)"
           fillOpacity="0.9"
         />
@@ -533,7 +598,15 @@ export function ElementNode({ data, selected }: NodeProps<BuilderNode>) {
   if (data.nodeType === "rocket") {
     return (
       <RocketSection
-        part={data.values.part === "booster" ? "booster" : "nose"}
+        part={
+          data.values.part === "booster"
+            ? "booster"
+            : data.values.part === "hull"
+              ? "hull"
+              : "nose"
+        }
+        w={typeof data.values.w === "number" ? data.values.w : undefined}
+        h={typeof data.values.h === "number" ? data.values.h : undefined}
         enterIndex={data.enterIndex}
       />
     )

@@ -288,7 +288,8 @@ function CanvasInner({
   return (
     <div
       className={cn(
-        "board-wash relative h-full w-full overflow-hidden",
+        "relative h-full w-full overflow-hidden",
+        scope === "raket" ? "board-space" : "board-wash",
         className,
       )}
       style={CANVAS_THEME}

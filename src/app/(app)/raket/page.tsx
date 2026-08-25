@@ -324,8 +324,37 @@ export default async function RaketPage() {
       selectable: false,
       connectable: false,
     })
-    nodes.push(section("nose", 300, minY - 184))
+    nodes.push(section("nose", 300, minY - 236))
     nodes.push(section("booster", 240, maxY + 24))
+
+    /*
+      The hull: the faintest possible 3D fuselage wrapped around wherever
+      the elements actually sit — it re-fits itself every render, so
+      activating a module widens the ship. Behind the cards (zIndex) and
+      deaf to the pointer (className), so it changes nothing about how the
+      board is used.
+    */
+    nodes.push({
+      id: "rocket-hull",
+      type: "element",
+      position: { x: minX - 48, y: minY - 32 },
+      data: {
+        nodeType: "rocket",
+        moduleId: null,
+        locked: false,
+        values: {
+          part: "hull",
+          w: maxX - minX + 96,
+          h: maxY - minY + 64,
+        },
+        enterIndex: nodes.length,
+      },
+      draggable: false,
+      selectable: false,
+      connectable: false,
+      zIndex: -1,
+      className: "pointer-events-none!",
+    })
   }
 
   const moduleCount = canvas.nodes.filter((row) => row.type === "module").length

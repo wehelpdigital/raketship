@@ -34,6 +34,9 @@ export interface CanvasNode {
   draggable?: boolean
   selectable?: boolean
   connectable?: boolean
+  /** The hull sits UNDER the cards; its wrapper must not eat their clicks. */
+  zIndex?: number
+  className?: string
 }
 
 export interface CanvasEdge {
