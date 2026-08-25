@@ -1,5 +1,6 @@
 import { booked } from "@/lib/i18n/messages/booked"
 import { dates } from "@/lib/i18n/messages/dates"
+import { raket } from "@/lib/i18n/messages/raket"
 import { shell } from "@/lib/i18n/messages/shell"
 import { fill, type MessageParams } from "@/lib/i18n/dictionary"
 import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/locale"
@@ -8,6 +9,7 @@ export const MESSAGES = {
   ...shell,
   ...dates,
   ...booked,
+  ...raket,
 }
 
 export type MessageKey = keyof typeof MESSAGES

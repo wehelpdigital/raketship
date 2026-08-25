@@ -7,6 +7,93 @@ import {
   accentChipClass,
 } from "@/features/builder/element-node"
 
+describe("a module card with a glance", () => {
+  const glance = {
+    lines: ["2 calendar · 1 live", "5 paparating na booking"],
+    live: true,
+  }
+
+  it("shows the module's own numbers instead of the stock sentence", () => {
+    render(
+      <ElementCard nodeType="module" values={{ label: "Booking" }} glance={glance} />
+    )
+
+    expect(screen.getByText("2 calendar · 1 live")).toBeInTheDocument()
+    expect(screen.getByText("5 paparating na booking")).toBeInTheDocument()
+    expect(
+      screen.queryByText(/A feature you activated/)
+    ).not.toBeInTheDocument()
+  })
+
+  it("wears the live mark only while something is live", () => {
+    const { container, rerender } = render(
+      <ElementCard nodeType="module" values={{}} glance={glance} />
+    )
+    expect(container.querySelector(".live-dot")).toBeInTheDocument()
+
+    rerender(
+      <ElementCard
+        nodeType="module"
+        values={{}}
+        glance={{ ...glance, live: false }}
+      />
+    )
+    expect(container.querySelector(".live-dot")).not.toBeInTheDocument()
+  })
+
+  it("paints the chosen palette as swatches, inline", () => {
+    // The swatch IS the colour — the one inline-style exception.
+    const { container } = render(
+      <ElementCard
+        nodeType="module"
+        values={{}}
+        glance={{
+          lines: ["Gupit ni Nena", "Tema: Dagat"],
+          live: false,
+          logoName: "GN",
+          swatches: ["oklch(0.48 0.113 245)", "oklch(0.9 0.05 245)"],
+        }}
+      />
+    )
+
+    const dots = [...container.querySelectorAll("[style]")].filter((el) =>
+      el.getAttribute("style")?.includes("background-color")
+    )
+    expect(dots).toHaveLength(2)
+  })
+
+  it("shows the shop's initials when there is a profile but no logo", () => {
+    render(
+      <ElementCard
+        nodeType="module"
+        values={{}}
+        glance={{
+          lines: ["Gupit ni Nena", "Tema: Dagat"],
+          live: false,
+          logoName: "Gupit ni Nena",
+          logoUrl: null,
+        }}
+      />
+    )
+    expect(screen.getByText("GN")).toBeInTheDocument()
+  })
+
+  it("arrives in turn, not all at once", () => {
+    const { container } = render(
+      <ElementCard nodeType="module" values={{}} glance={glance} enterIndex={3} />
+    )
+    const card = container.querySelector("[data-slot=element-card]")
+    expect(card?.className).toContain("node-arrive")
+    expect(card?.getAttribute("style")).toContain("210ms")
+  })
+
+  it("arrives without ceremony when it has no place in the stagger", () => {
+    const { container } = render(<ElementCard nodeType="timer" values={{}} />)
+    const card = container.querySelector("[data-slot=element-card]")
+    expect(card?.className).not.toContain("node-arrive")
+  })
+})
+
 describe("ElementCard", () => {
   it("renders the step label and its one-line summary", () => {
     render(

@@ -5,6 +5,7 @@
  */
 
 import type { FlowEdgeRow, FlowNodeRow, ModuleTierRow } from "@/lib/supabase/types"
+import type { ModuleGlance } from "@/lib/flow/glance"
 import { resolveNodeType, withDefaults } from "@/lib/flow/registry"
 
 export interface CanvasNodeData extends Record<string, unknown> {
@@ -12,6 +13,10 @@ export interface CanvasNodeData extends Record<string, unknown> {
   moduleId: string | null
   locked: boolean
   values: Record<string, unknown>
+  /** Live facts for a module card, assembled server-side. See glance.ts. */
+  glance?: ModuleGlance
+  /** Position in the entrance stagger; absent means arrive without ceremony. */
+  enterIndex?: number
 }
 
 export interface CanvasNode {

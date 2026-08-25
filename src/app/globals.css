@@ -176,6 +176,57 @@
   }
 }
 
+@keyframes node-arrive {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+    scale: 0.96;
+  }
+  to {
+    opacity: 1;
+    translate: none;
+    scale: none;
+  }
+}
+
+@keyframes live-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-success) 45%, transparent);
+  }
+  60% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+
+@layer utilities {
+  /*
+    A canvas node arriving. On the INNER card, never the React Flow wrapper —
+    the wrapper is positioned with a transform the library owns. translate and
+    scale rather than transform for the same reason: they compose with
+    anything else instead of overwriting it.
+
+    backwards + the per-node delay is what makes a stagger: each card holds
+    its from-state until its turn.
+  */
+  .node-arrive {
+    animation: node-arrive 320ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+    animation-delay: var(--arrive-delay, 0ms);
+  }
+
+  /* "Open", not "alarm": a slow breath, no blinking. */
+  .live-dot {
+    animation: live-pulse 2.6s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .node-arrive,
+    .live-dot {
+      animation: none;
+    }
+  }
+}
+
 @keyframes pop-in {
   from {
     opacity: 0;

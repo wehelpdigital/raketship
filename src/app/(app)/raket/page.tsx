@@ -7,7 +7,18 @@ import { SetupNotice } from "@/components/shell/setup-notice"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { supabaseConfigured } from "@/lib/env"
 import { cn } from "@/lib/utils"
+import {
+  bookingGlance,
+  businessGlance,
+  type ModuleGlance,
+} from "@/lib/flow/glance"
 import { rowToCanvasEdge, rowToCanvasNode } from "@/lib/flow/mappers"
+import { getLocale, getT } from "@/lib/i18n/server"
+import {
+  countCalendars,
+  countUpcomingBookings,
+} from "@/lib/queries/booking"
+import { getBusinessProfile } from "@/lib/queries/business"
 import {
   getRaketCanvas,
   getWorkspace,
@@ -112,7 +123,56 @@ export default async function RaketPage() {
     )
   }
 
-  const nodes = canvas.nodes.map((row) => rowToCanvasNode(row))
+  /*
+    The module cards carry their own live numbers, so the canvas is a picture
+    of what IS running rather than a diagram of what could. Assembled here,
+    where the queries are cached per-request; the client just paints strings.
+  */
+  const locale = await getLocale()
+  const t = await getT()
+  const glances: Record<string, ModuleGlance> = {}
+  for (const row of canvas.nodes) {
+    /*
+      The START node is the business — "where every raket begins", with the
+      business name as its one field — so it wears the shop: logo, name,
+      theme. The Your Business module has no separate card on the canvas.
+    */
+    if (row.type === "start") {
+      glances[row.node_key] = businessGlance(
+        await getBusinessProfile(user.id),
+        locale
+      )
+      continue
+    }
+    if (row.type !== "module") continue
+    if (row.module_id === "booking") {
+      const [calendars, upcoming] = await Promise.all([
+        countCalendars(user.id),
+        countUpcomingBookings(user.id),
+      ])
+      glances[row.node_key] = bookingGlance(
+        {
+          calendars: calendars.total,
+          published: calendars.published,
+          upcoming,
+        },
+        locale
+      )
+    } else if (row.module_id === "business") {
+      glances[row.node_key] = businessGlance(
+        await getBusinessProfile(user.id),
+        locale
+      )
+    }
+  }
+
+  const nodes = canvas.nodes.map((row, index) => {
+    const node = rowToCanvasNode(row)
+    return {
+      ...node,
+      data: { ...node.data, glance: glances[row.node_key], enterIndex: index },
+    }
+  })
   const edges = canvas.edges.map(rowToCanvasEdge)
   const nodeIds: Record<string, string> = Object.fromEntries(
     canvas.nodes.map((row): [string, string] => [row.node_key, row.id])
@@ -136,8 +196,11 @@ export default async function RaketPage() {
           </h2>
           <p className="truncate text-xs text-muted-foreground">
             {moduleCount === 0
-              ? "No modules yet — add one from the Raket Market."
-              : `${moduleCount} module${moduleCount === 1 ? "" : "s"} · tap one to open its builder`}
+              ? t("raket.summary.none")
+              : t(
+                  moduleCount === 1 ? "raket.summary.one" : "raket.summary.many",
+                  { n: moduleCount }
+                )}
           </p>
         </div>
         <RenameRaketDialog

@@ -17,6 +17,7 @@ import {
   type ModuleNavItem,
   type NavBadges,
 } from "@/components/shell/module-nav"
+import { useT } from "@/components/shell/locale-provider"
 import { cn } from "@/lib/utils"
 
 export { accentChip, moduleHref, type ModuleNavItem }
@@ -250,13 +251,14 @@ export function SideNav({
  * badge never sits there looking like a bug.
  */
 function NavBadge({ count }: { count: number }) {
+  const t = useT()
   const label = badgeLabel(count)
   if (!label) return null
 
   return (
     <span
       className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-destructive px-1.5 text-[11px] font-semibold text-destructive-foreground tabular-nums"
-      aria-label={`${count} paparating`}
+      aria-label={t("shell.badge.upcoming", { n: count })}
     >
       {label}
     </span>

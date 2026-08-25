@@ -16,4 +16,6 @@ export const shell = {
   "common.showAgain": { fil: "Ipakita ulit ang paalala", en: "Show the note again" },
   "common.hide": { fil: "Itago", en: "Hide" },
   "common.loading": { fil: "Sandali lang…", en: "One moment…" },
+
+  "shell.badge.upcoming": { fil: "{n} paparating", en: "{n} upcoming" },
 } satisfies Dict

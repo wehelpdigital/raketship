@@ -19,6 +19,8 @@ import {
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
+import { LogoMask } from "@/features/business/logo-mask"
+import type { ModuleGlance } from "@/lib/flow/glance"
 import type { CanvasNodeData } from "@/lib/flow/mappers"
 import { CATEGORY_LABELS, resolveNodeType, summarise } from "@/lib/flow/registry"
 import { cn } from "@/lib/utils"
@@ -76,6 +78,10 @@ export interface ElementCardProps {
   values: Record<string, unknown>
   locked?: boolean
   selected?: boolean
+  /** Live facts for a module card. See lib/flow/glance.ts. */
+  glance?: ModuleGlance
+  /** Position in the entrance stagger; absent means no ceremony. */
+  enterIndex?: number
   className?: string
 }
 
@@ -88,6 +94,8 @@ export function ElementCard({
   values,
   locked = false,
   selected = false,
+  glance,
+  enterIndex,
   className,
 }: ElementCardProps) {
   const def = resolveNodeType(nodeType)
@@ -97,27 +105,64 @@ export function ElementCard({
     ? tier
       ? `${tier.charAt(0).toUpperCase()}${tier.slice(1)}`
       : "Module"
-    : CATEGORY_LABELS[def.category]
+    : def.type === "start"
+      ? def.short
+      : CATEGORY_LABELS[def.category]
 
   return (
     <div
       data-slot="element-card"
       data-locked={locked ? "true" : undefined}
+      /*
+        The lift is on THIS element, never the React Flow wrapper — the wrapper
+        is positioned with a transform the library owns, and animating it would
+        fight every drag.
+      */
+      style={
+        enterIndex !== undefined
+          ? ({ "--arrive-delay": `${enterIndex * 70}ms` } as React.CSSProperties)
+          : undefined
+      }
       className={cn(
-        "w-62 rounded-xl bg-card p-4 text-left shadow-sm ring-1 ring-border transition-shadow lg:w-52 lg:rounded-lg lg:p-3",
+        "w-62 rounded-xl bg-card p-4 text-left shadow-sm ring-1 ring-border lg:w-52 lg:rounded-lg lg:p-3",
+        "transition-[box-shadow,translate] duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0",
+        enterIndex !== undefined && "node-arrive",
+        // A module card is a door, and a door reads wider than a step.
+        glance && "w-64 lg:w-60",
         selected && "ring-2 ring-primary",
         locked && "opacity-70",
         className
       )}
     >
       <div className="flex items-start gap-3">
-        <span
-          className={cn(
-            "flex size-10 shrink-0 items-center justify-center rounded-lg lg:size-8 lg:rounded-md",
-            accentChipClass(def.accent)
+        <span className="relative shrink-0">
+          {glance?.logoUrl || (glance?.logoName && glance.lines.length > 1) ? (
+            /* The shop's own mark, framed the way the owner framed it — the
+               same component as the public page, so the two cannot drift. */
+            <LogoMask
+              url={glance.logoUrl ?? null}
+              name={glance.logoName ?? null}
+              crop={glance.logoCrop}
+              className="size-10 text-sm lg:size-9"
+            />
+          ) : (
+            <span
+              className={cn(
+                "flex size-10 items-center justify-center rounded-lg lg:size-8 lg:rounded-md",
+                accentChipClass(def.accent)
+              )}
+            >
+              <NodeIcon name={def.icon} className="size-5 lg:size-4" />
+            </span>
           )}
-        >
-          <NodeIcon name={def.icon} className="size-5 lg:size-4" />
+          {glance?.live ? (
+            /* Breathing, not blinking: it means "open", not "alarm". The word
+               is in the glance line; this is the mark for it. */
+            <span
+              className="live-dot absolute -top-0.5 -right-0.5 size-2.5 rounded-full bg-success ring-2 ring-card"
+              aria-hidden="true"
+            />
+          ) : null}
         </span>
 
         <div className="min-w-0 flex-1">
@@ -132,9 +177,20 @@ export function ElementCard({
               />
             ) : null}
           </div>
-          <p className="truncate text-xs text-muted-foreground lg:text-[11px]">
-            {summarise(nodeType, values)}
-          </p>
+          {glance ? (
+            glance.lines.map((line) => (
+              <p
+                key={line}
+                className="truncate text-xs text-muted-foreground lg:text-[11px]"
+              >
+                {line}
+              </p>
+            ))
+          ) : (
+            <p className="truncate text-xs text-muted-foreground lg:text-[11px]">
+              {summarise(nodeType, values)}
+            </p>
+          )}
         </div>
 
         {isModule ? (
@@ -149,6 +205,18 @@ export function ElementCard({
         <Badge variant="outline" className="font-normal">
           {badgeText}
         </Badge>
+        {glance?.swatches?.length ? (
+          <span className="flex items-center gap-1" aria-hidden="true">
+            {glance.swatches.map((colour) => (
+              <span
+                key={colour}
+                className="size-3 rounded-full ring-1 ring-border"
+                /* The swatch IS the colour — the one inline-style exception. */
+                style={{ backgroundColor: colour }}
+              />
+            ))}
+          </span>
+        ) : null}
         {isModule ? (
           <span className="text-xs text-muted-foreground">Tap to open</span>
         ) : null}
@@ -179,6 +247,8 @@ export function ElementNode({ data, selected }: NodeProps<BuilderNode>) {
         values={data.values}
         locked={data.locked}
         selected={selected}
+        glance={data.glance}
+        enterIndex={data.enterIndex}
       />
       <Handle
         type="source"
