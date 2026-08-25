@@ -363,13 +363,23 @@ function SideTarget({ side }: { side: "left" | "right" }) {
   )
 }
 
-/**
- * The rocket's two cut-off sections, drawn as faceted prisms: each shape is
- * split down its middle into a lit face and a shaded face, low-poly style,
- * with a bright ridge line where they meet — flat SVG pretending to be 3D
- * the way modern logo marks do. The dashed edge is the cut: the body between
- * the sections is the elements themselves.
+/*
+ * The rocket's two cut-off sections as glowing wireframes: a triangulated
+ * mesh with lit vertices, layered neon drop-shadows, and a gradient plume —
+ * plexus-style, in the shop's own colour so every palette gets its own neon.
+ * The glow is a static CSS filter on a small SVG: composited once, no
+ * animation cost. The dashed edge is still the cut — the body between the
+ * sections is the elements themselves.
  */
+
+/** One neon vertex. */
+function MeshDot({ x, y }: { x: number; y: number }) {
+  return <circle cx={x} cy={y} r="2" fill="currentColor" fillOpacity="0.9" />
+}
+
+const NEON =
+  "pointer-events-none text-primary [filter:drop-shadow(0_0_2px_var(--color-primary))_drop-shadow(0_0_10px_var(--color-primary))]"
+
 function RocketSection({
   part,
   enterIndex,
@@ -383,36 +393,52 @@ function RocketSection({
       : undefined
 
   if (part === "nose") {
-    // 300 wide, ridge at 150: lit left face, shaded right face.
+    /*
+      Vertices of the mesh: the tip, the base, and the mid-edge points the
+      triangulation hangs from.
+    */
+    const dots: [number, number][] = [
+      [150, 8],
+      [89, 80],
+      [211, 80],
+      [150, 96],
+      [28, 152],
+      [96, 152],
+      [204, 152],
+      [272, 152],
+    ]
     return (
       <svg
         viewBox="0 0 300 160"
         width={300}
         height={160}
         aria-hidden="true"
-        className={cn(
-          "pointer-events-none text-primary",
-          enterIndex !== undefined && "node-arrive"
-        )}
+        className={cn(NEON, enterIndex !== undefined && "node-arrive")}
         style={style}
       >
-        <path d="M150 8 L28 152 L150 152 Z" fill="currentColor" fillOpacity="0.22" />
-        <path d="M150 8 L272 152 L150 152 Z" fill="currentColor" fillOpacity="0.09" />
-        {/* The ridge, catching the light. */}
-        <path
-          d="M150 8 L150 152"
-          stroke="currentColor"
-          strokeOpacity="0.5"
-          strokeWidth="1.5"
-        />
+        {/* A breath of fill so the mesh reads as a solid catching light. */}
+        <path d="M150 8 L28 152 L150 152 Z" fill="currentColor" fillOpacity="0.08" />
+        <path d="M150 8 L272 152 L150 152 Z" fill="currentColor" fillOpacity="0.04" />
+        {/* The outline. */}
         <path
           d="M28 152 L150 8 L272 152"
           fill="none"
           stroke="currentColor"
-          strokeOpacity="0.4"
-          strokeWidth="2"
+          strokeOpacity="0.8"
+          strokeWidth="1.5"
           strokeLinejoin="round"
         />
+        {/* The mesh. */}
+        <path
+          d="M150 8 L89 80 M150 8 L211 80 M150 8 L150 96 M89 80 L150 96 M211 80 L150 96 M89 80 L96 152 M211 80 L204 152 M150 96 L96 152 M150 96 L204 152 M89 80 L28 152 M211 80 L272 152"
+          fill="none"
+          stroke="currentColor"
+          strokeOpacity="0.45"
+          strokeWidth="1"
+        />
+        {dots.map(([x, y]) => (
+          <MeshDot key={`${x}-${y}`} x={x} y={y} />
+        ))}
         {/* The cut. */}
         <line
           x1="28"
@@ -420,44 +446,64 @@ function RocketSection({
           x2="272"
           y2="152"
           stroke="currentColor"
-          strokeOpacity="0.35"
-          strokeWidth="2"
+          strokeOpacity="0.5"
+          strokeWidth="1.5"
           strokeDasharray="8 7"
         />
       </svg>
     )
   }
 
-  // One bell, faceted the same way, one flame.
+  const dots: [number, number][] = [
+    [64, 6],
+    [176, 6],
+    [120, 6],
+    [52, 48],
+    [188, 48],
+    [120, 52],
+    [40, 92],
+    [120, 92],
+    [200, 92],
+  ]
   return (
     <svg
-      viewBox="0 0 240 190"
+      viewBox="0 0 240 200"
       width={240}
-      height={190}
+      height={200}
       aria-hidden="true"
-      className={cn(
-        "pointer-events-none text-primary",
-        enterIndex !== undefined && "node-arrive"
-      )}
+      className={cn(NEON, enterIndex !== undefined && "node-arrive")}
       style={style}
     >
-      {/* The bell: lit and shaded faces meeting at the ridge. */}
-      <path d="M120 6 L64 6 L40 92 L120 92 Z" fill="currentColor" fillOpacity="0.22" />
-      <path d="M120 6 L176 6 L200 92 L120 92 Z" fill="currentColor" fillOpacity="0.09" />
-      <path
-        d="M120 6 L120 92"
-        stroke="currentColor"
-        strokeOpacity="0.5"
-        strokeWidth="1.5"
-      />
+      <defs>
+        <radialGradient id="raket-plume" cx="50%" cy="20%" r="85%">
+          <stop offset="0%" stopColor="var(--color-warning)" stopOpacity="0.95" />
+          <stop offset="45%" stopColor="var(--color-destructive)" stopOpacity="0.55" />
+          <stop offset="100%" stopColor="var(--color-destructive)" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      {/* The bell's faces. */}
+      <path d="M120 6 L64 6 L40 92 L120 92 Z" fill="currentColor" fillOpacity="0.08" />
+      <path d="M120 6 L176 6 L200 92 L120 92 Z" fill="currentColor" fillOpacity="0.04" />
+      {/* The outline. */}
       <path
         d="M64 6 L40 92 L200 92 L176 6"
         fill="none"
         stroke="currentColor"
-        strokeOpacity="0.4"
-        strokeWidth="2"
+        strokeOpacity="0.8"
+        strokeWidth="1.5"
         strokeLinejoin="round"
       />
+      {/* The mesh. */}
+      <path
+        d="M64 6 L52 48 M176 6 L188 48 M120 6 L120 52 M52 48 L120 52 M188 48 L120 52 M52 48 L40 92 M188 48 L200 92 M120 52 L120 92 M52 48 L120 92 M120 52 L40 92 M120 52 L200 92"
+        fill="none"
+        stroke="currentColor"
+        strokeOpacity="0.45"
+        strokeWidth="1"
+      />
+      {dots.map(([x, y]) => (
+        <MeshDot key={`${x}-${y}`} x={x} y={y} />
+      ))}
       {/* The cut. */}
       <line
         x1="64"
@@ -465,21 +511,20 @@ function RocketSection({
         x2="176"
         y2="6"
         stroke="currentColor"
-        strokeOpacity="0.35"
-        strokeWidth="2"
+        strokeOpacity="0.5"
+        strokeWidth="1.5"
         strokeDasharray="8 7"
       />
-      {/* The flame. */}
+      {/* The plume: a gradient glow with a hot core. */}
       <g className="flame-flicker">
         <path
-          d="M120 98 C 140 114 138 140 120 178 C 102 140 100 114 120 98 Z"
-          fill="var(--color-destructive)"
-          fillOpacity="0.4"
+          d="M120 96 C 152 118 148 152 120 196 C 92 152 88 118 120 96 Z"
+          fill="url(#raket-plume)"
         />
         <path
-          d="M120 102 C 132 116 131 134 120 158 C 109 134 108 116 120 102 Z"
+          d="M120 100 C 134 114 133 134 120 160 C 107 134 106 114 120 100 Z"
           fill="var(--color-warning)"
-          fillOpacity="0.8"
+          fillOpacity="0.9"
         />
       </g>
     </svg>
