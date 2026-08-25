@@ -319,8 +319,11 @@
     animation: stars-fall-near 32s linear infinite;
   }
 
-  /* The booster's flame breathes fast — an engine, not an alarm. */
+  /* The booster's flame breathes fast — an engine, not an alarm.
+     transform-box makes the origin the FLAME's own top, not the svg's, so
+     the breath stretches downward from where the fire starts. */
   .flame-flicker {
+    transform-box: fill-box;
     transform-origin: 50% 0%;
     animation: flame-flicker 0.5s ease-in-out infinite alternate;
   }

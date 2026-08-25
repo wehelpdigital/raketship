@@ -537,7 +537,11 @@ function RocketSection({
       width={240}
       height={242}
       aria-hidden="true"
-      className={cn(NEON, enterIndex !== undefined && "node-arrive")}
+      className={cn(
+        NEON,
+        "overflow-visible",
+        enterIndex !== undefined && "node-arrive"
+      )}
       style={style}
     >
       <defs>
