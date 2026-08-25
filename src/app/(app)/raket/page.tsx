@@ -130,6 +130,7 @@ export default async function RaketPage() {
   */
   const locale = await getLocale()
   const t = await getT()
+  const profile = await getBusinessProfile(user.id)
   const glances: Record<string, ModuleGlance> = {}
   for (const row of canvas.nodes) {
     /*
@@ -138,10 +139,7 @@ export default async function RaketPage() {
       theme. The Your Business module has no separate card on the canvas.
     */
     if (row.type === "start") {
-      glances[row.node_key] = businessGlance(
-        await getBusinessProfile(user.id),
-        locale
-      )
+      glances[row.node_key] = businessGlance(profile, locale)
       continue
     }
     if (row.type !== "module") continue
@@ -159,18 +157,33 @@ export default async function RaketPage() {
         locale
       )
     } else if (row.module_id === "business") {
-      glances[row.node_key] = businessGlance(
-        await getBusinessProfile(user.id),
-        locale
-      )
+      glances[row.node_key] = businessGlance(profile, locale)
     }
   }
 
+  const shopName = profile?.business_name?.trim()
   const nodes = canvas.nodes.map((row, index) => {
     const node = rowToCanvasNode(row)
+    /*
+      The start card is the shop, so it wears the shop's NAME as its title —
+      but only while the node still has its stock label. An owner who renamed
+      the node on the canvas said something on purpose, and it stays said.
+      Display only; nothing is written back.
+    */
+    const values =
+      row.type === "start" &&
+      shopName &&
+      node.data.values.label === "Your business"
+        ? { ...node.data.values, label: shopName }
+        : node.data.values
     return {
       ...node,
-      data: { ...node.data, glance: glances[row.node_key], enterIndex: index },
+      data: {
+        ...node.data,
+        values,
+        glance: glances[row.node_key],
+        enterIndex: index,
+      },
     }
   })
   const edges = canvas.edges.map(rowToCanvasEdge)

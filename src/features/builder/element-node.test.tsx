@@ -41,25 +41,26 @@ describe("a module card with a glance", () => {
     expect(container.querySelector(".live-dot")).not.toBeInTheDocument()
   })
 
-  it("paints the chosen palette as swatches, inline", () => {
-    // The swatch IS the colour — the one inline-style exception.
+  it("gives the tagline room for a second line, unlike the facts", () => {
+    // Facts truncate; prose cut mid-word reads as a mistake.
     const { container } = render(
       <ElementCard
-        nodeType="module"
-        values={{}}
+        nodeType="start"
+        values={{ label: "Gupit ni Nena" }}
         glance={{
-          lines: ["Gupit ni Nena", "Tema: Dagat"],
+          lines: [],
           live: false,
-          logoName: "GN",
-          swatches: ["oklch(0.48 0.113 245)", "oklch(0.9 0.05 245)"],
+          logoName: "Gupit ni Nena",
+          tagline: "Gupit, kulay at rebond sa puso ng QC.",
         }}
       />
     )
 
-    const dots = [...container.querySelectorAll("[style]")].filter((el) =>
-      el.getAttribute("style")?.includes("background-color")
+    const tagline = [...container.querySelectorAll("p")].find((el) =>
+      el.textContent?.includes("rebond")
     )
-    expect(dots).toHaveLength(2)
+    expect(tagline?.className).toContain("line-clamp-2")
+    expect(tagline?.className).not.toContain("truncate")
   })
 
   it("shows the shop's initials when there is a profile but no logo", () => {
@@ -68,7 +69,7 @@ describe("a module card with a glance", () => {
         nodeType="module"
         values={{}}
         glance={{
-          lines: ["Gupit ni Nena", "Tema: Dagat"],
+          lines: [],
           live: false,
           logoName: "Gupit ni Nena",
           logoUrl: null,

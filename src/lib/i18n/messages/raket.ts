@@ -40,5 +40,4 @@ export const raket = {
     fil: "I-set up ang detalye ng negosyo",
     en: "Set up your business details",
   },
-  "raket.business.theme": { fil: "Tema: {name}", en: "Theme: {name}" },
 } satisfies Dict

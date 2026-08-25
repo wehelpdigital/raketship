@@ -89,12 +89,21 @@ describe("businessGlance", () => {
     ).toEqual(["I-set up ang detalye ng negosyo"])
   })
 
-  it("wears the shop's own name and theme", () => {
-    const glance = businessGlance(profile(), "fil")
-    expect(glance.lines[0]).toBe("Gupit ni Nena")
-    expect(glance.lines[1]).toBe("Tema: Dagat")
-    expect(glance.swatches).toHaveLength(2)
-    expect(glance.swatches?.[0]).toMatch(/^oklch\(/)
+  it("speaks the owner's tagline, not the app's inventory", () => {
+    const glance = businessGlance(
+      profile({ description: "Gupit, kulay at rebond sa QC." }),
+      "fil"
+    )
+    // The name is the card's TITLE — the page promotes it there — so the
+    // body carries only what the title does not.
+    expect(glance.lines).toEqual([])
+    expect(glance.tagline).toBe("Gupit, kulay at rebond sa QC.")
+  })
+
+  it("stays quiet when the owner wrote no tagline", () => {
+    const glance = businessGlance(profile({ description: "   " }), "fil")
+    expect(glance.tagline).toBeNull()
+    expect(glance.lines).toEqual([])
   })
 
   it("frames the logo the way the owner framed it", () => {
@@ -104,13 +113,6 @@ describe("businessGlance", () => {
     )
     expect(glance.logoUrl).toContain("/business-media/u1/logo.png")
     expect(glance.logoCrop).toEqual({ zoom: 2, x: 30, y: 60 })
-  })
-
-  it("falls back to the brand palette on an unknown key", () => {
-    // A removed palette must not blank the card of everyone who chose it.
-    const glance = businessGlance(profile({ theme_preset: "wala-na" }), "fil")
-    expect(glance.lines[1]).toBe("Tema: Pula")
-    expect(glance.swatches).toHaveLength(2)
   })
 
   it("leaves live to the Booking card", () => {

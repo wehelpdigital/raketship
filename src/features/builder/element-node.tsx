@@ -127,8 +127,10 @@ export function ElementCard({
         "w-62 rounded-xl bg-card p-4 text-left shadow-sm ring-1 ring-border lg:w-52 lg:rounded-lg lg:p-3",
         "transition-[box-shadow,translate] duration-200 hover:-translate-y-0.5 hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0",
         enterIndex !== undefined && "node-arrive",
-        // A module card is a door, and a door reads wider than a step.
+        // A module card is a door, and a door reads wider than a step. The
+        // business card is the front of the whole shop, and reads widest.
         glance && "w-64 lg:w-60",
+        glance && def.type === "start" && "w-72 lg:w-64",
         selected && "ring-2 ring-primary",
         locked && "opacity-70",
         className
@@ -136,14 +138,14 @@ export function ElementCard({
     >
       <div className="flex items-start gap-3">
         <span className="relative shrink-0">
-          {glance?.logoUrl || (glance?.logoName && glance.lines.length > 1) ? (
+          {glance?.logoUrl || glance?.logoName ? (
             /* The shop's own mark, framed the way the owner framed it — the
                same component as the public page, so the two cannot drift. */
             <LogoMask
               url={glance.logoUrl ?? null}
               name={glance.logoName ?? null}
               crop={glance.logoCrop}
-              className="size-10 text-sm lg:size-9"
+              className="size-12 text-base lg:size-10 lg:text-sm"
             />
           ) : (
             <span
@@ -178,14 +180,25 @@ export function ElementCard({
             ) : null}
           </div>
           {glance ? (
-            glance.lines.map((line) => (
-              <p
-                key={line}
-                className="truncate text-xs text-muted-foreground lg:text-[11px]"
-              >
-                {line}
-              </p>
-            ))
+            <>
+              {glance.tagline ? (
+                /*
+                  The owner's own sentence, allowed a second line: facts
+                  truncate, but prose cut mid-word reads as a mistake.
+                */
+                <p className="line-clamp-2 text-xs text-pretty text-muted-foreground lg:text-[11px]">
+                  {glance.tagline}
+                </p>
+              ) : null}
+              {glance.lines.map((line) => (
+                <p
+                  key={line}
+                  className="truncate text-xs text-muted-foreground lg:text-[11px]"
+                >
+                  {line}
+                </p>
+              ))}
+            </>
           ) : (
             <p className="truncate text-xs text-muted-foreground lg:text-[11px]">
               {summarise(nodeType, values)}
@@ -205,18 +218,6 @@ export function ElementCard({
         <Badge variant="outline" className="font-normal">
           {badgeText}
         </Badge>
-        {glance?.swatches?.length ? (
-          <span className="flex items-center gap-1" aria-hidden="true">
-            {glance.swatches.map((colour) => (
-              <span
-                key={colour}
-                className="size-3 rounded-full ring-1 ring-border"
-                /* The swatch IS the colour — the one inline-style exception. */
-                style={{ backgroundColor: colour }}
-              />
-            ))}
-          </span>
-        ) : null}
         {isModule ? (
           <span className="text-xs text-muted-foreground">Tap to open</span>
         ) : null}

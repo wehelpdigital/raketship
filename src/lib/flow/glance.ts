@@ -1,7 +1,6 @@
 import type { ImageCrop } from "@/lib/business/crop"
 import { mediaUrl } from "@/lib/business/media"
 import { t, type Locale } from "@/lib/i18n"
-import { getPalette } from "@/lib/theme/palettes"
 import type { BusinessProfileRow } from "@/lib/supabase/types"
 
 /**
@@ -18,17 +17,18 @@ export interface ModuleGlance {
   lines: string[]
   /** Something of this module is reachable by the public right now. */
   live: boolean
+  /**
+   * The owner's own sentence about the shop, allowed a second line.
+   *
+   * Facts truncate; a tagline cut mid-word reads as a mistake, because it is
+   * prose someone wrote.
+   */
+  tagline?: string | null
   /** The shop's logo, framed the way the owner framed it. */
   logoUrl?: string | null
   logoCrop?: Partial<ImageCrop> | null
   /** The shop's NAME — LogoMask derives the initials and the alt text. */
   logoName?: string | null
-  /**
-   * The chosen palette, as paintable colour strings (light-mode primary and
-   * accent). Painted inline because a swatch IS the colour — the one exception
-   * CLAUDE.md allows.
-   */
-  swatches?: string[]
 }
 
 export interface BookingGlanceCounts {
@@ -84,13 +84,11 @@ export function businessGlance(
     return { lines: [t(locale, "raket.business.unset")], live: false }
   }
 
-  const palette = getPalette(profile.theme_preset)
-
   return {
-    lines: [
-      profile.business_name.trim(),
-      t(locale, "raket.business.theme", { name: palette.name }),
-    ],
+    // The name is the card's TITLE (the page promotes it there), so the lines
+    // carry only what the title does not: the owner's own tagline.
+    lines: [],
+    tagline: profile.description?.trim() || null,
     // The profile page only opens to the public alongside a live calendar,
     // so "live" is the Booking card's fact to state, not this one's.
     live: false,
@@ -101,6 +99,5 @@ export function businessGlance(
       y: profile.logo_y ?? 50,
     },
     logoName: profile.business_name,
-    swatches: [palette.light.primary, palette.light.accent],
   }
 }
