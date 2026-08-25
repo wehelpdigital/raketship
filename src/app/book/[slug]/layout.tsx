@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import Link from "next/link"
 import { Rocket } from "lucide-react"
 
+import { LocaleToggle } from "@/components/shell/locale-toggle"
 import { ThemeToggle } from "@/components/shell/theme-toggle"
 
 /**
@@ -34,6 +35,7 @@ export default function PublicBookingLayout({
           {/* A customer may open this link at any hour; let them read it in
               whichever mode suits. */}
           <div className="ml-auto">
+            <LocaleToggle />
             <ThemeToggle />
           </div>
         </div>

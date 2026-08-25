@@ -8,6 +8,8 @@ const route = vi.hoisted(() => ({ pathname: "/dashboard" }))
 
 vi.mock("next/navigation", () => ({
   usePathname: () => route.pathname,
+  // The language toggle in the header refreshes after setting its cookie.
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
 }))
 
 vi.mock("next/link", async () => {

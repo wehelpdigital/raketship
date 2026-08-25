@@ -176,6 +176,32 @@
   }
 }
 
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@layer utilities {
+  /* Something arriving in the space another thing has just left — the note's
+     "i" button taking the note's place beside the tabs. Short, because it is
+     furniture rather than an event. */
+  .pop-in {
+    animation: pop-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pop-in {
+      animation: none;
+    }
+  }
+}
+
 @keyframes step-enter {
   from {
     opacity: 0;

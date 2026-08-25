@@ -1,8 +1,8 @@
 /**
  * Finding one booking among many.
  *
- * Pure, so the searching and paging can be tested without rendering anything —
- * and so the list component stays about layout rather than about matching.
+ * Pure, so the searching can be tested without rendering anything — and so the
+ * list component stays about layout rather than about matching.
  */
 
 export interface SearchableBooking {
@@ -16,9 +16,16 @@ export interface SearchableBooking {
   answerText: string
 }
 
-/** How many rows a page holds. */
-export const PAGE_SIZES = [10, 25, 50, 100] as const
-export const DEFAULT_PAGE_SIZE = 10
+/**
+ * How many rows are on screen before scrolling asks for more, and how many
+ * more it asks for.
+ *
+ * The first number is a screenful and a bit on a phone; the second is enough
+ * that a fast scroll does not out-run it. Both are here rather than in the
+ * component so the reasoning sits with the rest of the list's arithmetic.
+ */
+export const INITIAL_VISIBLE = 20
+export const VISIBLE_STEP = 20
 
 /**
  * The reference a customer would quote, taken off the id.
@@ -65,67 +72,20 @@ export function matchesQuery(row: SearchableBooking, query: string): boolean {
   return q.split(/\s+/).every((word) => haystack.includes(word))
 }
 
-/** How many pages a list of this length needs. Always at least one. */
-export function pageCount(total: number, size: number): number {
-  if (!Number.isFinite(size) || size <= 0) return 1
-  return Math.max(1, Math.ceil(Math.max(0, total) / size))
-}
-
 /**
- * Brings a page number into range for a list of this length.
+ * How many rows to show after the list has been scrolled to the end of what is
+ * already there.
  *
- * Filtering can shrink a list under the page somebody is on, and a page past
- * the end renders as empty — which reads as "no results" when there are
- * plenty, just not there.
+ * Never past the end, and never backwards: a filter that shrinks the list
+ * underneath a scroll position should not also throw away rows that are
+ * already on screen and being read.
  */
-export function clampPage(page: number, total: number, size: number): number {
-  const last = pageCount(total, size)
-  if (!Number.isFinite(page)) return 1
-  return Math.min(Math.max(1, Math.trunc(page)), last)
+export function grow(visible: number, total: number, step = VISIBLE_STEP): number {
+  const wanted = Math.max(INITIAL_VISIBLE, Math.trunc(visible)) + Math.max(1, step)
+  return Math.min(wanted, Math.max(0, total))
 }
 
-/** The slice of items for one page. */
-export function paginate<T>(items: readonly T[], page: number, size: number): T[] {
-  if (!Number.isFinite(size) || size <= 0) return [...items]
-  const current = clampPage(page, items.length, size)
-  const start = (current - 1) * size
-  return items.slice(start, start + size)
-}
-
-/**
- * The page numbers to offer, with gaps where there are too many to list.
- *
- * Returns numbers and nulls, a null standing for an elided run. Always shows
- * the first and last page, so however long the list is there is a way to reach
- * either end in one tap.
- */
-export function pageWindow(
-  current: number,
-  total: number,
-  span = 1
-): (number | null)[] {
-  if (total <= 1) return [1]
-
-  const page = clampPage(current, total * span || total, 1)
-  const wanted = new Set<number>([1, total])
-  for (let p = page - span; p <= page + span; p++) {
-    if (p >= 1 && p <= total) wanted.add(p)
-  }
-
-  const pages = [...wanted].sort((a, b) => a - b)
-  const out: (number | null)[] = []
-  let previous: number | null = null
-
-  for (const p of pages) {
-    if (previous !== null) {
-      const skipped = p - previous - 1
-      // A gap hiding exactly one page is worse than the page: it costs the
-      // same width and takes away somewhere to tap.
-      if (skipped === 1) out.push(previous + 1)
-      else if (skipped > 1) out.push(null)
-    }
-    out.push(p)
-    previous = p
-  }
-  return out
+/** Whether anything is still waiting below the fold. */
+export function hasMore(visible: number, total: number): boolean {
+  return visible < total
 }

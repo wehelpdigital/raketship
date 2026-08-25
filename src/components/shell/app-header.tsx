@@ -14,6 +14,7 @@ import {
   type ModuleNavItem,
   type NavBadges,
 } from "@/components/shell/module-nav"
+import { LocaleToggle } from "@/components/shell/locale-toggle"
 import { ThemeToggle } from "@/components/shell/theme-toggle"
 import { ModuleIcon } from "@/components/module-icon"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -135,6 +136,8 @@ export function AppHeader({
 
         <div className="ml-auto flex shrink-0 items-center gap-0.5">
           <ModulesMenu modules={modules} badges={badges} pathname={pathname} />
+
+          <LocaleToggle />
 
           <ThemeToggle />
 

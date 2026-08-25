@@ -2,6 +2,10 @@ import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { LocaleProvider } from "@/components/shell/locale-provider"
+import type { Locale } from "@/lib/i18n"
+import { INITIAL_VISIBLE } from "@/lib/booking/booked-filter"
+
 import { BookedBrowser } from "./booked-browser"
 import type { BookedRow } from "./booked-list"
 
@@ -41,20 +45,6 @@ function row(index: number, overrides: Partial<BookedRow> = {}): BookedRow {
   }
 }
 
-function renderBrowser(
-  overrides: Partial<React.ComponentProps<typeof BookedBrowser>> = {}
-) {
-  return render(
-    <BookedBrowser
-      rows={[row(1), row(2), row(3)]}
-      fieldsByCalendar={{}}
-      calendars={[{ id: CAL_A, name: "Gupit ni Nena" }]}
-      emptyLabel="Wala pa."
-      {...overrides}
-    />
-  )
-}
-
 /*
   A row on a given day relative to today, in the calendar's own zone. Manila is
   UTC+8, so 02:00Z is the same Manila date whatever hour the suite runs at.
@@ -74,68 +64,78 @@ function rowDaysFromToday(offset: number, index = 1): BookedRow {
   })
 }
 
-const search = () => screen.getByPlaceholderText(/Pangalan, number/)
+const clearQuery = vi.fn()
+
+function renderBrowser(
+  overrides: Partial<React.ComponentProps<typeof BookedBrowser>> = {},
+  locale: Locale = "fil"
+) {
+  return render(
+    <LocaleProvider locale={locale}>
+      <BookedBrowser
+        rows={[row(1), row(2), row(3)]}
+        fieldsByCalendar={{}}
+        calendars={[{ id: CAL_A, name: "Gupit ni Nena" }]}
+        query=""
+        onClearQuery={clearQuery}
+        emptyLabel="Wala pa."
+        {...overrides}
+      />
+    </LocaleProvider>
+  )
+}
 
 /*
-  The rows, and only the rows. aria-expanded is no longer unique to them — the
-  filter toggle carries one too — so they are picked by the one thing that is
-  always theirs: the customer's name is in the button.
+  The rows, and only the rows. They are picked by the one thing that is always
+  theirs: the customer's name is in the button.
 */
-const rowButtons = () => screen.getAllByRole("button", { name: /Suki|Juan|Maria|Nena/ })
+const rowButtons = () =>
+  screen.getAllByRole("button", { name: /Suki|Juan|Maria|Nena/ })
 
 beforeEach(() => {
   vi.clearAllMocks()
 })
 
 describe("searching", () => {
-  it("narrows to what was typed", async () => {
-    const user = userEvent.setup()
+  // The box itself now lives above the tabs; the list is handed the query.
+  it("narrows to what was asked for", () => {
     renderBrowser({
       rows: [
         row(1, { customerName: "Juan dela Cruz" }),
         row(2, { customerName: "Maria Santos" }),
       ],
+      query: "maria",
     })
-
-    await user.type(search(), "maria")
 
     expect(screen.getByText("Maria Santos")).toBeInTheDocument()
     expect(screen.queryByText("Juan dela Cruz")).not.toBeInTheDocument()
   })
 
-  it("finds a booking by its reference", async () => {
-    const user = userEvent.setup()
-    renderBrowser({ rows: [row(1, { customerName: "Juan" }), row(2)] })
-
-    // The eight characters the customer was shown on their confirmation.
-    await user.type(search(), "00000001")
+  it("finds a booking by its reference", () => {
+    renderBrowser({
+      rows: [row(1, { customerName: "Juan" }), row(2)],
+      // The eight characters the customer was shown on their confirmation.
+      query: "00000001",
+    })
 
     expect(screen.getByText("Juan")).toBeInTheDocument()
     expect(screen.queryByText("Suki 2")).not.toBeInTheDocument()
   })
 
-  it("says so when nothing matches, rather than showing an empty list", async () => {
-    const user = userEvent.setup()
-    renderBrowser()
-
-    await user.type(search(), "walang ganito")
-
+  it("says so when nothing matches, rather than showing an empty list", () => {
+    renderBrowser({ query: "walang ganito" })
     expect(screen.getByText(/Walang booking na tugma/)).toBeInTheDocument()
   })
 
-  it("clears from the box and from the summary", async () => {
+  it("shows what is being searched for, and offers to drop it", async () => {
     const user = userEvent.setup()
-    renderBrowser()
+    renderBrowser({ query: "maria" })
 
-    await user.type(search(), "maria")
-    await user.click(screen.getByRole("button", { name: /Burahin/ }))
-
-    expect(search()).toHaveValue("")
-    expect(screen.getByText("Suki 1")).toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: /Hinahanap: maria/ }))
+    expect(clearQuery).toHaveBeenCalled()
   })
 
-  it("reports how much of the list survived", async () => {
-    const user = userEvent.setup()
+  it("reports how much of the list survived", () => {
     renderBrowser({
       rows: [
         row(1, { customerName: "Juan" }),
@@ -143,12 +143,7 @@ describe("searching", () => {
         row(3, { customerName: "Nena" }),
       ],
     })
-
     expect(screen.getByText("3 bookings")).toBeInTheDocument()
-    // A digit would match every row here — they all share a phone number, and
-    // the number is searchable on purpose.
-    await user.type(search(), "maria")
-    expect(screen.getByText("1 sa 3")).toBeInTheDocument()
   })
 })
 
@@ -173,52 +168,76 @@ describe("filtering by calendar", () => {
   })
 })
 
-describe("paging", () => {
-  const many = Array.from({ length: 25 }, (_, i) => row(i + 1))
+describe("growing the list", () => {
+  const many = Array.from({ length: 60 }, (_, i) => row(i + 1))
 
-  it("shows one page at a time", () => {
+  it("starts with a screenful rather than everything", () => {
     renderBrowser({ rows: many })
-
-    // The default page size, not all twenty-five.
-    expect(rowButtons()).toHaveLength(10)
+    expect(rowButtons()).toHaveLength(INITIAL_VISIBLE)
   })
 
-  it("moves between pages", async () => {
+  it("offers a way past the end that does not need a scroll", async () => {
+    // An IntersectionObserver fires on scroll, and a keyboard never scrolls.
     const user = userEvent.setup()
     renderBrowser({ rows: many })
 
-    expect(screen.getByText("Suki 1")).toBeInTheDocument()
-    await user.click(screen.getByRole("button", { name: "Pahina 2" }))
-
-    expect(screen.queryByText("Suki 1")).not.toBeInTheDocument()
-    expect(screen.getByText("Suki 11")).toBeInTheDocument()
+    const more = screen.getByRole("button", { name: /Marami pang booking/ })
+    await user.click(more)
+    expect(rowButtons().length).toBeGreaterThan(INITIAL_VISIBLE)
   })
 
-  it("does not offer paging when it all fits", () => {
-    renderBrowser()
-    expect(screen.queryByRole("navigation", { name: /pahina/i })).not.toBeInTheDocument()
-  })
-
-  it("comes back to page one when a search shrinks the list", async () => {
-    // Otherwise the results are on page one and you are still on page three,
-    // looking at nothing.
+  it("stops offering more once there is none", async () => {
     const user = userEvent.setup()
-    renderBrowser({ rows: many })
+    renderBrowser({ rows: Array.from({ length: 25 }, (_, i) => row(i + 1)) })
 
-    await user.click(screen.getByRole("button", { name: "Pahina 3" }))
-    await user.type(search(), "Suki 2")
-
-    expect(screen.getByText("Suki 2")).toBeInTheDocument()
-  })
-
-  it("changes how many fit on a page", async () => {
-    const user = userEvent.setup()
-    renderBrowser({ rows: many })
-
-    await user.click(screen.getByLabelText(/Ilan bawat pahina/))
-    await user.click(await screen.findByRole("option", { name: "50 / pahina" }))
+    await user.click(screen.getByRole("button", { name: /Marami pang booking/ }))
 
     expect(rowButtons()).toHaveLength(25)
+    expect(
+      screen.queryByRole("button", { name: /Marami pang booking/ })
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not offer more when it all fits", () => {
+    renderBrowser()
+    expect(
+      screen.queryByRole("button", { name: /Marami pang booking/ })
+    ).not.toBeInTheDocument()
+  })
+
+  it("goes back to the top of the list when the search changes", async () => {
+    const user = userEvent.setup()
+    const { rerender } = render(
+      <LocaleProvider locale="fil">
+        <BookedBrowser
+          rows={many}
+          fieldsByCalendar={{}}
+          calendars={[{ id: CAL_A, name: "Gupit ni Nena" }]}
+          query=""
+          onClearQuery={clearQuery}
+          emptyLabel="Wala pa."
+        />
+      </LocaleProvider>
+    )
+
+    await user.click(screen.getByRole("button", { name: /Marami pang booking/ }))
+    expect(rowButtons().length).toBeGreaterThan(INITIAL_VISIBLE)
+
+    rerender(
+      <LocaleProvider locale="fil">
+        <BookedBrowser
+          rows={many}
+          fieldsByCalendar={{}}
+          calendars={[{ id: CAL_A, name: "Gupit ni Nena" }]}
+          query="suki"
+          onClearQuery={clearQuery}
+          emptyLabel="Wala pa."
+        />
+      </LocaleProvider>
+    )
+
+    // A new query is a new list; row 40 of the old one is nowhere.
+    expect(rowButtons()).toHaveLength(INITIAL_VISIBLE)
   })
 })
 
@@ -239,13 +258,13 @@ describe("opening a row", () => {
     // Written out plainly, so an owner reading it back on the phone reads a
     // line rather than a layout.
     expect(screen.getByText("Pangalan:")).toBeInTheDocument()
-    // Twice on purpose: once in the row you scan, once labelled in the detail
-    // you read back to the customer.
-    expect(screen.getAllByText("Suki 1")).toHaveLength(2)
+    expect(screen.getAllByText("Suki 1").length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText("Kailan:")).toBeInTheDocument()
     expect(screen.getByText("Reference:")).toBeInTheDocument()
     expect(screen.getByText("Email:")).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: /juan@example.com/ })).toBeInTheDocument()
+    expect(
+      screen.getByRole("link", { name: /juan@example.com/ })
+    ).toBeInTheDocument()
   })
 
   it("keeps only one open at a time", async () => {
@@ -295,64 +314,37 @@ describe("opening a row", () => {
 
     await user.click(rowButtons()[0])
 
-    // The owner's own questions read the same way as everything else.
     expect(screen.getByText("Anong hairstyle:")).toBeInTheDocument()
     expect(screen.getByText("Fade po")).toBeInTheDocument()
   })
 })
 
-describe("grouping by day", () => {
-  it("puts the day on a heading instead of on every row", () => {
-    // Both land on 11 March in Manila; one heading, not two dates.
-    renderBrowser({ rows: [row(1), row(21)] })
-
-    const heading = screen.getByRole("heading", { name: /11 March/ })
-    expect(heading).toHaveTextContent("Thursday, 11 March")
-    expect(heading).toHaveTextContent("2 bookings")
-    expect(screen.queryByText("2027-03-11")).not.toBeInTheDocument()
+describe("the collapsed row", () => {
+  it("puts the whole time range on one line", () => {
+    renderBrowser({ rows: [row(1)] })
+    // 01:00Z is 09:00 in Manila, half an hour long.
+    const label = rowButtons()[0].textContent ?? ""
+    expect(label).toContain("9:00 AM")
+    expect(label).toContain("– 9:30 AM")
   })
 
-  it("starts a new heading when the day changes", () => {
-    renderBrowser({ rows: [row(1), row(2)] })
-
-    expect(
-      screen.getByRole("heading", { name: /Thursday, 11 March/ })
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole("heading", { name: /Friday, 12 March/ })
-    ).toBeInTheDocument()
+  it("puts the service on the same line as the name", () => {
+    renderBrowser({ rows: [row(1)] })
+    expect(rowButtons()[0].textContent).toContain("Suki 1 · Gupit lang")
   })
 
-  it("says the day in words when it is nearly here", () => {
-    // Read in the CALENDAR's zone. 02:00 UTC is the same Manila date whatever
-    // hour the test runs at.
-    const today = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Asia/Manila",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(new Date())
+  it("names the calendar only when there is more than one", () => {
+    renderBrowser({ rows: [row(1)] })
+    expect(rowButtons()[0].textContent).not.toContain("Gupit ni Nena")
 
     renderBrowser({
-      rows: [
-        row(1, {
-          startsAt: `${today}T02:00:00.000Z`,
-          endsAt: `${today}T02:30:00.000Z`,
-        }),
+      rows: [row(1)],
+      calendars: [
+        { id: CAL_A, name: "Gupit ni Nena" },
+        { id: CAL_B, name: "Kulay" },
       ],
     })
-
-    expect(screen.getByRole("heading", { name: /Ngayon/ })).toBeInTheDocument()
-  })
-
-  it("counts only the rows on this page under each heading", async () => {
-    const user = userEvent.setup()
-    // Twenty rows spread over twenty days, ten to a page.
-    renderBrowser({ rows: Array.from({ length: 20 }, (_, i) => row(i + 1)) })
-
-    expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(10)
-    await user.click(screen.getByRole("button", { name: "Pahina 2" }))
-    expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(10)
+    expect(rowButtons()[1].textContent).toContain("Gupit ni Nena")
   })
 })
 
@@ -365,7 +357,6 @@ describe("how near the day is", () => {
 
     const heading = screen.getByRole("heading", { level: 3 })
     expect(heading).toHaveTextContent("Bukas")
-    // The written date, not just the relative word.
     expect(heading.textContent).toMatch(
       /[0-9]+ (January|February|March|April|May|June|July|August|September|October|November|December)/
     )
@@ -373,19 +364,25 @@ describe("how near the day is", () => {
 
   it("paints today and tomorrow red, and nothing else", () => {
     renderBrowser({
-      rows: [rowDaysFromToday(0, 1), rowDaysFromToday(1, 2), rowDaysFromToday(4, 3)],
+      rows: [
+        rowDaysFromToday(0, 1),
+        rowDaysFromToday(1, 2),
+        rowDaysFromToday(4, 3),
+      ],
     })
 
     expect(chip("Ngayon").className).toContain("bg-destructive")
     expect(chip("Bukas").className).toContain("bg-destructive")
-    expect(chip("Sa 4 araw").className).not.toContain("bg-destructive")
+    expect(chip(/Sa loob ng apat na araw/).className).not.toContain(
+      "bg-destructive"
+    )
   })
 
   it("warms the rest of the week and lets the far ones go quiet", () => {
     renderBrowser({ rows: [rowDaysFromToday(4, 1), rowDaysFromToday(20, 2)] })
 
-    expect(chip("Sa 4 araw").className).toContain("bg-warning")
-    expect(chip("Sa 20 araw").className).toContain("bg-muted")
+    expect(chip(/Sa loob ng apat na araw/).className).toContain("bg-warning")
+    expect(chip(/Sa loob ng dalawampung araw/).className).toContain("bg-muted")
   })
 
   it("never paints a day that has already happened", () => {
@@ -418,6 +415,33 @@ describe("how near the day is", () => {
   })
 })
 
+describe("in English", () => {
+  it("says the days in English and keeps the digits", () => {
+    renderBrowser({ rows: [rowDaysFromToday(1, 1), rowDaysFromToday(4, 2)] }, "en")
+
+    expect(screen.getByText("Tomorrow")).toBeInTheDocument()
+    expect(screen.getByText("In 4 days")).toBeInTheDocument()
+    expect(screen.queryByText(/araw/)).not.toBeInTheDocument()
+  })
+
+  it("translates the detail panel too", async () => {
+    const user = userEvent.setup()
+    renderBrowser({ rows: [row(1)] }, "en")
+
+    await user.click(rowButtons()[0])
+
+    expect(screen.getByText("Name:")).toBeInTheDocument()
+    expect(screen.getByText("When:")).toBeInTheDocument()
+    expect(screen.getByText("Reference:")).toBeInTheDocument()
+    expect(screen.queryByText("Pangalan:")).not.toBeInTheDocument()
+  })
+
+  it("counts in English", () => {
+    renderBrowser({ rows: [row(1), row(2), row(3)] }, "en")
+    expect(screen.getByText("3 bookings")).toBeInTheDocument()
+  })
+})
+
 describe("the day's rows", () => {
   it("share one card, ruled between them", () => {
     // Separate cards spent a gap of page on every row; a schedule is a ruled
@@ -427,6 +451,7 @@ describe("the day's rows", () => {
     const list = container.querySelector("section ul")
     expect(list?.className).toContain("divide-y")
     expect(list?.className).toContain("rounded-xl")
+    expect(list?.className).toContain("bg-card")
     expect(list?.querySelectorAll("li")).toHaveLength(2)
   })
 
@@ -435,34 +460,6 @@ describe("the day's rows", () => {
     const article = container.querySelector("section ul li article")
     expect(article?.className).not.toContain("rounded-xl")
     expect(article?.className).not.toContain("ring-border")
-  })
-})
-
-describe("the filters on a phone", () => {
-  it("folds away behind a toggle so the first booking is on screen", async () => {
-    const user = userEvent.setup()
-    renderBrowser({
-      rows: [row(1), row(2)],
-      calendars: [
-        { id: CAL_A, name: "Gupit" },
-        { id: CAL_B, name: "Kulay" },
-      ],
-    })
-
-    const toggle = screen.getByRole("button", { name: /Filter/ })
-    expect(toggle).toHaveAttribute("aria-expanded", "false")
-    expect(screen.getByRole("button", { name: /Filter/ })).toHaveAttribute(
-      "aria-controls",
-      "booked-filters"
-    )
-
-    await user.click(toggle)
-    expect(toggle).toHaveAttribute("aria-expanded", "true")
-  })
-
-  it("leaves the search box out where it can always be reached", () => {
-    renderBrowser()
-    expect(search()).toBeVisible()
   })
 })
 

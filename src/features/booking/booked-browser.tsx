@@ -1,10 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { ChevronLeft, ChevronRight, Search, SlidersHorizontal, X } from "lucide-react"
+import { SlidersHorizontal, X } from "lucide-react"
 
+import { useLocale, useT } from "@/components/shell/locale-provider"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -15,13 +15,10 @@ import {
 } from "@/components/ui/select"
 import { BookedRowCard, type BookedRow } from "@/features/booking/booked-list"
 import {
-  clampPage,
-  DEFAULT_PAGE_SIZE,
+  grow,
+  hasMore,
+  INITIAL_VISIBLE,
   matchesQuery,
-  PAGE_SIZES,
-  pageCount,
-  pageWindow,
-  paginate,
   referenceOf,
 } from "@/lib/booking/booked-filter"
 import {
@@ -42,6 +39,14 @@ export interface BookedBrowserProps {
   /** Every calendar the owner has, so the filter can name them all. */
   calendars: { id: string; name: string }[]
   variant?: "active" | "cancelled"
+  /**
+   * What is being searched for, owned by the tabs above.
+   *
+   * One query for all three lists: someone who flips to Cancelled while
+   * looking for "Maria" is still looking for Maria.
+   */
+  query: string
+  onClearQuery: () => void
   /** Shown when nothing survives the search. */
   emptyLabel: string
 }
@@ -68,7 +73,7 @@ const DAY_TONE: Record<DayUrgency, string> = {
 }
 
 /**
- * Searching, filtering and paging a list of bookings.
+ * Searching, filtering and growing a list of bookings.
  *
  * All of it in the browser over rows already loaded, rather than a round trip
  * per keystroke: a raket has tens or hundreds of bookings, not millions, and
@@ -84,33 +89,23 @@ export function BookedBrowser({
   fieldsByCalendar,
   calendars,
   variant = "active",
+  query,
+  onClearQuery,
   emptyLabel,
 }: BookedBrowserProps) {
-  const [query, setQuery] = React.useState("")
+  const t = useT()
+  const locale = useLocale()
   const [calendarId, setCalendarId] = React.useState<string>(ALL)
-  const [size, setSize] = React.useState<number>(DEFAULT_PAGE_SIZE)
-  const [page, setPage] = React.useState(1)
+  const [visible, setVisible] = React.useState(INITIAL_VISIBLE)
   const [openId, setOpenId] = React.useState<string | null>(null)
-  const [showFilters, setShowFilters] = React.useState(false)
+  // Three of these are mounted at once, one per tab, so the label's htmlFor
+  // cannot be a constant.
+  const uid = React.useId()
 
   // The answers are stored keyed by field id, which is not what anyone types.
   // Flattened once so every keystroke is not re-reading the whole map.
   const searchable = React.useMemo(
-    () =>
-      rows.map((row) => ({
-        row,
-        search: {
-          id: row.id,
-          customerName: row.customerName,
-          customerEmail: row.customerEmail,
-          customerPhone: row.customerPhone,
-          calendarName: row.calendarName,
-          serviceName: row.serviceName,
-          answerText: Object.values(row.answers ?? {})
-            .map((value) => answerToText(value))
-            .join(" "),
-        },
-      })),
+    () => rows.map((row) => ({ row, search: searchableOf(row) })),
     [rows]
   )
 
@@ -124,27 +119,31 @@ export function BookedBrowser({
   )
 
   /*
-    Derived, not stored. Filtering can shrink the list under whatever page
-    somebody is on, and a page past the end renders empty — which reads as "no
-    results" when there are plenty, just not there.
+    A new query is a new list. Staying at row 140 of the old one would show
+    a screenful of nothing and read as broken.
   */
-  const current = clampPage(page, filtered.length, size)
-  const pages = pageCount(filtered.length, size)
-  const shown = paginate(filtered, current, size)
+  const [lastQuery, setLastQuery] = React.useState(query)
+  if (lastQuery !== query) {
+    setLastQuery(query)
+    setVisible(INITIAL_VISIBLE)
+  }
+
+  const shown = filtered.slice(0, visible)
+  const more = hasMore(visible, filtered.length)
 
   /*
     Every row carries a date, but a list of them repeats it on every single
     line. Grouped under a day heading the rows only need their time — which is
-    what an owner is actually scanning for — and "Ngayon" reads faster than any
+    what an owner is actually scanning for — and "Bukas" reads faster than any
     date does.
 
-    Grouped AFTER paging, so a heading never counts rows that are on the next
-    page. Plain loop, no useMemo — the React Compiler does that better than a
+    Grouped AFTER the cut, so a heading never counts rows that have not loaded
+    yet. Plain loop, no useMemo — the React Compiler does that better than a
     dependency array can, and `shown` is rebuilt on every keystroke anyway.
   */
   const groups: {
     key: string
-    /** "Bukas", "Sa 5 araw" — null once counting days stops helping. */
+    /** "Bukas", "Sa loob ng limang araw" — null once counting stops helping. */
     near: string | null
     urgency: DayUrgency
     /** Always written out, so a relative word never stands on its own. */
@@ -163,7 +162,7 @@ export function BookedBrowser({
     const today = isoDateInZone(new Date(), row.timezone)
     groups.push({
       key,
-      near: relativeDayLabel(key, today),
+      near: relativeDayLabel(key, today, locale),
       urgency: dayUrgency(key, today),
       // The year only earns its space when it is not this one — which on the
       // finished tab it often is not.
@@ -178,104 +177,34 @@ export function BookedBrowser({
   const filtering = query.trim().length > 0 || calendarId !== ALL
 
   function reset() {
-    setQuery("")
+    onClearQuery()
     setCalendarId(ALL)
-    setPage(1)
+    setVisible(INITIAL_VISIBLE)
   }
 
   return (
     <div className="space-y-4">
-      {/* --- the toolbar --------------------------------------------------- */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-        <div className="flex min-w-0 flex-1 items-end gap-2">
-          <div className="grid min-w-0 flex-1 gap-1.5">
-            <Label htmlFor="booked-search" className="sr-only">
-              Maghanap ng booking
-            </Label>
-            <div className="relative">
-              <Search
-                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <Input
-                id="booked-search"
-                value={query}
-                placeholder="Pangalan, number, serbisyo, reference…"
-                autoComplete="off"
-                className="h-11 pl-9"
-                onChange={(event) => {
-                  setQuery(event.target.value)
-                  // A new search is a new list; staying on page four of the old
-                  // one would show nothing and look broken.
-                  setPage(1)
-                }}
-              />
-              {query ? (
-                <button
-                  type="button"
-                  aria-label="Burahin ang hinahanap"
-                  onClick={() => {
-                    setQuery("")
-                    setPage(1)
-                  }}
-                  className="absolute top-1/2 right-2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                >
-                  <X className="size-4" aria-hidden="true" />
-                </button>
-              ) : null}
-            </div>
-          </div>
-
-          {/*
-            At 390px the selects push the first booking off the screen, so
-            below lg they fold away behind this. From lg they all fit across
-            one row and the toggle would only be in the way. The search box
-            never folds — it is the one control worth reaching for first.
-          */}
-          <Button
-            type="button"
-            variant="outline"
-            aria-expanded={showFilters}
-            aria-controls="booked-filters"
-            className="h-11 shrink-0 gap-2 lg:hidden"
-            onClick={() => setShowFilters((previous) => !previous)}
-          >
-            <SlidersHorizontal className="size-4" aria-hidden="true" />
-            <span className="sr-only sm:not-sr-only">Filter</span>
-            {filtering ? (
-              <span
-                className="size-1.5 rounded-full bg-primary"
-                aria-hidden="true"
-              />
-            ) : null}
-          </Button>
-        </div>
-
-        <div
-          id="booked-filters"
-          className={cn(
-            "flex-col gap-3 sm:flex-row lg:flex lg:shrink-0 lg:items-end",
-            showFilters ? "flex" : "hidden"
-          )}
-        >
+      {/* --- the toolbar, if there is anything left to put in it ----------- */}
+      {calendars.length > 1 || query.trim() ? (
+        <div className="flex items-center gap-2">
           {/* Only worth a control when there is more than one thing to pick. */}
           {calendars.length > 1 ? (
-            <div className="grid gap-1.5 sm:flex-1 lg:w-56 lg:flex-none">
-              <Label htmlFor="booked-calendar" className="sr-only">
-                Salain ayon sa calendar
+            <div className="grid min-w-0 flex-1 gap-1.5 sm:max-w-64">
+              <Label htmlFor={`${uid}-calendar`} className="sr-only">
+                {t("booked.filter.calendar")}
               </Label>
               <Select
                 items={[
-                  { label: "Lahat ng calendar", value: ALL },
+                  { label: t("booked.filter.allCalendars"), value: ALL },
                   ...calendars.map((c) => ({ label: c.name, value: c.id })),
                 ]}
                 value={calendarId}
                 onValueChange={(next) => {
                   setCalendarId((next as string) ?? ALL)
-                  setPage(1)
+                  setVisible(INITIAL_VISIBLE)
                 }}
               >
-                <SelectTrigger id="booked-calendar" className="h-11! w-full">
+                <SelectTrigger id={`${uid}-calendar`} className="h-11! w-full">
                   <SlidersHorizontal
                     className="size-4 shrink-0 text-muted-foreground"
                     aria-hidden="true"
@@ -283,7 +212,9 @@ export function BookedBrowser({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={ALL}>Lahat ng calendar</SelectItem>
+                  <SelectItem value={ALL}>
+                    {t("booked.filter.allCalendars")}
+                  </SelectItem>
                   {calendars.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.name}
@@ -294,45 +225,38 @@ export function BookedBrowser({
             </div>
           ) : null}
 
-          <div className="grid gap-1.5 sm:flex-1 lg:w-36 lg:flex-none">
-            <Label htmlFor="booked-size" className="sr-only">
-              Ilan bawat pahina
-            </Label>
-            <Select
-              items={PAGE_SIZES.map((n) => ({
-                label: `${n} / pahina`,
-                value: String(n),
-              }))}
-              value={String(size)}
-              onValueChange={(next) => {
-                const parsed = Number(next ?? DEFAULT_PAGE_SIZE)
-                if (Number.isFinite(parsed)) setSize(parsed)
-                setPage(1)
-              }}
+          {/*
+            What is being searched for, since the box that says so is now a
+            button two rows up. A filter you cannot see is a filter you will
+            blame the app for.
+          */}
+          {query.trim() ? (
+            <button
+              type="button"
+              onClick={onClearQuery}
+              className="flex min-w-0 items-center gap-1.5 rounded-full bg-muted py-1 pr-1.5 pl-3 text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             >
-              <SelectTrigger id="booked-size" className="h-11! w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PAGE_SIZES.map((n) => (
-                  <SelectItem key={n} value={String(n)}>
-                    {n} / pahina
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              <span className="truncate">
+                {t("booked.search.showing", { query: query.trim() })}
+              </span>
+              <X className="size-3.5 shrink-0" aria-hidden="true" />
+              <span className="sr-only">{t("booked.search.clear")}</span>
+            </button>
+          ) : null}
         </div>
-      </div>
+      ) : null}
 
       {/* --- what is being looked at --------------------------------------- */}
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
         <p aria-live="polite">
           {filtered.length === 0
-            ? "Walang tugma"
+            ? t("booked.count.none")
             : filtered.length === rows.length
-              ? `${rows.length} ${rows.length === 1 ? "booking" : "bookings"}`
-              : `${filtered.length} sa ${rows.length}`}
+              ? countLabel(t, rows.length)
+              : t("booked.count.ofTotal", {
+                  shown: filtered.length,
+                  total: rows.length,
+                })}
         </p>
         {filtering ? (
           <Button
@@ -342,7 +266,7 @@ export function BookedBrowser({
             onClick={reset}
           >
             <X className="size-3.5" aria-hidden="true" />
-            I-clear ang filter
+            {t("booked.filter.clear")}
           </Button>
         ) : null}
       </div>
@@ -350,9 +274,7 @@ export function BookedBrowser({
       {/* --- the list ------------------------------------------------------ */}
       {shown.length === 0 ? (
         <p className="rounded-xl bg-card px-4 py-10 text-center text-sm text-pretty text-muted-foreground ring-1 ring-border">
-          {filtering
-            ? "Walang booking na tugma sa hinahanap mo."
-            : emptyLabel}
+          {filtering ? t("booked.noMatch") : emptyLabel}
         </p>
       ) : (
         <div className="space-y-5">
@@ -382,8 +304,7 @@ export function BookedBrowser({
                   {group.date}
                 </span>
                 <span className="text-xs text-muted-foreground tabular-nums">
-                  {group.rows.length}
-                  {group.rows.length === 1 ? " booking" : " bookings"}
+                  {countLabel(t, group.rows.length)}
                 </span>
               </h3>
 
@@ -416,84 +337,99 @@ export function BookedBrowser({
         </div>
       )}
 
-      {/* --- paging -------------------------------------------------------- */}
-      {pages > 1 ? (
-        <nav
-          aria-label="Mga pahina"
-          className="flex flex-wrap items-center justify-center gap-1 pt-1"
-        >
-          <PageButton
-            label="Nakaraan"
-            disabled={current === 1}
-            onClick={() => setPage(current - 1)}
-          >
-            <ChevronLeft className="size-4" aria-hidden="true" />
-          </PageButton>
-
-          {pageWindow(current, pages).map((p, index) =>
-            p === null ? (
-              <span
-                key={`gap-${index}`}
-                aria-hidden="true"
-                className="px-1 text-sm text-muted-foreground"
-              >
-                …
-              </span>
-            ) : (
-              <button
-                key={p}
-                type="button"
-                aria-current={p === current ? "page" : undefined}
-                aria-label={`Pahina ${p}`}
-                onClick={() => setPage(p)}
-                className={cn(
-                  "h-9 min-w-9 rounded-lg px-2 text-sm font-medium tabular-nums transition-colors",
-                  "outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  p === current
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                {p}
-              </button>
-            )
-          )}
-
-          <PageButton
-            label="Susunod"
-            disabled={current === pages}
-            onClick={() => setPage(current + 1)}
-          >
-            <ChevronRight className="size-4" aria-hidden="true" />
-          </PageButton>
-        </nav>
+      {/* --- more, when scrolling asks for it ------------------------------ */}
+      {more ? (
+        <LoadMore
+          label={t("booked.more")}
+          onReach={() => setVisible((n) => grow(n, filtered.length))}
+        />
       ) : null}
     </div>
   )
 }
 
-function PageButton({
+/** "1 booking" / "3 bookings", in whichever language is on. */
+function countLabel(
+  t: (key: "booked.count.one" | "booked.count.many", params: { n: number }) => string,
+  n: number
+): string {
+  return n === 1 ? t("booked.count.one", { n }) : t("booked.count.many", { n })
+}
+
+/**
+ * The bottom of the list, which asks for more when it comes into view.
+ *
+ * Also a button, and not as a courtesy: an observer fires on SCROLL, and a
+ * keyboard tabbing down the page never scrolls it. Whoever reaches the end
+ * gets a way to go past it.
+ *
+ * The margin means the next rows are asked for while the last ones are still
+ * on screen, so the list grows before it runs out rather than after.
+ */
+function LoadMore({
   label,
-  disabled,
-  onClick,
-  children,
+  onReach,
 }: {
   label: string
-  disabled: boolean
-  onClick: () => void
-  children: React.ReactNode
+  onReach: () => void
 }) {
+  const ref = React.useRef<HTMLButtonElement | null>(null)
+  const reach = React.useRef(onReach)
+
+  // Written in an effect, never in render — the React Compiler memoises
+  // renders, and a ref poked during one is exactly what it cannot see.
+  React.useEffect(() => {
+    reach.current = onReach
+  }, [onReach])
+
+  React.useEffect(() => {
+    const node = ref.current
+    if (!node || typeof IntersectionObserver === "undefined") return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) reach.current()
+      },
+      { rootMargin: "400px 0px" }
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <button
+      ref={ref}
       type="button"
-      aria-label={label}
-      disabled={disabled}
-      onClick={onClick}
-      className="flex size-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40"
+      onClick={() => reach.current()}
+      className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
     >
-      {children}
+      <span
+        className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent motion-reduce:animate-none"
+        aria-hidden="true"
+      />
+      {label}
     </button>
   )
+}
+
+/**
+ * A booking, reduced to the text somebody might type looking for it.
+ *
+ * Exported because the search box lives above the tabs now and has to count
+ * matches in the list it cannot see.
+ */
+export function searchableOf(row: BookedRow) {
+  return {
+    id: row.id,
+    customerName: row.customerName,
+    customerEmail: row.customerEmail,
+    customerPhone: row.customerPhone,
+    calendarName: row.calendarName,
+    serviceName: row.serviceName,
+    answerText: Object.values(row.answers ?? {})
+      .map((value) => answerToText(value))
+      .join(" "),
+  }
 }
 
 export { referenceOf }

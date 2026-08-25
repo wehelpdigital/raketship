@@ -7,6 +7,7 @@ import {
   PageHeader,
 } from "@/components/shell/page-container"
 import { SetupNotice } from "@/components/shell/setup-notice"
+import { LocaleToggle } from "@/components/shell/locale-toggle"
 import { ThemeToggle } from "@/components/shell/theme-toggle"
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -150,6 +151,7 @@ export default async function AccountPage() {
                     Light for daytime deliveries, dark for late-night encoding.
                   </p>
                 </div>
+                <LocaleToggle />
                 <ThemeToggle className="-mr-2" />
               </div>
             </CardContent>

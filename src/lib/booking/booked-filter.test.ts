@@ -1,15 +1,16 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  clampPage,
+  grow,
+  hasMore,
+  INITIAL_VISIBLE,
   matchesQuery,
-  pageCount,
-  pageWindow,
-  paginate,
   referenceOf,
   searchHaystack,
+  VISIBLE_STEP,
   type SearchableBooking,
 } from "./booked-filter"
+
 
 function row(overrides: Partial<SearchableBooking> = {}): SearchableBooking {
   return {
@@ -94,103 +95,46 @@ describe("searchHaystack", () => {
     expect(hay).not.toContain("444444444444")
   })
 })
-
-describe("pageCount", () => {
-  it("counts the pages a list needs", () => {
-    expect(pageCount(0, 10)).toBe(1)
-    expect(pageCount(1, 10)).toBe(1)
-    expect(pageCount(10, 10)).toBe(1)
-    expect(pageCount(11, 10)).toBe(2)
-    expect(pageCount(25, 10)).toBe(3)
+describe("grow", () => {
+  it("adds a step at a time", () => {
+    expect(grow(INITIAL_VISIBLE, 500)).toBe(INITIAL_VISIBLE + VISIBLE_STEP)
+    expect(grow(INITIAL_VISIBLE + VISIBLE_STEP, 500)).toBe(
+      INITIAL_VISIBLE + VISIBLE_STEP * 2
+    )
   })
 
-  it("never returns zero, so there is always a page to be on", () => {
-    expect(pageCount(0, 10)).toBe(1)
-    expect(pageCount(-5, 10)).toBe(1)
+  it("never promises more rows than there are", () => {
+    expect(grow(INITIAL_VISIBLE, 25)).toBe(25)
+    expect(grow(INITIAL_VISIBLE, 0)).toBe(0)
   })
 
-  it("survives a nonsense page size", () => {
-    expect(pageCount(50, 0)).toBe(1)
-    expect(pageCount(50, Number.NaN)).toBe(1)
-  })
-})
-
-describe("clampPage", () => {
-  it("holds a page inside the list", () => {
-    expect(clampPage(1, 25, 10)).toBe(1)
-    expect(clampPage(3, 25, 10)).toBe(3)
-    expect(clampPage(9, 25, 10)).toBe(3)
-    expect(clampPage(0, 25, 10)).toBe(1)
-    expect(clampPage(-4, 25, 10)).toBe(1)
-  })
-
-  it("pulls you back when a filter shrinks the list under you", () => {
-    // Otherwise page 5 of a now-3-page list renders empty, which reads as "no
-    // results" when there are plenty — just not there.
-    expect(clampPage(5, 12, 10)).toBe(2)
-    expect(clampPage(5, 0, 10)).toBe(1)
-  })
-})
-
-describe("paginate", () => {
-  const items = Array.from({ length: 25 }, (_, i) => i + 1)
-
-  it("cuts the page asked for", () => {
-    expect(paginate(items, 1, 10)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-    expect(paginate(items, 3, 10)).toEqual([21, 22, 23, 24, 25])
-  })
-
-  it("gives the last page rather than nothing when asked past the end", () => {
-    expect(paginate(items, 99, 10)).toEqual([21, 22, 23, 24, 25])
-  })
-
-  it("covers every item exactly once across all its pages", () => {
-    const seen = [
-      ...paginate(items, 1, 10),
-      ...paginate(items, 2, 10),
-      ...paginate(items, 3, 10),
-    ]
-    expect(seen).toEqual(items)
-  })
-
-  it("handles an empty list", () => {
-    expect(paginate([], 1, 10)).toEqual([])
-  })
-})
-
-describe("pageWindow", () => {
-  it("lists them all when there are few", () => {
-    expect(pageWindow(1, 1)).toEqual([1])
-    expect(pageWindow(2, 3)).toEqual([1, 2, 3])
-  })
-
-  it("always offers the first and the last", () => {
-    // However long the list, both ends stay one tap away.
-    const window = pageWindow(50, 100)
-    expect(window[0]).toBe(1)
-    expect(window[window.length - 1]).toBe(100)
-  })
-
-  it("elides the runs it skips", () => {
-    expect(pageWindow(50, 100)).toEqual([1, null, 49, 50, 51, null, 100])
-  })
-
-  it("does not leave a gap standing in for a single page", () => {
-    // A "…" hiding exactly one page is worse than the page.
-    for (const current of [1, 2, 3, 4, 5]) {
-      const window = pageWindow(current, 6)
-      for (let i = 1; i < window.length - 1; i++) {
-        if (window[i] === null) {
-          const before = window[i - 1] as number
-          const after = window[i + 1] as number
-          expect(after - before).toBeGreaterThan(2)
-        }
-      }
+  it("never goes backwards", () => {
+    // A filter can shrink the list under a scroll position. Taking rows away
+    // from someone mid-read is worse than showing a few too many.
+    for (const visible of [0, 1, 5, INITIAL_VISIBLE, 100]) {
+      expect(grow(visible, 500)).toBeGreaterThanOrEqual(
+        Math.min(visible, 500)
+      )
     }
   })
 
-  it("never repeats a page", () => {
-    const window = pageWindow(1, 20).filter((p): p is number => p !== null)
-    expect(new Set(window).size).toBe(window.length)
+  it("always shows at least the first screenful", () => {
+    expect(grow(0, 500)).toBeGreaterThanOrEqual(INITIAL_VISIBLE)
+    expect(grow(-10, 500)).toBeGreaterThanOrEqual(INITIAL_VISIBLE)
+  })
+
+  it("refuses to stand still on a zero step", () => {
+    // A step of zero would make the sentinel fire forever without ever
+    // loading anything.
+    expect(grow(INITIAL_VISIBLE, 500, 0)).toBeGreaterThan(INITIAL_VISIBLE)
+  })
+})
+
+describe("hasMore", () => {
+  it("knows when the end has been reached", () => {
+    expect(hasMore(10, 25)).toBe(true)
+    expect(hasMore(25, 25)).toBe(false)
+    expect(hasMore(30, 25)).toBe(false)
+    expect(hasMore(0, 0)).toBe(false)
   })
 })

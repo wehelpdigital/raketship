@@ -177,6 +177,35 @@ before the post does. Objects live under `<uid>/`, and the bucket needs a
 row before deleting it, and without select the owner's own remove came back 403
 while every replaced logo stayed behind as an orphan.
 
+## Language
+
+The app speaks Filipino by default and English by choice. The choice is a
+plain COOKIE (`raketship-locale`), not a URL segment — booking links get
+pasted into Facebook, and a /en/ in the link would fork every share into two.
+The root layout reads it once server-side and hands it down through
+`LocaleProvider`; client components use `useT()`, server components
+`getT()`. The toggle sits beside the theme toggle and draws its flags as
+inline SVG because Windows renders flag emoji as boxed letters.
+
+Messages live in `src/lib/i18n/messages/*` with BOTH languages on the same
+line — a split fil/en file drifts the first time somebody adds a string in a
+hurry. Filipino counted phrases go through `tagalogCount()` in
+`lib/i18n/numbers.ts`, which spells the number and picks the linker ("tatlong
+araw", "apat NA araw") — getting the linker wrong is not a typo, it is a
+foreign accent. The two languages are allowed different shapes: "Sa loob ng
+tatlong araw" vs "In 3 days".
+
+Most of the app is still hard-coded Filipino. New user-facing strings in the
+areas already converted (the Booked page, the shell) must go through the
+dictionary; converting the rest is incremental work.
+
+**The `animate-in` / `fade-in-0` / `zoom-in-95` classes used in
+dialog.tsx, dropdown-menu.tsx and select.tsx DO NOT EXIST** — the plugin that
+defines them was never installed, so those are dead classes and the components
+simply appear. Animations here are hand-written keyframes in `globals.css`
+(`pop-in`, `step-enter`, the confirm family) or Base UI's measured-height
+collapsible (`--collapsible-panel-height`).
+
 ## Booking module
 
 Six tables: `booking_calendars`, `booking_availability`, `booking_blackouts`,

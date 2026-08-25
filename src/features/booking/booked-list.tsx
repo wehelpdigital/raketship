@@ -2,15 +2,11 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import {
-  CalendarX2,
-  ChevronDown,
-  Loader2,
-  RotateCcw,
-  Undo2,
-} from "lucide-react"
+import { Collapsible } from "@base-ui/react/collapsible"
+import { CalendarX2, ChevronDown, Loader2, RotateCcw, Undo2 } from "lucide-react"
 import { toast } from "sonner"
 
+import { useT } from "@/components/shell/locale-provider"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -67,8 +63,8 @@ export interface BookedRowCardProps {
 /**
  * One booking, closed to a line and opened to everything.
  *
- * Closed it is a scannable row: when, who, and what — which is what an owner
- * reads down the page looking for one particular booking. Opened it gives the
+ * Closed it is ONE line: when, who, and what — which is what an owner reads
+ * down the page looking for one particular booking. Opened it gives the
  * contact details, the answers to their own form questions, and the way to
  * cancel.
  *
@@ -84,10 +80,10 @@ export function BookedRowCard({
   open,
   onToggle,
 }: BookedRowCardProps) {
+  const t = useT()
   const router = useRouter()
   const [confirming, setConfirming] = React.useState(false)
   const [busy, startBusy] = React.useTransition()
-  const bodyId = React.useId()
 
   const when = instantInZone(row.startsAt, row.timezone)
   const until = instantInZone(row.endsAt, row.timezone)
@@ -103,14 +99,14 @@ export function BookedRowCard({
       try {
         const result = await run()
         if (!result.ok) {
-          toast.error(result.message ?? "Hindi natuloy. Pakisubukan ulit.")
+          toast.error(result.message ?? t("booked.toast.failed"))
           return
         }
         setConfirming(false)
-        toast.success(result.message ?? "Tapos na.")
+        toast.success(result.message ?? t("booked.toast.done"))
         router.refresh()
       } catch {
-        toast.error("Something went wrong. Pakisubukan ulit.")
+        toast.error(t("booked.toast.error"))
       }
     })
   }
@@ -121,93 +117,93 @@ export function BookedRowCard({
     shading that says it is the one that is open.
   */
   return (
-    <article
-      className={cn(
-        "transition-colors",
-        open && "bg-muted/40",
-        cancelled && "opacity-75"
-      )}
+    <Collapsible.Root
+      open={open}
+      onOpenChange={onToggle}
+      render={
+        <article
+          className={cn(
+            "transition-colors",
+            open && "bg-muted/40",
+            cancelled && "opacity-75"
+          )}
+        />
+      }
     >
       {/* The whole row is the control. One large target beats a chevron the
           size of a fingernail, which is what this is on a phone. */}
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls={bodyId}
-        onClick={onToggle}
-        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:gap-4 sm:px-5"
-      >
+      <Collapsible.Trigger className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none sm:gap-4 sm:px-5">
         {/*
-          Fixed width so the times line up down the page and the eye can run
-          along one column instead of tracking ragged text. The DAY is on the
-          heading above this row, so all a row has to say is when in the day.
+          The whole range on ONE line, at a fixed width so the times line up
+          down the page and the eye can run along one column instead of
+          tracking ragged text. The DAY is on the heading above this row.
         */}
-        <span className="w-[4.5rem] shrink-0 sm:w-24">
-          <span className="block text-sm font-semibold tabular-nums">
-            {when.time}
-          </span>
-          <span className="block text-xs text-muted-foreground tabular-nums">
-            {`– ${until.time}`}
+        <span className="w-32 shrink-0 whitespace-nowrap sm:w-[8.5rem]">
+          <span className="text-sm font-semibold tabular-nums">{when.time}</span>
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {` – ${until.time}`}
           </span>
         </span>
 
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium">
-            {row.customerName}
-          </span>
-          <span className="block truncate text-xs text-muted-foreground">
-            {row.serviceName ?? row.calendarName}
+        <span className="min-w-0 flex-1 truncate">
+          <span className="text-sm font-medium">{row.customerName}</span>
+          <span className="text-xs text-muted-foreground">
+            {` · ${row.serviceName ?? row.calendarName}`}
             {showCalendar && row.serviceName ? ` · ${row.calendarName}` : ""}
           </span>
         </span>
 
         {/* Dropped on the narrowest phones, where the name has to win. */}
-        <span className="hidden shrink-0 text-right sm:block">
+        <span className="hidden shrink-0 text-right text-xs whitespace-nowrap sm:block">
           {row.servicePriceCentavos ? (
-            <span className="block text-sm font-medium tabular-nums">
+            <span className="font-medium tabular-nums">
               {formatPeso(row.servicePriceCentavos)}
+              <span className="text-muted-foreground"> · </span>
             </span>
           ) : null}
-          <span className="block text-xs text-muted-foreground tabular-nums">
+          <span className="text-muted-foreground tabular-nums">
             {formatDuration(row.durationMinutes)}
           </span>
         </span>
 
         <ChevronDown
           className={cn(
-            "size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none",
+            "size-4 shrink-0 text-muted-foreground transition-transform duration-200 motion-reduce:transition-none",
             open && "rotate-180"
           )}
           aria-hidden="true"
         />
-      </button>
+      </Collapsible.Trigger>
 
-      {open ? (
-        <div id={bodyId} className="space-y-4 border-t px-4 pt-4 pb-5 sm:px-5">
+      {/*
+        Base UI measures the panel and hands its height over as a CSS variable,
+        so the open and close can both be animated without this component
+        having to know anything about its own contents — and it animates CLOSED
+        as well as open, which a panel that only exists while it is open cannot.
+      */}
+      <Collapsible.Panel className="h-[var(--collapsible-panel-height)] overflow-hidden transition-[height] duration-200 ease-out data-ending-style:h-0 data-starting-style:h-0 motion-reduce:transition-none">
+        <div className="space-y-4 border-t px-4 pt-4 pb-5 sm:px-5">
           {/*
             Written out as "Label: value" rather than a grid of headings above
             values. An owner reading a booking back to a customer on the phone
             reads a line, not a layout — and half of these are one short word,
             which a heading above makes taller than the thing it names.
-          */}
-          {/*
-            One column on a phone, two once there is room. A single column of
-            eleven short lines down a 900px screen is mostly empty space, and
-            the eye has to travel further than the facts are worth.
+
+            One column on a phone, two once there is room.
           */}
           <dl className="grid gap-x-8 gap-y-1.5 text-sm lg:grid-cols-2">
-            <Fact label="Pangalan">{row.customerName}</Fact>
+            <Fact label={t("booked.fact.name")}>{row.customerName}</Fact>
 
-            <Fact label="Kailan">
+            <Fact label={t("booked.fact.when")}>
               <span className="tabular-nums">
                 {longDate(when.isoDate)}, {when.time} – {until.time}
               </span>
             </Fact>
 
-            <Fact label="Timezone">{row.timezone}</Fact>
+            <Fact label={t("booked.fact.timezone")}>{row.timezone}</Fact>
 
             {row.customerEmail ? (
-              <Fact label="Email">
+              <Fact label={t("booked.fact.email")}>
                 <a
                   href={`mailto:${row.customerEmail}`}
                   className="underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
@@ -218,7 +214,7 @@ export function BookedRowCard({
             ) : null}
 
             {row.customerPhone ? (
-              <Fact label="Mobile">
+              <Fact label={t("booked.fact.mobile")}>
                 <a
                   href={`tel:${row.customerPhone}`}
                   className="tabular-nums underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
@@ -229,26 +225,32 @@ export function BookedRowCard({
             ) : null}
 
             {!row.customerEmail && !row.customerPhone ? (
-              <Fact label="Contact">
-                <span className="text-muted-foreground">Wala silang iniwan</span>
+              <Fact label={t("booked.fact.contact")}>
+                <span className="text-muted-foreground">
+                  {t("booked.fact.noContact")}
+                </span>
               </Fact>
             ) : null}
 
-            <Fact label="Serbisyo">{row.serviceName ?? row.calendarName}</Fact>
+            <Fact label={t("booked.fact.service")}>
+              {row.serviceName ?? row.calendarName}
+            </Fact>
 
-            <Fact label="Haba">{formatDuration(row.durationMinutes)}</Fact>
+            <Fact label={t("booked.fact.length")}>
+              {formatDuration(row.durationMinutes)}
+            </Fact>
 
             {row.servicePriceCentavos ? (
-              <Fact label="Presyo">
+              <Fact label={t("booked.fact.price")}>
                 <span className="tabular-nums">
                   {formatPeso(row.servicePriceCentavos)}
                 </span>
               </Fact>
             ) : null}
 
-            <Fact label="Calendar">{row.calendarName}</Fact>
+            <Fact label={t("booked.fact.calendar")}>{row.calendarName}</Fact>
 
-            <Fact label="Reference">
+            <Fact label={t("booked.fact.reference")}>
               <span className="font-mono tracking-wider tabular-nums">
                 {referenceOf(row.id)}
               </span>
@@ -260,7 +262,7 @@ export function BookedRowCard({
               {/* Said out loud, so these are not mistaken for booking fields
                   the app invented. They are the owner's own questions. */}
               <p className="mb-1.5 text-xs font-medium text-muted-foreground">
-                Sagot sa form mo
+                {t("booked.answers")}
               </p>
               <dl className="space-y-1.5 text-sm">
                 {answered.map(({ field, text }) => (
@@ -289,7 +291,7 @@ export function BookedRowCard({
                 ) : (
                   <Undo2 className="size-4" aria-hidden="true" />
                 )}
-                Ibalik
+                {t("booked.action.restore")}
               </Button>
             ) : (
               <Dialog open={confirming} onOpenChange={setConfirming}>
@@ -301,17 +303,17 @@ export function BookedRowCard({
                   onClick={() => setConfirming(true)}
                 >
                   <CalendarX2 className="size-4" aria-hidden="true" />
-                  I-cancel
+                  {t("booked.action.cancel")}
                 </Button>
 
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>I-cancel ang booking?</DialogTitle>
+                    <DialogTitle>{t("booked.cancel.title")}</DialogTitle>
                     <DialogDescription className="text-pretty">
-                      {`${row.customerName}, ${longDate(when.isoDate)} ${when.time}. `}
-                      Babalik sa bakante ang oras na ito, kaya pwede na ulit
-                      itong kunin ng iba. Hindi namin sila aabisuhan — ikaw ang
-                      magpapaalam.
+                      {t("booked.cancel.body", {
+                        who: row.customerName,
+                        when: `${longDate(when.isoDate)} ${when.time}`,
+                      })}
                     </DialogDescription>
                   </DialogHeader>
 
@@ -319,7 +321,7 @@ export function BookedRowCard({
                     <DialogClose
                       render={<Button variant="outline" className="h-11" />}
                     >
-                      Huwag muna
+                      {t("common.cancel")}
                     </DialogClose>
                     <Button
                       variant="destructive"
@@ -335,7 +337,7 @@ export function BookedRowCard({
                       ) : (
                         <RotateCcw className="size-4" aria-hidden="true" />
                       )}
-                      Oo, i-cancel
+                      {t("booked.cancel.confirm")}
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -343,8 +345,8 @@ export function BookedRowCard({
             )}
           </div>
         </div>
-      ) : null}
-    </article>
+      </Collapsible.Panel>
+    </Collapsible.Root>
   )
 }
 

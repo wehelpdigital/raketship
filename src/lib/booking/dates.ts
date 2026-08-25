@@ -1,4 +1,6 @@
 import { WEEKDAY_LABELS, WEEKDAY_SHORT } from "@/lib/booking/slots"
+import { t, type Locale } from "@/lib/i18n"
+import { tagalogCount } from "@/lib/i18n/numbers"
 
 /**
  * Dates written out from their parts, never through the viewer's locale.
@@ -78,8 +80,8 @@ export function dayOffset(fromIso: string, toIso: string): number {
 export const RELATIVE_DAY_LIMIT = 30
 
 /**
- * "Ngayon", "Bukas", "Sa 5 araw", "3 araw na" — or null when the day is far
- * enough away that counting it serves nobody.
+ * "Bukas", "Sa loob ng limang araw", "Tomorrow", "In 5 days" — or null when
+ * the day is far enough away that counting it serves nobody.
  *
  * A booking list is read relative to today far more often than absolutely: an
  * owner wants to know what is happening now, not to parse a date. This is the
@@ -87,28 +89,35 @@ export const RELATIVE_DAY_LIMIT = 30
  * instead of it, so that "Bukas" never leaves someone wondering which day that
  * actually is.
  *
- * "Sa N araw" and "N araw na" are the app's own two shapes: "Sa susunod na N
- * araw" already ships on the public page, and "na" is how everything else here
- * marks something done — "Tapos na", "Sarado na", "Booked na po!".
+ * The two languages do not have the same shape here and are not made to. The
+ * Filipino counted form spells the number out and wraps it — "sa loob ng
+ * tatlong araw" — because that is how it is said; English keeps the digits.
+ * Both parameters are handed to both, and each message uses the one it wants.
  */
 export function relativeDayLabel(
   iso: string,
-  todayIso: string
+  todayIso: string,
+  locale: Locale
 ): string | null {
   const offset = dayOffset(todayIso, iso)
   if (Math.abs(offset) > RELATIVE_DAY_LIMIT) return null
 
   switch (offset) {
     case 0:
-      return "Ngayon"
+      return t(locale, "date.today")
     case 1:
-      return "Bukas"
+      return t(locale, "date.tomorrow")
     case 2:
-      return "Makalawa"
+      return t(locale, "date.dayAfter")
     case -1:
-      return "Kahapon"
-    default:
-      return offset > 0 ? `Sa ${offset} araw` : `${-offset} araw na`
+      return t(locale, "date.yesterday")
+    default: {
+      const days = Math.abs(offset)
+      const params = { n: days, count: tagalogCount(days) }
+      return offset > 0
+        ? t(locale, "date.inDays", params)
+        : t(locale, "date.daysAgo", params)
+    }
   }
 }
 
