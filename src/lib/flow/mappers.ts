@@ -17,6 +17,9 @@ export interface CanvasNodeData extends Record<string, unknown> {
   glance?: ModuleGlance
   /** Position in the entrance stagger; absent means arrive without ceremony. */
   enterIndex?: number
+  /** The module's own accent and icon, read off its catalog row server-side. */
+  accent?: string
+  icon?: string
 }
 
 export interface CanvasNode {
@@ -105,6 +108,20 @@ export function nextNodeKey(
   }
   // Practically unreachable; keeps the signature total.
   return `${type}-${existingKeys.length + 1}`
+}
+
+/**
+ * Where tapping a module node on the outer board leads.
+ *
+ * Booking's builder ships pre-wired, so its node opens what an owner actually
+ * checks — the Booked list. Every other module opens its inner canvas.
+ */
+export function moduleNodeHref(
+  moduleId: string | null,
+  nodeDbId: string
+): string {
+  if (moduleId === "booking") return "/modules/booking/booked"
+  return `/raket/${nodeDbId}`
 }
 
 export function edgeKey(source: string, target: string): string {

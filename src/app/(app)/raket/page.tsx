@@ -162,6 +162,21 @@ export default async function RaketPage() {
   }
 
   const shopName = profile?.business_name?.trim()
+  /*
+    Each module's own icon and accent, read off its catalog row so the node
+    wears the same dress as the nav and the marketplace. Keyed by module id;
+    a module with no row falls back to the registry's generic look.
+  */
+  const dress: Record<string, { accent?: string; icon?: string }> = {}
+  for (const activated of workspace.modules) {
+    if (activated.module) {
+      dress[activated.module.id] = {
+        accent: activated.module.accent,
+        icon: activated.module.icon,
+      }
+    }
+  }
+
   const nodes = canvas.nodes.map((row, index) => {
     const node = rowToCanvasNode(row)
     /*
@@ -183,6 +198,7 @@ export default async function RaketPage() {
         values,
         glance: glances[row.node_key],
         enterIndex: index,
+        ...(row.module_id ? (dress[row.module_id] ?? {}) : {}),
       },
     }
   })

@@ -66,6 +66,24 @@ export function accentChipClass(accent: string): string {
   return ACCENT_CHIP[accent] ?? ACCENT_CHIP["chart-1"]
 }
 
+/*
+ * The line on each card's left edge: the module's colour, fading as it falls.
+ * Static entries — the scanner cannot see a class built at runtime — and the
+ * primary entry is for the start card, whose colour IS the shop's.
+ */
+const ACCENT_EDGE: Record<string, string> = {
+  primary: "bg-linear-to-b from-primary to-primary/25",
+  "chart-1": "bg-linear-to-b from-chart-1 to-chart-1/25",
+  "chart-2": "bg-linear-to-b from-chart-2 to-chart-2/25",
+  "chart-3": "bg-linear-to-b from-chart-3 to-chart-3/25",
+  "chart-4": "bg-linear-to-b from-chart-4 to-chart-4/25",
+  "chart-5": "bg-linear-to-b from-chart-5 to-chart-5/25",
+}
+
+export function accentEdgeClass(accent: string): string {
+  return ACCENT_EDGE[accent] ?? ACCENT_EDGE["chart-1"]
+}
+
 function labelOf(def: { label: string }, values: Record<string, unknown>) {
   const custom = values.label
   return typeof custom === "string" && custom.trim().length > 0
@@ -82,6 +100,9 @@ export interface ElementCardProps {
   glance?: ModuleGlance
   /** Position in the entrance stagger; absent means no ceremony. */
   enterIndex?: number
+  /** The module's own accent and icon; the registry's defaults otherwise. */
+  accent?: string | null
+  icon?: string | null
   className?: string
 }
 
@@ -96,11 +117,14 @@ export function ElementCard({
   selected = false,
   glance,
   enterIndex,
+  accent,
+  icon,
   className,
 }: ElementCardProps) {
   const def = resolveNodeType(nodeType)
   const isModule = def.type === "module"
   const isStart = def.type === "start"
+  const edgeAccent = accent ?? (isStart ? "primary" : def.accent)
   const tier = typeof values.tier === "string" ? values.tier : null
   const badgeText = isModule
     ? tier
@@ -125,7 +149,7 @@ export function ElementCard({
           : undefined
       }
       className={cn(
-        "group w-62 rounded-xl bg-card p-4 text-left shadow-node ring-1 ring-border lg:w-52 lg:rounded-lg lg:p-3",
+        "group relative w-62 rounded-xl bg-card p-4 text-left shadow-node ring-1 ring-border lg:w-52 lg:rounded-lg lg:p-3",
         "transition-[box-shadow,translate,scale] duration-200 hover:-translate-y-0.5 hover:shadow-node-hover active:scale-[0.99] active:shadow-node motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100",
         enterIndex !== undefined && "node-arrive",
         // A module card is a door, and a door reads wider than a step. The
@@ -146,6 +170,14 @@ export function ElementCard({
         className
       )}
     >
+      <span
+        aria-hidden="true"
+        className={cn(
+          "absolute inset-y-0 left-0 w-1 rounded-l-xl lg:rounded-l-lg",
+          accentEdgeClass(edgeAccent)
+        )}
+      />
+
       <div className="flex items-start gap-3">
         <span className="relative shrink-0">
           {glance?.logoUrl || glance?.logoName ? (
@@ -161,10 +193,10 @@ export function ElementCard({
             <span
               className={cn(
                 "flex size-10 items-center justify-center rounded-lg lg:size-8 lg:rounded-md",
-                accentChipClass(def.accent)
+                accentChipClass(accent ?? def.accent)
               )}
             >
-              <NodeIcon name={def.icon} className="size-5 lg:size-4" />
+              <NodeIcon name={icon ?? def.icon} className="size-5 lg:size-4" />
             </span>
           )}
           {glance?.live ? (
@@ -191,6 +223,11 @@ export function ElementCard({
           </div>
           {glance ? (
             <>
+              {isStart ? (
+                <Badge variant="outline" className="mt-1 mb-0.5 font-normal">
+                  {badgeText}
+                </Badge>
+              ) : null}
               {glance.tagline ? (
                 /*
                   The owner's own sentence, allowed a second line: facts
@@ -224,6 +261,7 @@ export function ElementCard({
         ) : null}
       </div>
 
+      {isStart ? null : (
       <div className="mt-3 flex items-center gap-2">
         <Badge variant="outline" className="font-normal">
           {badgeText}
@@ -235,6 +273,7 @@ export function ElementCard({
           <span className="text-xs text-muted-foreground">Upgrade to use</span>
         ) : null}
       </div>
+      )}
     </div>
   )
 }
@@ -260,6 +299,8 @@ export function ElementNode({ data, selected }: NodeProps<BuilderNode>) {
         selected={selected}
         glance={data.glance}
         enterIndex={data.enterIndex}
+        accent={data.accent}
+        icon={data.icon}
       />
       <Handle
         type="source"

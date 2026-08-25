@@ -27,6 +27,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import {
   canAddNode,
   edgeKey,
+  moduleNodeHref,
   nextNodeKey,
   nextNodePosition,
   CANVAS_NODE_COMPONENT,
@@ -88,8 +89,8 @@ export interface CanvasProps {
   initialNodes: CanvasNode[];
   initialEdges: CanvasEdge[];
   unlockedTypes: string[];
-  /** Receives the canvas node key; the caller maps it to a database id. */
-  onOpenModule?: (nodeKey: string) => void;
+  /** Receives the canvas node key and the module behind it. */
+  onOpenModule?: (nodeKey: string, moduleId: string | null) => void;
   className?: string;
 }
 
@@ -329,7 +330,7 @@ function CanvasInner({
           }}
           onNodeClick={(_, node) => {
             if (node.data.nodeType === "module") {
-              onOpenModule?.(node.id);
+              onOpenModule?.(node.id, node.data.moduleId ?? null);
               return;
             }
             setSelectedKey(node.id);
@@ -508,13 +509,15 @@ export function RaketCanvas({
       initialNodes={initialNodes}
       initialEdges={initialEdges}
       unlockedTypes={[]}
-      onOpenModule={(nodeKey) => {
+      onOpenModule={(nodeKey, moduleId) => {
         const id = nodeIds[nodeKey];
         if (!id) {
           toast.error("That module does not have a builder yet.");
           return;
         }
-        router.push(`/raket/${id}`);
+        // Booking opens what an owner actually checks — the Booked list —
+        // rather than its inner canvas.
+        router.push(moduleNodeHref(moduleId, id));
       }}
     />
   );

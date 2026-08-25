@@ -7,6 +7,53 @@ import {
   accentChipClass,
 } from "@/features/builder/element-node"
 
+describe("the module's own dress", () => {
+  it("draws the accent line down the left edge", () => {
+    const { container } = render(
+      <ElementCard nodeType="module" values={{}} accent="chart-3" />
+    )
+    const edge = container.querySelector("[aria-hidden]")
+    expect(edge?.className).toContain("from-chart-3")
+    expect(edge?.className).toContain("left-0")
+  })
+
+  it("wears the shop's colour on the start card's edge", () => {
+    const { container } = render(<ElementCard nodeType="start" values={{}} />)
+    const edge = container.querySelector("[aria-hidden]")
+    expect(edge?.className).toContain("from-primary")
+  })
+
+  it("wears the module's own icon, not the generic box", () => {
+    const { container } = render(
+      <ElementCard nodeType="module" values={{}} icon="CalendarCheck" />
+    )
+    expect(container.querySelector(".lucide-calendar-check")).toBeInTheDocument()
+    expect(container.querySelector(".lucide-boxes")).not.toBeInTheDocument()
+  })
+
+  it("keeps the generic box when the catalog has nothing better", () => {
+    const { container } = render(<ElementCard nodeType="module" values={{}} />)
+    expect(container.querySelector(".lucide-boxes")).toBeInTheDocument()
+  })
+
+  it("moves the start card's badge up under its name", () => {
+    const { container } = render(
+      <ElementCard
+        nodeType="start"
+        values={{ label: "Salon ni Nena" }}
+        glance={{ lines: [], live: false, logoName: "Salon ni Nena", tagline: "Gupit at kulay." }}
+      />
+    )
+
+    const badge = screen.getByText("Business")
+    const name = screen.getByText("Salon ni Nena")
+    // Same column as the name, not the footer row.
+    expect(badge.parentElement).toBe(name.closest("[class*=min-w-0]"))
+    // And the footer is gone entirely — nothing else lived there.
+    expect(container.textContent).not.toContain("Tap to open")
+  })
+})
+
 describe("a module card with a glance", () => {
   const glance = {
     lines: ["2 calendar · 1 live", "5 paparating na booking"],

@@ -6,6 +6,7 @@ import {
   countOfType,
   edgeKey,
   linearise,
+  moduleNodeHref,
   nextNodeKey,
   nextNodePosition,
   rowToCanvasEdge,
@@ -271,5 +272,16 @@ describe("unlockedNodeTypes", () => {
 describe("edgeKey", () => {
   it("is stable and readable", () => {
     expect(edgeKey("booking-1", "timer-1")).toBe("booking-1->timer-1")
+  })
+})
+
+describe("moduleNodeHref", () => {
+  it("sends Booking straight to what an owner actually checks", () => {
+    expect(moduleNodeHref("booking", "abc-123")).toBe("/modules/booking/booked")
+  })
+
+  it("opens every other module's inner canvas", () => {
+    expect(moduleNodeHref("product-catalog", "abc-123")).toBe("/raket/abc-123")
+    expect(moduleNodeHref(null, "abc-123")).toBe("/raket/abc-123")
   })
 })
