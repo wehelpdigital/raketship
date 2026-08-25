@@ -329,7 +329,7 @@ function ClientsMarker({
     >
       <Handle
         type="source"
-        position={Position.Top}
+        position={Position.Bottom}
         isConnectable={false}
         className="pointer-events-none! opacity-0!"
         aria-hidden="true"

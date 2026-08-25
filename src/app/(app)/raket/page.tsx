@@ -224,18 +224,19 @@ export default async function RaketPage() {
 
     One marker PER DOOR, because the doors have different clients: the
     Website's are organic visitors, Booking's are the people a link was
-    shared with. Each flanks its own door on the outside and arcs INTO it —
-    customers entering — and none draws while its door is closed.
+    shared with. Both sit on the TOP row, each directly above its own door,
+    so every arrow falls straight down into its entry and never crosses the
+    start card's own wires — the doors sit left and right of the start's
+    column, so a vertical line above a door is clear of everything. None
+    draws while its door is closed.
   */
   const DOOR_SOURCES = [
     {
       doorId: "module-booking",
-      side: -1 as const,
       note: "Mga naka-receive ng booking link mo — sa chat, sa post, kahit saan mo i-share.",
     },
     {
       doorId: "module-website",
-      side: 1 as const,
       note: "Organic visitors — mga nakadiskubre ng page ng negosyo mo.",
     },
   ]
@@ -245,14 +246,11 @@ export default async function RaketPage() {
     nodes.push({
       id: `clients-${source.doorId}`,
       type: "element",
-      // Cards are ~300 wide, the marker ~176: flank the door's outer side,
-      // level with it, and let the edge arc over into its top.
+      // Cards are ~300 wide, the marker ~176: +62 aligns their centres, and
+      // 430 up puts the marker a full row above the start card's row.
       position: {
-        x:
-          source.side < 0
-            ? door.position.x - 260
-            : door.position.x + 340,
-        y: door.position.y + 10,
+        x: door.position.x + 62,
+        y: door.position.y - 430,
       },
       data: {
         nodeType: "clients",
