@@ -93,6 +93,23 @@ describe("a module card with a glance", () => {
     expect(screen.getByText("99+")).toBeInTheDocument()
   })
 
+  it("is wide enough for its whole tagline, even without a glance", () => {
+    // The Client Manager carries no glance and was left at step width,
+    // wrapping its tagline — width follows isModule, not the glance.
+    const { container } = render(
+      <ElementCard
+        nodeType="module"
+        values={{ label: "Client Manager" }}
+        tagline="Lahat ng suki mo, sa isang lista"
+      />
+    )
+
+    const card = container.querySelector("[data-slot=element-card]")
+    expect(card?.className).toContain("w-80")
+    const tagline = screen.getByText("Lahat ng suki mo, sa isang lista")
+    expect(tagline.className).toContain("truncate")
+  })
+
   it("keeps the edge line clear of the card's border", () => {
     const { container } = render(
       <ElementCard nodeType="module" values={{}} accent="chart-3" />

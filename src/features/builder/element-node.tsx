@@ -155,8 +155,10 @@ export function ElementCard({
         "transition-[box-shadow,translate,scale] duration-200 hover:-translate-y-0.5 hover:shadow-node-hover active:scale-[0.99] active:shadow-node motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100",
         enterIndex !== undefined && "node-arrive",
         // A module card is a door, and a door reads wider than a step —
-        // wide enough that a catalog tagline fits on its one line.
-        glance && "w-72 lg:w-64",
+        // wide enough that its WHOLE catalog tagline sits on one line. On
+        // isModule too, not just glance: the Client Manager carries no glance
+        // and was left at step width, wrapping its tagline.
+        (glance || isModule) && "w-80 lg:w-72",
         /*
           The heart of the board dresses like it: a quiet gradient of the
           shop's own colour over bg-card (background-image over
@@ -190,7 +192,7 @@ export function ElementCard({
       ) : null}
 
       <div className="flex items-center gap-3">
-        <span className="relative shrink-0">
+        <span className="relative shrink-0 self-center">
           {glance?.logoUrl || glance?.logoName ? (
             /* The shop's own mark, framed the way the owner framed it — the
                same component as the public page, so the two cannot drift. */
