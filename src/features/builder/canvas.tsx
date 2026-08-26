@@ -212,11 +212,9 @@ function SpaceTraffic() {
 const NODE_RENDERERS: NodeTypes = { [CANVAS_NODE_COMPONENT]: ElementNode };
 
 /*
-  padding 0.1: as zoomed IN as fitting everything allows. maxZoom 1 so a
-  near-empty board does not open at magnifying-glass scale. The fit's own
-  minZoom must clear the interactive floor below — the ship stands ~1400px
-  tall, and a 0.4 floor CLAMPED the fit, cropping nose and flame on laptop
-  screens while looking framed on tall ones.
+  padding 0.1: as zoomed IN as fitting the CARDS allows. maxZoom 1 so a
+  near-empty board does not open at magnifying-glass scale. The interactive
+  minZoom floor below must sit under any fit the board can demand.
 */
 const FIT_VIEW_OPTIONS = { padding: 0.1, maxZoom: 1 };
 
@@ -289,6 +287,22 @@ function CanvasInner({
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(
     initialEdges.map((edge) => ({ ...edge })),
   );
+  /*
+    The opening frame fits the ELEMENTS, not the artwork. The rocket
+    sections stretch the board past 1900 units, and fitting them shrank
+    every card to postage-stamp size — the decoration was deciding the
+    zoom. Scoping the fit to the non-rocket nodes opens the board with the
+    cards big and lets the hull run off-screen, which is what a close-up
+    of a rocket looks like.
+  */
+  const fitViewOptions = useMemo(() => {
+    const cards = initialNodes.filter(
+      (node) => node.data.nodeType !== "rocket",
+    );
+    return cards.length > 0
+      ? { ...FIT_VIEW_OPTIONS, nodes: cards.map((node) => ({ id: node.id })) }
+      : FIT_VIEW_OPTIONS;
+  }, [initialNodes]);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
@@ -520,12 +534,12 @@ function CanvasInner({
           }}
           onPaneClick={() => setSelectedKey(null)}
           nodeTypes={NODE_RENDERERS}
-          // Every load frames the WHOLE ship: fitView, with nothing
-          // restoring an old camera over it. The viewport memory that used
-          // to win here is gone — a board that opens half off-screen reads
-          // as broken.
+          // Every load frames the elements: fitView scoped to the cards,
+          // with nothing restoring an old camera over it. The viewport
+          // memory that used to win here is gone — a board that opens
+          // half off-screen reads as broken.
           fitView
-          fitViewOptions={FIT_VIEW_OPTIONS}
+          fitViewOptions={fitViewOptions}
           minZoom={0.15}
           maxZoom={1.5}
           nodeDragThreshold={3}
