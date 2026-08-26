@@ -105,11 +105,11 @@ const SPACE_SAUCERS: readonly {
 function TinySaucer({ size }: { size: number }) {
   return (
     <svg
-      viewBox="0 0 34 16"
+      viewBox="0 0 34 25"
       width={size}
-      height={size * (16 / 34)}
+      height={size * (25 / 34)}
       aria-hidden="true"
-      className="text-primary"
+      className="overflow-visible text-primary"
     >
       {/* The dome. */}
       <path
@@ -136,6 +136,19 @@ function TinySaucer({ size }: { size: number }) {
       <circle cx="8" cy="10.5" r="1.1" fill="var(--color-warning)" fillOpacity="0.9" />
       <circle cx="17" cy="12" r="1.1" fill="var(--color-warning)" fillOpacity="0.9" />
       <circle cx="26" cy="10.5" r="1.1" fill="var(--color-warning)" fillOpacity="0.9" />
+      {/* The thruster: a saucer travelling is a saucer burning something. */}
+      <g className="flame-flicker">
+        <path
+          d="M17 14 C 20 17 20 20 17 24 C 14 20 14 17 17 14 Z"
+          fill="var(--color-destructive)"
+          fillOpacity="0.5"
+        />
+        <path
+          d="M17 15 C 18.6 17.5 18.6 19.5 17 22 C 15.4 19.5 15.4 17.5 17 15 Z"
+          fill="var(--color-warning)"
+          fillOpacity="0.85"
+        />
+      </g>
     </svg>
   );
 }
