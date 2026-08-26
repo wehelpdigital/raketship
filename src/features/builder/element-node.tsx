@@ -373,8 +373,12 @@ function SideTarget({ side }: { side: "left" | "right" }) {
  * the sections is the elements themselves.
  */
 
-const NEON =
-  "pointer-events-none text-primary [filter:drop-shadow(0_0_1px_var(--color-primary))_drop-shadow(0_0_5px_color-mix(in_oklab,var(--color-primary)_45%,transparent))]"
+/* The wireframe's glow, separable from the base classes: the booster must
+   glow its METAL only — a root-level filter wraps the flame too, tinting
+   the fire primary while the hull's strap-on flames burn clean. */
+const NEON_GLOW =
+  "[filter:drop-shadow(0_0_1px_var(--color-primary))_drop-shadow(0_0_5px_color-mix(in_oklab,var(--color-primary)_45%,transparent))]"
+const NEON = `pointer-events-none text-primary ${NEON_GLOW}`
 
 /** A cross-section ring: solid where it faces you, dashed where it hides. */
 function Ring({
@@ -664,8 +668,7 @@ function RocketSection({
       height={242}
       aria-hidden="true"
       className={cn(
-        NEON,
-        "overflow-visible",
+        "pointer-events-none text-primary overflow-visible",
         enterIndex !== undefined && "node-arrive"
       )}
       style={style}
@@ -677,37 +680,41 @@ function RocketSection({
           <stop offset="100%" stopColor="var(--color-destructive)" stopOpacity="0" />
         </radialGradient>
       </defs>
-      {/* The bell's lit and shaded halves, flaring like a nozzle. */}
-      <path
-        d="M64 14 C 58 46 48 72 40 92 L 120 103 L 120 14 Z"
-        fill="currentColor"
-        fillOpacity="0.1"
-      />
-      <path
-        d="M176 14 C 182 46 192 72 200 92 L 120 103 L 120 14 Z"
-        fill="currentColor"
-        fillOpacity="0.04"
-      />
-      {/* The silhouette. */}
-      <path
-        d="M64 14 C 58 46 48 72 40 92 M176 14 C 182 46 192 72 200 92"
-        fill="none"
-        stroke="currentColor"
-        strokeOpacity="0.85"
-        strokeWidth="1.5"
-      />
-      {/* Meridians. */}
-      <path
-        d="M92 12 C 88 44 82 74 78 98 M148 12 C 152 44 158 74 162 98 M120 14 L120 102"
-        fill="none"
-        stroke="currentColor"
-        strokeOpacity="0.3"
-        strokeWidth="1"
-      />
-      {/* Rings: the top one is the CUT, the lip is the exhaust's mouth. */}
-      <Ring cx={120} cy={14} rx={56} ry={8} />
-      <Ring cx={120} cy={58} rx={68} ry={9} />
-      <Ring cx={120} cy={92} rx={80} ry={11} />
+      {/* Only the METAL glows: the neon filter wraps the bell, not the
+          flame, so all three engines burn the exact same fire. */}
+      <g className={NEON_GLOW}>
+        {/* The bell's lit and shaded halves, flaring like a nozzle. */}
+        <path
+          d="M64 14 C 58 46 48 72 40 92 L 120 103 L 120 14 Z"
+          fill="currentColor"
+          fillOpacity="0.1"
+        />
+        <path
+          d="M176 14 C 182 46 192 72 200 92 L 120 103 L 120 14 Z"
+          fill="currentColor"
+          fillOpacity="0.04"
+        />
+        {/* The silhouette. */}
+        <path
+          d="M64 14 C 58 46 48 72 40 92 M176 14 C 182 46 192 72 200 92"
+          fill="none"
+          stroke="currentColor"
+          strokeOpacity="0.85"
+          strokeWidth="1.5"
+        />
+        {/* Meridians. */}
+        <path
+          d="M92 12 C 88 44 82 74 78 98 M148 12 C 152 44 158 74 162 98 M120 14 L120 102"
+          fill="none"
+          stroke="currentColor"
+          strokeOpacity="0.3"
+          strokeWidth="1"
+        />
+        {/* Rings: the top one is the CUT, the lip is the exhaust's mouth. */}
+        <Ring cx={120} cy={14} rx={56} ry={8} />
+        <Ring cx={120} cy={58} rx={68} ry={9} />
+        <Ring cx={120} cy={92} rx={80} ry={11} />
+      </g>
       {/* The plume: a gradient glow with a hot core, well clear of the bell. */}
       <g className="flame-flicker">
         <path
