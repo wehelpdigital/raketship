@@ -455,6 +455,15 @@ function RocketSection({
         aria-hidden="true"
         className="pointer-events-none text-primary overflow-visible"
       >
+        <defs>
+          {/* The SAME plume as the main engine — one rocket, one fuel. A
+              distinct id because the booster SVG already claims its own. */}
+          <radialGradient id="raket-plume-side" cx="50%" cy="20%" r="85%">
+            <stop offset="0%" stopColor="var(--color-warning)" stopOpacity="0.95" />
+            <stop offset="45%" stopColor="var(--color-destructive)" stopOpacity="0.55" />
+            <stop offset="100%" stopColor="var(--color-destructive)" stopOpacity="0" />
+          </radialGradient>
+        </defs>
         {/*
           The wings: swept deltas DETACHED from the barrel — a cut gap
           between root and hull, like every other section of this exploded
@@ -525,13 +534,12 @@ function RocketSection({
               <g className="flame-flicker">
                 <path
                   d={`M ${cx} ${top + 58} C ${cx + 16} ${top + 72} ${cx + 15} ${top + 92} ${cx} ${top + 122} C ${cx - 15} ${top + 92} ${cx - 16} ${top + 72} ${cx} ${top + 58} Z`}
-                  fill="var(--color-destructive)"
-                  fillOpacity="0.4"
+                  fill="url(#raket-plume-side)"
                 />
                 <path
                   d={`M ${cx} ${top + 62} C ${cx + 9} ${top + 74} ${cx + 9} ${top + 88} ${cx} ${top + 106} C ${cx - 9} ${top + 88} ${cx - 9} ${top + 74} ${cx} ${top + 62} Z`}
                   fill="var(--color-warning)"
-                  fillOpacity="0.8"
+                  fillOpacity="0.9"
                 />
               </g>
             </g>
