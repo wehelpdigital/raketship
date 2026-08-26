@@ -461,7 +461,7 @@ function RocketSection({
           ship. Decoration only now; the boxes all live in the body.
         */}
         <path
-          d={`M ${ww - 14} ${wt} C ${ww - 90} ${wt + wh * 0.18} ${70} ${wt + wh * 0.45} ${12} ${wt + wh * 0.78} L ${34} ${wt + wh} C ${ww * 0.45} ${wt + wh - 10} ${ww - 40} ${wt + wh * 0.92} ${ww - 14} ${wt + wh * 0.86} Z`}
+          d={`M ${ww - 50} ${wt} C ${ww - 90} ${wt + wh * 0.18} ${70} ${wt + wh * 0.45} ${12} ${wt + wh * 0.78} L ${34} ${wt + wh} C ${ww * 0.45} ${wt + wh - 10} ${ww - 76} ${wt + wh * 0.92} ${ww - 50} ${wt + wh * 0.86} Z`}
           fill="currentColor"
           fillOpacity="0.045"
           stroke="currentColor"
@@ -470,7 +470,7 @@ function RocketSection({
           strokeLinejoin="round"
         />
         <path
-          d={`M ${w - ww + 14} ${wt} C ${w - ww + 90} ${wt + wh * 0.18} ${w - 70} ${wt + wh * 0.45} ${w - 12} ${wt + wh * 0.78} L ${w - 34} ${wt + wh} C ${w - ww * 0.45} ${wt + wh - 10} ${w - ww + 40} ${wt + wh * 0.92} ${w - ww + 14} ${wt + wh * 0.86} Z`}
+          d={`M ${w - ww + 50} ${wt} C ${w - ww + 90} ${wt + wh * 0.18} ${w - 70} ${wt + wh * 0.45} ${w - 12} ${wt + wh * 0.78} L ${w - 34} ${wt + wh} C ${w - ww * 0.45} ${wt + wh - 10} ${w - ww + 76} ${wt + wh * 0.92} ${w - ww + 50} ${wt + wh * 0.86} Z`}
           fill="currentColor"
           fillOpacity="0.045"
           stroke="currentColor"
@@ -480,7 +480,7 @@ function RocketSection({
         />
         {/* The wings' cut edges, facing the hull. */}
         <path
-          d={`M ${ww - 14} ${wt} L ${ww - 14} ${wt + wh * 0.86} M ${w - ww + 14} ${wt} L ${w - ww + 14} ${wt + wh * 0.86}`}
+          d={`M ${ww - 50} ${wt} L ${ww - 50} ${wt + wh * 0.86} M ${w - ww + 50} ${wt} L ${w - ww + 50} ${wt + wh * 0.86}`}
           fill="none"
           stroke="currentColor"
           strokeOpacity="0.25"
@@ -489,12 +489,50 @@ function RocketSection({
         />
         {/* A rib along each wing. */}
         <path
-          d={`M ${ww - 30} ${wt + wh * 0.4} C ${ww * 0.55} ${wt + wh * 0.52} ${ww * 0.3} ${wt + wh * 0.66} ${60} ${wt + wh * 0.8} M ${w - ww + 30} ${wt + wh * 0.4} C ${w - ww * 0.55} ${wt + wh * 0.52} ${w - ww * 0.3} ${wt + wh * 0.66} ${w - 60} ${wt + wh * 0.8}`}
+          d={`M ${ww - 66} ${wt + wh * 0.4} C ${ww * 0.55} ${wt + wh * 0.52} ${ww * 0.3} ${wt + wh * 0.66} ${60} ${wt + wh * 0.8} M ${w - ww + 66} ${wt + wh * 0.4} C ${w - ww * 0.55} ${wt + wh * 0.52} ${w - ww * 0.3} ${wt + wh * 0.66} ${w - 60} ${wt + wh * 0.8}`}
           fill="none"
           stroke="currentColor"
           strokeOpacity="0.12"
           strokeWidth="1"
         />
+        {/*
+          Strap-on boosters riding in the wing gaps — the space between wing
+          and body earns its keep. Small bells, small flames, same grammar.
+        */}
+        {[ww - 20, w - ww + 20].map((cx) => (
+          <g key={cx}>
+            <path
+              d={`M ${cx - 11} ${wt + wh - 26} L ${cx + 11} ${wt + wh - 26} L ${cx + 16} ${wt + wh + 10} L ${cx - 16} ${wt + wh + 10} Z`}
+              fill="currentColor"
+              fillOpacity="0.09"
+              stroke="currentColor"
+              strokeOpacity="0.35"
+              strokeWidth="1.3"
+            />
+            <line
+              x1={cx - 11}
+              y1={wt + wh - 26}
+              x2={cx + 11}
+              y2={wt + wh - 26}
+              stroke="currentColor"
+              strokeOpacity="0.3"
+              strokeWidth="1"
+              strokeDasharray="5 5"
+            />
+            <g className="flame-flicker">
+              <path
+                d={`M ${cx} ${wt + wh + 14} C ${cx + 11} ${wt + wh + 24} ${cx + 10} ${wt + wh + 38} ${cx} ${wt + wh + 58} C ${cx - 10} ${wt + wh + 38} ${cx - 11} ${wt + wh + 24} ${cx} ${wt + wh + 14} Z`}
+                fill="var(--color-destructive)"
+                fillOpacity="0.4"
+              />
+              <path
+                d={`M ${cx} ${wt + wh + 17} C ${cx + 6} ${wt + wh + 25} ${cx + 6} ${wt + wh + 34} ${cx} ${wt + wh + 46} C ${cx - 6} ${wt + wh + 34} ${cx - 6} ${wt + wh + 25} ${cx} ${wt + wh + 17} Z`}
+                fill="var(--color-warning)"
+                fillOpacity="0.8"
+              />
+            </g>
+          </g>
+        ))}
         {/* The barrel's skin. */}
         <path
           d={`M ${L} 16 C ${L - bow} ${h * 0.33} ${L - bow} ${h * 0.66} ${L} ${h - 16} A ${rx} 13 0 0 0 ${R} ${h - 16} C ${R + bow} ${h * 0.66} ${R + bow} ${h * 0.33} ${R} 16 A ${rx} 13 0 0 0 ${L} 16 Z`}

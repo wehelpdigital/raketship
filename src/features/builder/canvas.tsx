@@ -54,6 +54,86 @@ import { DRAG_MIME, PaletteSheet } from "@/features/builder/palette-sheet";
 import { RunPreview } from "@/features/builder/run-preview";
 import { useViewportMemory } from "@/features/builder/use-viewport-memory";
 
+/**
+ * Space traffic behind the board: small rockets and planets on long, offset
+ * loops. Hand-scattered positions and NEGATIVE delays — the sky is already
+ * mid-story when the board opens, and with every period different, the
+ * pattern never visibly repeats. Deterministic, so it costs no JS at all.
+ */
+const SPACE_TRAFFIC: readonly {
+  kind: "rocket" | "planet";
+  left: string;
+  size: number;
+  duration: number;
+  delay: number;
+  opacity: number;
+  color?: "planet-c2" | "planet-c3" | "planet-c4" | "planet-c5";
+}[] = [
+  { kind: "planet", left: "7%", size: 22, duration: 44, delay: -9, opacity: 0.7, color: "planet-c5" },
+  { kind: "rocket", left: "16%", size: 18, duration: 27, delay: -21, opacity: 0.6 },
+  { kind: "planet", left: "29%", size: 12, duration: 38, delay: -30, opacity: 0.55, color: "planet-c3" },
+  { kind: "planet", left: "55%", size: 16, duration: 52, delay: -4, opacity: 0.6, color: "planet-c2" },
+  { kind: "rocket", left: "67%", size: 14, duration: 33, delay: -12, opacity: 0.5 },
+  { kind: "planet", left: "82%", size: 26, duration: 47, delay: -26, opacity: 0.75, color: "planet-c4" },
+  { kind: "rocket", left: "92%", size: 20, duration: 24, delay: -6, opacity: 0.65 },
+];
+
+function TinyRocket({ size }: { size: number }) {
+  return (
+    <svg
+      viewBox="0 0 14 26"
+      width={size}
+      height={size * (26 / 14)}
+      aria-hidden="true"
+      className="text-primary"
+    >
+      <path
+        d="M7 1 C 10 5 11 10 11 16 L 10 20 L 12 24 L 8 22 L 6 22 L 2 24 L 4 20 L 3 16 C 3 10 4 5 7 1 Z"
+        fill="currentColor"
+        fillOpacity="0.25"
+        stroke="currentColor"
+        strokeOpacity="0.7"
+        strokeWidth="1"
+        strokeLinejoin="round"
+      />
+      <circle cx="7" cy="10" r="1.6" fill="currentColor" fillOpacity="0.8" />
+    </svg>
+  );
+}
+
+function SpaceTraffic() {
+  return (
+    <>
+      {SPACE_TRAFFIC.map((item, index) => (
+        <div
+          key={index}
+          aria-hidden="true"
+          className="debris"
+          style={
+            {
+              left: item.left,
+              "--debris-duration": `${item.duration}s`,
+              "--debris-delay": `${item.delay}s`,
+              "--debris-opacity": item.opacity,
+            } as CSSProperties
+          }
+        >
+          {item.kind === "planet" ? (
+            <div
+              className={`planet ${item.color ?? "planet-c5"}`}
+              style={{ width: item.size, height: item.size }}
+            />
+          ) : (
+            <div className="debris-sway">
+              <TinyRocket size={item.size} />
+            </div>
+          )}
+        </div>
+      ))}
+    </>
+  );
+}
+
 // Defined once: a fresh nodeTypes object on every render makes React Flow
 // remount every node it draws.
 const NODE_RENDERERS: NodeTypes = { [CANVAS_NODE_COMPONENT]: ElementNode };
@@ -299,6 +379,7 @@ function CanvasInner({
         <>
           <div className="star-field-far" aria-hidden="true" />
           <div className="star-field-near" aria-hidden="true" />
+          <SpaceTraffic />
         </>
       ) : null}
 

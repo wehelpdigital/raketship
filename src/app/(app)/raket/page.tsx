@@ -349,7 +349,7 @@ export default async function RaketPage() {
       connectable: false,
     })
     nodes.push(section("nose", 300, minY - 260))
-    nodes.push(section("booster", 240, maxY + 88))
+    nodes.push(section("booster", 240, maxY + 62))
 
     /*
       The hull: the faintest possible 3D fuselage wrapped around wherever

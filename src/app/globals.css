@@ -245,6 +245,36 @@
   }
 }
 
+/* Space traffic: each item falls the board's full height on its own long
+   period, fading in and out at the edges. The delays are negative and
+   scattered, so the sky is already mid-story on arrival and nothing repeats
+   in sync — deterministic, but felt as random. */
+@keyframes debris-fall {
+  0% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+  6% {
+    opacity: var(--debris-opacity, 0.8);
+  }
+  92% {
+    opacity: var(--debris-opacity, 0.8);
+  }
+  100% {
+    transform: translateY(112vh);
+    opacity: 0;
+  }
+}
+
+@keyframes debris-sway {
+  from {
+    transform: rotate(-7deg);
+  }
+  to {
+    transform: rotate(7deg);
+  }
+}
+
 @keyframes flame-flicker {
   from {
     transform: scaleY(0.85);
@@ -319,6 +349,46 @@
     animation: stars-fall-near 32s linear infinite;
   }
 
+  .debris {
+    position: absolute;
+    top: -60px;
+    pointer-events: none;
+    animation: debris-fall var(--debris-duration, 30s) linear infinite;
+    animation-delay: var(--debris-delay, 0s);
+    opacity: 0;
+  }
+
+  .debris-sway {
+    animation: debris-sway 6s ease-in-out infinite alternate;
+  }
+
+  /* Planets: a lit limb and a shaded one, each in its own chart colour mixed
+     toward the sky's star and ground inks so they sit IN the scene. */
+  .planet {
+    border-radius: calc(infinity * 1px);
+    background: radial-gradient(
+      circle at 32% 30%,
+      var(--planet-hi),
+      var(--planet-lo) 72%
+    );
+  }
+  .planet-c2 {
+    --planet-hi: color-mix(in oklab, var(--color-chart-2) 75%, var(--space-star));
+    --planet-lo: color-mix(in oklab, var(--color-chart-2) 45%, var(--space-ground));
+  }
+  .planet-c3 {
+    --planet-hi: color-mix(in oklab, var(--color-chart-3) 75%, var(--space-star));
+    --planet-lo: color-mix(in oklab, var(--color-chart-3) 45%, var(--space-ground));
+  }
+  .planet-c4 {
+    --planet-hi: color-mix(in oklab, var(--color-chart-4) 75%, var(--space-star));
+    --planet-lo: color-mix(in oklab, var(--color-chart-4) 45%, var(--space-ground));
+  }
+  .planet-c5 {
+    --planet-hi: color-mix(in oklab, var(--color-chart-5) 75%, var(--space-star));
+    --planet-lo: color-mix(in oklab, var(--color-chart-5) 45%, var(--space-ground));
+  }
+
   /* The booster's flame breathes fast — an engine, not an alarm.
      transform-box makes the origin the FLAME's own top, not the svg's, so
      the breath stretches downward from where the fire starts. */
@@ -331,7 +401,9 @@
   @media (prefers-reduced-motion: reduce) {
     .star-field-far,
     .star-field-near,
-    .flame-flicker {
+    .flame-flicker,
+    .debris,
+    .debris-sway {
       animation: none;
     }
   }
