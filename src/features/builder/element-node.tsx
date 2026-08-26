@@ -443,10 +443,10 @@ function RocketSection({
   if (part === "hull") {
     /*
       The fuselage barrel plus two swept delta WINGS — the Clients boxes ride
-      inside the wings, sources docked to the ship's sides. Same grammar as
-      the sections: curved silhouettes, dashed cut rings at both ends, mid
-      rings with hidden halves dashed, meridians. Faint and glowless — it
-      lives behind everything.
+      inside the wings, sources docked to the ship's sides. Same grammar AND
+      the same line strength as the nose and booster: curved silhouettes at
+      0.85, dashed cut rings, mid rings with hidden halves dashed, meridians
+      at 0.3. Unfilled and glowless — it lives behind everything.
     */
     const bw = w - 2 * ww
     const L = ww + 10
@@ -479,19 +479,17 @@ function RocketSection({
         */}
         <path
           d={`M ${ww - 50} ${wt} C ${ww - 90} ${wt + wh * 0.18} ${70} ${wt + wh * 0.45} ${12} ${wt + wh * 0.78} L ${34} ${wt + wh} C ${ww * 0.45} ${wt + wh - 10} ${ww - 76} ${wt + wh * 0.92} ${ww - 50} ${wt + wh * 0.86} Z`}
-          fill="currentColor"
-          fillOpacity="0.045"
+          fill="none"
           stroke="currentColor"
-          strokeOpacity="0.3"
+          strokeOpacity="0.85"
           strokeWidth="1.5"
           strokeLinejoin="round"
         />
         <path
           d={`M ${w - ww + 50} ${wt} C ${w - ww + 90} ${wt + wh * 0.18} ${w - 70} ${wt + wh * 0.45} ${w - 12} ${wt + wh * 0.78} L ${w - 34} ${wt + wh} C ${w - ww * 0.45} ${wt + wh - 10} ${w - ww + 76} ${wt + wh * 0.92} ${w - ww + 50} ${wt + wh * 0.86} Z`}
-          fill="currentColor"
-          fillOpacity="0.045"
+          fill="none"
           stroke="currentColor"
-          strokeOpacity="0.3"
+          strokeOpacity="0.85"
           strokeWidth="1.5"
           strokeLinejoin="round"
         />
@@ -500,7 +498,7 @@ function RocketSection({
           d={`M ${ww - 50} ${wt} L ${ww - 50} ${wt + wh * 0.86} M ${w - ww + 50} ${wt} L ${w - ww + 50} ${wt + wh * 0.86}`}
           fill="none"
           stroke="currentColor"
-          strokeOpacity="0.25"
+          strokeOpacity="0.6"
           strokeWidth="1.2"
           strokeDasharray="8 7"
         />
@@ -509,36 +507,37 @@ function RocketSection({
           d={`M ${ww - 66} ${wt + wh * 0.4} C ${ww * 0.55} ${wt + wh * 0.52} ${ww * 0.3} ${wt + wh * 0.66} ${60} ${wt + wh * 0.8} M ${w - ww + 66} ${wt + wh * 0.4} C ${w - ww * 0.55} ${wt + wh * 0.52} ${w - ww * 0.3} ${wt + wh * 0.66} ${w - 60} ${wt + wh * 0.8}`}
           fill="none"
           stroke="currentColor"
-          strokeOpacity="0.12"
+          strokeOpacity="0.3"
           strokeWidth="1"
         />
         {/*
-          Strap-on boosters hung UNDER each wing with clear spacing — a
-          launcher's outboard engines. Bigger bells, bigger flames, same
-          grammar as the main engine.
+          Strap-on boosters hung UNDER each wing with clear spacing — scaled
+          copies of the main engine: flaring bell sides, a centre meridian,
+          spinning rings, glow on the metal only, and the same fire.
         */}
         {[ww / 2 - 19, w - ww / 2 + 19].map((cx) => {
           const top = wt + wh + 26
           return (
             <g key={cx}>
-              <path
-                d={`M ${cx - 16} ${top} L ${cx + 16} ${top} L ${cx + 24} ${top + 52} L ${cx - 24} ${top + 52} Z`}
-                fill="currentColor"
-                fillOpacity="0.09"
-                stroke="currentColor"
-                strokeOpacity="0.35"
-                strokeWidth="1.4"
-              />
-              <line
-                x1={cx - 16}
-                y1={top}
-                x2={cx + 16}
-                y2={top}
-                stroke="currentColor"
-                strokeOpacity="0.3"
-                strokeWidth="1"
-                strokeDasharray="5 5"
-              />
+              <g className={NEON_GLOW}>
+                <path
+                  d={`M ${cx - 16} ${top} C ${cx - 18} ${top + 21} ${cx - 21} ${top + 37} ${cx - 24} ${top + 52} M ${cx + 16} ${top} C ${cx + 18} ${top + 21} ${cx + 21} ${top + 37} ${cx + 24} ${top + 52}`}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeOpacity="0.85"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d={`M ${cx} ${top} L ${cx} ${top + 52}`}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeOpacity="0.3"
+                  strokeWidth="1"
+                />
+                <Ring cx={cx} cy={top} rx={16} ry={2.4} spin />
+                <Ring cx={cx} cy={top + 29} rx={20} ry={2.9} spin />
+                <Ring cx={cx} cy={top + 52} rx={24} ry={3.4} spin />
+              </g>
               <g className="flame-flicker">
                 <path
                   d={`M ${cx} ${top + 58} C ${cx + 16} ${top + 72} ${cx + 15} ${top + 92} ${cx} ${top + 122} C ${cx - 15} ${top + 92} ${cx - 16} ${top + 72} ${cx} ${top + 58} Z`}
@@ -553,18 +552,12 @@ function RocketSection({
             </g>
           )
         })}
-        {/* The barrel's skin. */}
-        <path
-          d={`M ${L} 16 C ${L - bow} ${h * 0.33} ${L - bow} ${h * 0.66} ${L} ${h - 16} A ${rx} 13 0 0 0 ${R} ${h - 16} C ${R + bow} ${h * 0.66} ${R + bow} ${h * 0.33} ${R} 16 A ${rx} 13 0 0 0 ${L} 16 Z`}
-          fill="currentColor"
-          fillOpacity="0.045"
-        />
-        {/* The sides. */}
+        {/* The sides — pure wireframe now, no skin fill anywhere. */}
         <path
           d={`M ${L} 16 C ${L - bow} ${h * 0.33} ${L - bow} ${h * 0.66} ${L} ${h - 16} M ${R} 16 C ${R + bow} ${h * 0.33} ${R + bow} ${h * 0.66} ${R} ${h - 16}`}
           fill="none"
           stroke="currentColor"
-          strokeOpacity="0.35"
+          strokeOpacity="0.85"
           strokeWidth="1.5"
         />
         {/* The cut rings at both ends: this section continues. */}
@@ -574,7 +567,7 @@ function RocketSection({
               d={`M ${L} ${cy} A ${rx} 13 0 0 0 ${R} ${cy}`}
               fill="none"
               stroke="currentColor"
-              strokeOpacity="0.3"
+              strokeOpacity="0.6"
               strokeWidth="1.2"
               strokeDasharray="8 7"
             />
@@ -582,7 +575,7 @@ function RocketSection({
               d={`M ${L} ${cy} A ${rx} 13 0 0 1 ${R} ${cy}`}
               fill="none"
               stroke="currentColor"
-              strokeOpacity="0.12"
+              strokeOpacity="0.25"
               strokeWidth="1"
               strokeDasharray="4 5"
             />
@@ -595,14 +588,14 @@ function RocketSection({
               d={`M ${L} ${h * t} A ${rx} 13 0 0 0 ${R} ${h * t}`}
               fill="none"
               stroke="currentColor"
-              strokeOpacity="0.16"
+              strokeOpacity="0.6"
               strokeWidth="1"
             />
             <path
               d={`M ${L} ${h * t} A ${rx} 13 0 0 1 ${R} ${h * t}`}
               fill="none"
               stroke="currentColor"
-              strokeOpacity="0.07"
+              strokeOpacity="0.25"
               strokeWidth="1"
               strokeDasharray="4 5"
             />
@@ -613,7 +606,7 @@ function RocketSection({
           d={`M ${ww + bw * 0.28} 22 C ${ww + bw * 0.26} ${h * 0.4} ${ww + bw * 0.26} ${h * 0.66} ${ww + bw * 0.28} ${h - 22} M ${mid} 26 L ${mid} ${h - 26} M ${ww + bw * 0.72} 22 C ${ww + bw * 0.74} ${h * 0.4} ${ww + bw * 0.74} ${h * 0.66} ${ww + bw * 0.72} ${h - 22}`}
           fill="none"
           stroke="currentColor"
-          strokeOpacity="0.12"
+          strokeOpacity="0.3"
           strokeWidth="1"
         />
       </svg>
@@ -630,27 +623,6 @@ function RocketSection({
         className={cn(NEON, enterIndex !== undefined && "node-arrive")}
         style={style}
       >
-        <defs>
-          <linearGradient id="raket-facet-nose" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stopColor="var(--color-primary)" stopOpacity="0" />
-            <stop offset="0.5" stopColor="var(--color-primary)" stopOpacity="0.16" />
-            <stop offset="1" stopColor="var(--color-primary)" stopOpacity="0" />
-          </linearGradient>
-          <clipPath id="raket-cone-clip">
-            <path d="M28 152 C 62 70 118 22 150 8 C 182 22 238 70 272 152 Z" />
-          </clipPath>
-        </defs>
-        {/* The lit and shaded halves of the cone. */}
-        <path
-          d="M150 8 C 118 22 62 70 28 152 L 150 152 Z"
-          fill="currentColor"
-          fillOpacity="0.1"
-        />
-        <path
-          d="M150 8 C 182 22 238 70 272 152 L 150 152 Z"
-          fill="currentColor"
-          fillOpacity="0.04"
-        />
         {/* The silhouette: a rocket tip, not a pyramid. */}
         <path
           d="M28 152 C 62 70 118 22 150 8 C 182 22 238 70 272 152"
@@ -667,20 +639,8 @@ function RocketSection({
           strokeOpacity="0.3"
           strokeWidth="1"
         />
-        {/* The spin: a lit face sweeps across the cone while the hidden-half
-            dashes crawl the other way — a body of revolution, turning. */}
-        <g clipPath="url(#raket-cone-clip)">
-          <rect
-            x="-84"
-            y="0"
-            width="84"
-            height="176"
-            fill="url(#raket-facet-nose)"
-            className="facet-sweep"
-            style={{ "--sweep-x": "396px" } as React.CSSProperties}
-          />
-        </g>
-        {/* Cross-sections; the base ring is the CUT itself. */}
+        {/* Cross-sections; the base ring is the CUT itself. The crawling
+            hidden-half dashes are the spin — pure wireframe, no fill. */}
         <Ring cx={150} cy={96} rx={78} ry={10} spin />
         <Ring cx={150} cy={152} rx={122} ry={14} spin />
         <circle cx="150" cy="8" r="2" fill="currentColor" fillOpacity="0.9" />
@@ -706,29 +666,10 @@ function RocketSection({
           <stop offset="45%" stopColor="var(--color-destructive)" stopOpacity="0.55" />
           <stop offset="100%" stopColor="var(--color-destructive)" stopOpacity="0" />
         </radialGradient>
-        <linearGradient id="raket-facet-bell" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor="var(--color-primary)" stopOpacity="0" />
-          <stop offset="0.5" stopColor="var(--color-primary)" stopOpacity="0.16" />
-          <stop offset="1" stopColor="var(--color-primary)" stopOpacity="0" />
-        </linearGradient>
-        <clipPath id="raket-bell-clip">
-          <path d="M64 14 C 58 46 48 72 40 92 L 200 92 C 192 72 182 46 176 14 Z" />
-        </clipPath>
       </defs>
       {/* Only the METAL glows: the neon filter wraps the bell, not the
           flame, so all three engines burn the exact same fire. */}
       <g className={NEON_GLOW}>
-        {/* The bell's lit and shaded halves, flaring like a nozzle. */}
-        <path
-          d="M64 14 C 58 46 48 72 40 92 L 120 103 L 120 14 Z"
-          fill="currentColor"
-          fillOpacity="0.1"
-        />
-        <path
-          d="M176 14 C 182 46 192 72 200 92 L 120 103 L 120 14 Z"
-          fill="currentColor"
-          fillOpacity="0.04"
-        />
         {/* The silhouette. */}
         <path
           d="M64 14 C 58 46 48 72 40 92 M176 14 C 182 46 192 72 200 92"
@@ -745,19 +686,8 @@ function RocketSection({
           strokeOpacity="0.3"
           strokeWidth="1"
         />
-        {/* The spin, same trick as the nose: sweeping face, crawling dashes. */}
-        <g clipPath="url(#raket-bell-clip)">
-          <rect
-            x="-64"
-            y="8"
-            width="64"
-            height="100"
-            fill="url(#raket-facet-bell)"
-            className="facet-sweep"
-            style={{ "--sweep-x": "312px" } as React.CSSProperties}
-          />
-        </g>
-        {/* Rings: the top one is the CUT, the lip is the exhaust's mouth. */}
+        {/* Rings: the top one is the CUT, the lip is the exhaust's mouth.
+            Their crawling dashes are the spin, same as the nose. */}
         <Ring cx={120} cy={14} rx={56} ry={8} spin />
         <Ring cx={120} cy={58} rx={68} ry={9} spin />
         <Ring cx={120} cy={92} rx={80} ry={11} spin />

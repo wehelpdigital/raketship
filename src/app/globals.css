@@ -315,21 +315,11 @@
   }
 }
 
-/* The rocket's spin, faked in 2D: the hidden-half ring dashes crawl one
-   way while a lit face sweeps across the surface the other way. Both are
-   slow, linear and seamless — a body of revolution, quietly turning. */
+/* The rocket's spin, faked in 2D: the hidden-half ring dashes crawl
+   sideways — slow, linear and seamless, a body of revolution turning. */
 @keyframes ring-drift {
   to {
     stroke-dashoffset: 16;
-  }
-}
-
-@keyframes facet-sweep {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(var(--sweep-x, 396px));
   }
 }
 
@@ -435,14 +425,9 @@
   }
 
   /* 16 units over 3.2s is two full "4 4" dash cycles, so the loop has no
-     visible seam; the facet band starts and ends outside its clip for the
-     same reason. */
+     visible seam. */
   .ring-drift {
     animation: ring-drift 3.2s linear infinite;
-  }
-
-  .facet-sweep {
-    animation: facet-sweep 7s linear infinite;
   }
 
   /* Land masses and craters ride inside the planet's clip; the ring is a
@@ -513,8 +498,7 @@
     .debris,
     .debris-rocket,
     .debris-satellite,
-    .ring-drift,
-    .facet-sweep {
+    .ring-drift {
       animation: none;
     }
   }
