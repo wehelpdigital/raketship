@@ -89,70 +89,6 @@ const SPACE_ROCKETS: readonly {
   { left: "88%", size: 18, duration: 23, delay: -11, opacity: 0.8, shootX: "-28vw", tilt: -15 },
 ];
 
-const SPACE_SAUCERS: readonly {
-  top: string;
-  size: number;
-  duration: number;
-  delay: number;
-  opacity: number;
-  from: string;
-  to: string;
-}[] = [
-  { top: "14%", size: 30, duration: 34, delay: -8, opacity: 0.7, from: "-60px", to: "104vw" },
-  { top: "44%", size: 22, duration: 41, delay: -25, opacity: 0.55, from: "104vw", to: "-60px" },
-];
-
-function TinySaucer({ size }: { size: number }) {
-  return (
-    <svg
-      viewBox="0 0 34 25"
-      width={size}
-      height={size * (25 / 34)}
-      aria-hidden="true"
-      className="overflow-visible text-primary"
-    >
-      {/* The dome. */}
-      <path
-        d="M11 8 C 11 4 14 2 17 2 C 20 2 23 4 23 8"
-        fill="currentColor"
-        fillOpacity="0.2"
-        stroke="currentColor"
-        strokeOpacity="0.6"
-        strokeWidth="1"
-      />
-      {/* The disc. */}
-      <ellipse
-        cx="17"
-        cy="9.5"
-        rx="15"
-        ry="4.5"
-        fill="currentColor"
-        fillOpacity="0.25"
-        stroke="currentColor"
-        strokeOpacity="0.7"
-        strokeWidth="1"
-      />
-      {/* The running lights. */}
-      <circle cx="8" cy="10.5" r="1.1" fill="var(--color-warning)" fillOpacity="0.9" />
-      <circle cx="17" cy="12" r="1.1" fill="var(--color-warning)" fillOpacity="0.9" />
-      <circle cx="26" cy="10.5" r="1.1" fill="var(--color-warning)" fillOpacity="0.9" />
-      {/* The thruster: a saucer travelling is a saucer burning something. */}
-      <g className="flame-flicker">
-        <path
-          d="M17 14 C 20 17 20 20 17 24 C 14 20 14 17 17 14 Z"
-          fill="var(--color-destructive)"
-          fillOpacity="0.5"
-        />
-        <path
-          d="M17 15 C 18.6 17.5 18.6 19.5 17 22 C 15.4 19.5 15.4 17.5 17 15 Z"
-          fill="var(--color-warning)"
-          fillOpacity="0.85"
-        />
-      </g>
-    </svg>
-  );
-}
-
 function TinyRocket({ size }: { size: number }) {
   return (
     <svg
@@ -244,27 +180,6 @@ function SpaceTraffic() {
               ) : null}
             </div>
             {item.feature === "ring" ? <div className="planet-ring" /> : null}
-          </div>
-        </div>
-      ))}
-      {SPACE_SAUCERS.map((item, index) => (
-        <div
-          key={`s${index}`}
-          aria-hidden="true"
-          className="debris-saucer"
-          style={
-            {
-              top: item.top,
-              "--debris-duration": `${item.duration}s`,
-              "--debris-delay": `${item.delay}s`,
-              "--debris-opacity": item.opacity,
-              "--glide-from": item.from,
-              "--glide-to": item.to,
-            } as CSSProperties
-          }
-        >
-          <div className="debris-bob">
-            <TinySaucer size={item.size} />
           </div>
         </div>
       ))}

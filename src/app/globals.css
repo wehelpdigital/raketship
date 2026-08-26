@@ -291,38 +291,6 @@
   }
 }
 
-/* A saucer crossing: sideways, unhurried, transit-then-rest like the
-   rockets — and a slow bob, because saucers hover even while they travel. */
-@keyframes saucer-glide {
-  0% {
-    transform: translateX(var(--glide-from, -60px));
-    opacity: 0;
-  }
-  4% {
-    opacity: var(--debris-opacity, 0.7);
-  }
-  30% {
-    opacity: var(--debris-opacity, 0.7);
-  }
-  34% {
-    transform: translateX(var(--glide-to, 104vw));
-    opacity: 0;
-  }
-  100% {
-    transform: translateX(var(--glide-to, 104vw));
-    opacity: 0;
-  }
-}
-
-@keyframes saucer-bob {
-  from {
-    transform: translateY(-3px);
-  }
-  to {
-    transform: translateY(3px);
-  }
-}
-
 @keyframes flame-flicker {
   from {
     transform: scaleY(0.85);
@@ -406,19 +374,6 @@
     opacity: 0;
   }
 
-  .debris-saucer {
-    position: absolute;
-    left: 0;
-    pointer-events: none;
-    animation: saucer-glide var(--debris-duration, 34s) linear infinite;
-    animation-delay: var(--debris-delay, 0s);
-    opacity: 0;
-  }
-
-  .debris-bob {
-    animation: saucer-bob 2.6s ease-in-out infinite alternate;
-  }
-
   .debris-rocket {
     position: absolute;
     top: -140px;
@@ -494,9 +449,7 @@
     .star-field-near,
     .flame-flicker,
     .debris,
-    .debris-rocket,
-    .debris-saucer,
-    .debris-bob {
+    .debris-rocket {
       animation: none;
     }
   }
