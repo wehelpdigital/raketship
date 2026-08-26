@@ -291,6 +291,30 @@
   }
 }
 
+/* A satellite passing through: the rockets' transit-then-rest grammar, but
+   crossing the sky sideways on a slant — in on one edge, out the other, a
+   little lower or higher than it entered. */
+@keyframes satellite-drift {
+  0% {
+    transform: translate(var(--sat-from, -90px), 0);
+    opacity: 0;
+  }
+  4% {
+    opacity: var(--debris-opacity, 0.6);
+  }
+  30% {
+    opacity: var(--debris-opacity, 0.6);
+  }
+  34% {
+    transform: translate(var(--sat-to, 104vw), var(--sat-slant, 15vh));
+    opacity: 0;
+  }
+  100% {
+    transform: translate(var(--sat-to, 104vw), var(--sat-slant, 15vh));
+    opacity: 0;
+  }
+}
+
 @keyframes flame-flicker {
   from {
     transform: scaleY(0.85);
@@ -383,6 +407,15 @@
     opacity: 0;
   }
 
+  .debris-satellite {
+    position: absolute;
+    left: 0;
+    pointer-events: none;
+    animation: satellite-drift var(--debris-duration, 40s) linear infinite;
+    animation-delay: var(--debris-delay, 0s);
+    opacity: 0;
+  }
+
   /* Land masses and craters ride inside the planet's clip; the ring is a
      tilted ellipse around a wrapper. */
   .planet-land {
@@ -449,7 +482,8 @@
     .star-field-near,
     .flame-flicker,
     .debris,
-    .debris-rocket {
+    .debris-rocket,
+    .debris-satellite {
       animation: none;
     }
   }

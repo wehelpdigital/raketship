@@ -89,6 +89,23 @@ const SPACE_ROCKETS: readonly {
   { left: "88%", size: 18, duration: 23, delay: -11, opacity: 0.8, shootX: "-28vw", tilt: -15 },
 ];
 
+/* Satellites cross the sky sideways on a slant — one each way, tilted into
+   their travel, on the same transit-then-rest cadence as the rockets. */
+const SPACE_SATELLITES: readonly {
+  top: string;
+  size: number;
+  duration: number;
+  delay: number;
+  opacity: number;
+  from: string;
+  to: string;
+  slant: string;
+  tilt: number;
+}[] = [
+  { top: "20%", size: 34, duration: 37, delay: -13, opacity: 0.6, from: "-90px", to: "104vw", slant: "16vh", tilt: 12 },
+  { top: "62%", size: 26, duration: 44, delay: -31, opacity: 0.5, from: "104vw", to: "-90px", slant: "-13vh", tilt: -9 },
+];
+
 function TinyRocket({ size }: { size: number }) {
   return (
     <svg
@@ -121,6 +138,79 @@ function TinyRocket({ size }: { size: number }) {
           fillOpacity="0.85"
         />
       </g>
+    </svg>
+  );
+}
+
+function TinySatellite({ size }: { size: number }) {
+  return (
+    <svg
+      viewBox="0 0 46 22"
+      width={size}
+      height={size * (22 / 46)}
+      aria-hidden="true"
+      className="overflow-visible text-primary"
+    >
+      {/* The solar wings, gridded into cells. */}
+      <rect
+        x="1"
+        y="7"
+        width="13"
+        height="10"
+        fill="currentColor"
+        fillOpacity="0.14"
+        stroke="currentColor"
+        strokeOpacity="0.55"
+        strokeWidth="1"
+      />
+      <rect
+        x="32"
+        y="7"
+        width="13"
+        height="10"
+        fill="currentColor"
+        fillOpacity="0.14"
+        stroke="currentColor"
+        strokeOpacity="0.55"
+        strokeWidth="1"
+      />
+      <path
+        d="M5.3 7 L5.3 17 M9.7 7 L9.7 17 M1 12 L14 12 M36.3 7 L36.3 17 M40.7 7 L40.7 17 M32 12 L45 12"
+        fill="none"
+        stroke="currentColor"
+        strokeOpacity="0.35"
+        strokeWidth="0.8"
+      />
+      {/* The struts. */}
+      <path
+        d="M14 12 L17 12 M29 12 L32 12"
+        fill="none"
+        stroke="currentColor"
+        strokeOpacity="0.6"
+        strokeWidth="1"
+      />
+      {/* The bus. */}
+      <rect
+        x="17"
+        y="6"
+        width="12"
+        height="12"
+        rx="1.5"
+        fill="currentColor"
+        fillOpacity="0.25"
+        stroke="currentColor"
+        strokeOpacity="0.7"
+        strokeWidth="1"
+      />
+      {/* The antenna, calling home. */}
+      <path
+        d="M23 6 L23 2"
+        fill="none"
+        stroke="currentColor"
+        strokeOpacity="0.6"
+        strokeWidth="1"
+      />
+      <circle cx="23" cy="1.6" r="1.2" fill="var(--color-warning)" fillOpacity="0.9" />
     </svg>
   );
 }
@@ -200,6 +290,28 @@ function SpaceTraffic() {
         >
           <div style={{ transform: `rotate(${item.tilt}deg)` }}>
             <TinyRocket size={item.size} />
+          </div>
+        </div>
+      ))}
+      {SPACE_SATELLITES.map((item, index) => (
+        <div
+          key={`sat${index}`}
+          aria-hidden="true"
+          className="debris-satellite"
+          style={
+            {
+              top: item.top,
+              "--debris-duration": `${item.duration}s`,
+              "--debris-delay": `${item.delay}s`,
+              "--debris-opacity": item.opacity,
+              "--sat-from": item.from,
+              "--sat-to": item.to,
+              "--sat-slant": item.slant,
+            } as CSSProperties
+          }
+        >
+          <div style={{ transform: `rotate(${item.tilt}deg)` }}>
+            <TinySatellite size={item.size} />
           </div>
         </div>
       ))}
