@@ -427,61 +427,85 @@ function RocketSection({
 
   if (part === "hull") {
     /*
-      The fuselage, barely there: a capsule wrapped around wherever the
-      elements actually sit, with the same ring-and-meridian grammar as the
-      sections above and below it — at opacities low enough to be felt more
-      than seen. No glow: a glow would lift it forward, and it lives behind.
+      The fuselage barrel, in the same grammar as the sections: curved side
+      silhouettes bowing outward, a cut ring at each end whose hidden half is
+      dashed, meridians down the surface, mid rings across it. Faint — it
+      lives behind the cards — but drawn like a solid, not a rounded box.
+      No glow: a glow would lift it forward.
     */
-    const r = Math.min(w, h) * 0.14
-    const rings = [0.28, 0.55, 0.82]
+    const rx = w / 2 - 10
+    const bow = w * 0.012
     return (
       <svg
         viewBox={`0 0 ${w} ${h}`}
         width={w}
         height={h}
         aria-hidden="true"
-        className="pointer-events-none text-primary"
+        className="pointer-events-none text-primary overflow-visible"
       >
-        <rect
-          x="1.5"
-          y="1.5"
-          width={w - 3}
-          height={h - 3}
-          rx={r}
-          fill="currentColor"
-          fillOpacity="0.022"
-          stroke="currentColor"
-          strokeOpacity="0.12"
-          strokeWidth="1.5"
-        />
-        {/* Meridians bowing with the hull. */}
+        {/* The barrel's skin. */}
         <path
-          d={`M ${w * 0.3} 6 C ${w * 0.26} ${h * 0.33} ${w * 0.26} ${h * 0.66} ${w * 0.3} ${h - 6} M ${w * 0.7} 6 C ${w * 0.74} ${h * 0.33} ${w * 0.74} ${h * 0.66} ${w * 0.7} ${h - 6}`}
+          d={`M 10 16 C ${10 - bow} ${h * 0.33} ${10 - bow} ${h * 0.66} 10 ${h - 16} A ${rx} 13 0 0 0 ${w - 10} ${h - 16} C ${w - 10 + bow} ${h * 0.66} ${w - 10 + bow} ${h * 0.33} ${w - 10} 16 A ${rx} 13 0 0 0 10 16 Z`}
+          fill="currentColor"
+          fillOpacity="0.045"
+        />
+        {/* The sides. */}
+        <path
+          d={`M 10 16 C ${10 - bow} ${h * 0.33} ${10 - bow} ${h * 0.66} 10 ${h - 16} M ${w - 10} 16 C ${w - 10 + bow} ${h * 0.33} ${w - 10 + bow} ${h * 0.66} ${w - 10} ${h - 16}`}
           fill="none"
           stroke="currentColor"
-          strokeOpacity="0.07"
-          strokeWidth="1"
+          strokeOpacity="0.35"
+          strokeWidth="1.5"
         />
-        {/* Cross-section rings, hidden halves dashed. */}
-        {rings.map((t) => (
-          <g key={t}>
+        {/* The cut rings at both ends: this section continues. */}
+        {[16, h - 16].map((cy) => (
+          <g key={cy}>
             <path
-              d={`M 8 ${h * t} A ${w / 2 - 8} 12 0 0 0 ${w - 8} ${h * t}`}
+              d={`M 10 ${cy} A ${rx} 13 0 0 0 ${w - 10} ${cy}`}
               fill="none"
               stroke="currentColor"
-              strokeOpacity="0.09"
-              strokeWidth="1"
+              strokeOpacity="0.3"
+              strokeWidth="1.2"
+              strokeDasharray="8 7"
             />
             <path
-              d={`M 8 ${h * t} A ${w / 2 - 8} 12 0 0 1 ${w - 8} ${h * t}`}
+              d={`M 10 ${cy} A ${rx} 13 0 0 1 ${w - 10} ${cy}`}
               fill="none"
               stroke="currentColor"
-              strokeOpacity="0.05"
+              strokeOpacity="0.12"
               strokeWidth="1"
               strokeDasharray="4 5"
             />
           </g>
         ))}
+        {/* Mid rings. */}
+        {[0.4, 0.72].map((t) => (
+          <g key={t}>
+            <path
+              d={`M ${10 - bow * 0.7} ${h * t} A ${rx + bow * 0.7} 13 0 0 0 ${w - 10 + bow * 0.7} ${h * t}`}
+              fill="none"
+              stroke="currentColor"
+              strokeOpacity="0.16"
+              strokeWidth="1"
+            />
+            <path
+              d={`M ${10 - bow * 0.7} ${h * t} A ${rx + bow * 0.7} 13 0 0 1 ${w - 10 + bow * 0.7} ${h * t}`}
+              fill="none"
+              stroke="currentColor"
+              strokeOpacity="0.07"
+              strokeWidth="1"
+              strokeDasharray="4 5"
+            />
+          </g>
+        ))}
+        {/* Meridians following the bow. */}
+        <path
+          d={`M ${w * 0.28} 22 C ${w * 0.26} ${h * 0.4} ${w * 0.26} ${h * 0.66} ${w * 0.28} ${h - 22} M ${w * 0.5} 26 L ${w * 0.5} ${h - 26} M ${w * 0.72} 22 C ${w * 0.74} ${h * 0.4} ${w * 0.74} ${h * 0.66} ${w * 0.72} ${h - 22}`}
+          fill="none"
+          stroke="currentColor"
+          strokeOpacity="0.12"
+          strokeWidth="1"
+        />
       </svg>
     )
   }

@@ -337,15 +337,18 @@ export default async function RaketPage() {
     nodes.push({
       id: "rocket-hull",
       type: "element",
-      position: { x: minX - 48, y: minY - 32 },
+      // Hugging the cards: the Clients boxes flank the doors from OUTSIDE
+      // the ship, and the booster's cut begins below the hull's — nothing
+      // overlaps either.
+      position: { x: minX - 24, y: minY - 28 },
       data: {
         nodeType: "rocket",
         moduleId: null,
         locked: false,
         values: {
           part: "hull",
-          w: maxX - minX + 96,
-          h: maxY - minY + 64,
+          w: maxX - minX + 48,
+          h: maxY - minY + 36,
         },
         enterIndex: nodes.length,
       },
