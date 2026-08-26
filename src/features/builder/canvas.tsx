@@ -296,7 +296,14 @@ function SpaceTraffic() {
 // remount every node it draws.
 const NODE_RENDERERS: NodeTypes = { [CANVAS_NODE_COMPONENT]: ElementNode };
 
-const FIT_VIEW_OPTIONS = { padding: 0.25 };
+/*
+  padding 0.1: as zoomed IN as fitting everything allows. maxZoom 1 so a
+  near-empty board does not open at magnifying-glass scale. The fit's own
+  minZoom must clear the interactive floor below — the ship stands ~1400px
+  tall, and a 0.4 floor CLAMPED the fit, cropping nose and flame on laptop
+  screens while looking framed on tall ones.
+*/
+const FIT_VIEW_OPTIONS = { padding: 0.1, maxZoom: 1 };
 
 /**
  * React Flow ships its own palette through CSS custom properties, so pointing
@@ -604,7 +611,7 @@ function CanvasInner({
           // as broken.
           fitView
           fitViewOptions={FIT_VIEW_OPTIONS}
-          minZoom={0.4}
+          minZoom={0.15}
           maxZoom={1.5}
           nodeDragThreshold={3}
           nodeClickDistance={8}
