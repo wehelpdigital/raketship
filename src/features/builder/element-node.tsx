@@ -413,11 +413,18 @@ function RocketSection({
   part,
   w = 700,
   h = 700,
+  ww = 240,
+  wt = 200,
+  wh = 200,
   enterIndex,
 }: {
   part: "nose" | "booster" | "hull"
   w?: number
   h?: number
+  /** Wing width each side, wing top, wing height — hull only. */
+  ww?: number
+  wt?: number
+  wh?: number
   enterIndex?: number
 }) {
   const style =
@@ -427,14 +434,19 @@ function RocketSection({
 
   if (part === "hull") {
     /*
-      The fuselage barrel, in the same grammar as the sections: curved side
-      silhouettes bowing outward, a cut ring at each end whose hidden half is
-      dashed, meridians down the surface, mid rings across it. Faint — it
-      lives behind the cards — but drawn like a solid, not a rounded box.
-      No glow: a glow would lift it forward.
+      The fuselage barrel plus two swept delta WINGS — the Clients boxes ride
+      inside the wings, sources docked to the ship's sides. Same grammar as
+      the sections: curved silhouettes, dashed cut rings at both ends, mid
+      rings with hidden halves dashed, meridians. Faint and glowless — it
+      lives behind everything.
     */
-    const rx = w / 2 - 10
-    const bow = w * 0.012
+    const bw = w - 2 * ww
+    const L = ww + 10
+    const R = w - ww - 10
+    const rx = bw / 2 - 10
+    const bow = bw * 0.012
+    const wb = wt + wh
+    const mid = ww + bw / 2
     return (
       <svg
         viewBox={`0 0 ${w} ${h}`}
@@ -443,15 +455,42 @@ function RocketSection({
         aria-hidden="true"
         className="pointer-events-none text-primary overflow-visible"
       >
+        {/* The wings: swept deltas rooted on the barrel. */}
+        <path
+          d={`M ${L} ${wt} C ${ww - 70} ${wt + wh * 0.18} ${70} ${wt + wh * 0.45} ${12} ${wt + wh * 0.78} L ${34} ${wb} C ${ww * 0.5} ${wb - 8} ${ww * 0.85} ${wb - 4} ${L} ${wb} Z`}
+          fill="currentColor"
+          fillOpacity="0.045"
+          stroke="currentColor"
+          strokeOpacity="0.3"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
+        <path
+          d={`M ${R} ${wt} C ${w - ww + 70} ${wt + wh * 0.18} ${w - 70} ${wt + wh * 0.45} ${w - 12} ${wt + wh * 0.78} L ${w - 34} ${wb} C ${w - ww * 0.5} ${wb - 8} ${w - ww * 0.85} ${wb - 4} ${R} ${wb} Z`}
+          fill="currentColor"
+          fillOpacity="0.045"
+          stroke="currentColor"
+          strokeOpacity="0.3"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
+        {/* A rib along each wing. */}
+        <path
+          d={`M ${L} ${wt + wh * 0.45} C ${ww * 0.6} ${wt + wh * 0.55} ${ww * 0.3} ${wt + wh * 0.68} ${60} ${wt + wh * 0.82} M ${R} ${wt + wh * 0.45} C ${w - ww * 0.6} ${wt + wh * 0.55} ${w - ww * 0.3} ${wt + wh * 0.68} ${w - 60} ${wt + wh * 0.82}`}
+          fill="none"
+          stroke="currentColor"
+          strokeOpacity="0.12"
+          strokeWidth="1"
+        />
         {/* The barrel's skin. */}
         <path
-          d={`M 10 16 C ${10 - bow} ${h * 0.33} ${10 - bow} ${h * 0.66} 10 ${h - 16} A ${rx} 13 0 0 0 ${w - 10} ${h - 16} C ${w - 10 + bow} ${h * 0.66} ${w - 10 + bow} ${h * 0.33} ${w - 10} 16 A ${rx} 13 0 0 0 10 16 Z`}
+          d={`M ${L} 16 C ${L - bow} ${h * 0.33} ${L - bow} ${h * 0.66} ${L} ${h - 16} A ${rx} 13 0 0 0 ${R} ${h - 16} C ${R + bow} ${h * 0.66} ${R + bow} ${h * 0.33} ${R} 16 A ${rx} 13 0 0 0 ${L} 16 Z`}
           fill="currentColor"
           fillOpacity="0.045"
         />
         {/* The sides. */}
         <path
-          d={`M 10 16 C ${10 - bow} ${h * 0.33} ${10 - bow} ${h * 0.66} 10 ${h - 16} M ${w - 10} 16 C ${w - 10 + bow} ${h * 0.33} ${w - 10 + bow} ${h * 0.66} ${w - 10} ${h - 16}`}
+          d={`M ${L} 16 C ${L - bow} ${h * 0.33} ${L - bow} ${h * 0.66} ${L} ${h - 16} M ${R} 16 C ${R + bow} ${h * 0.33} ${R + bow} ${h * 0.66} ${R} ${h - 16}`}
           fill="none"
           stroke="currentColor"
           strokeOpacity="0.35"
@@ -461,7 +500,7 @@ function RocketSection({
         {[16, h - 16].map((cy) => (
           <g key={cy}>
             <path
-              d={`M 10 ${cy} A ${rx} 13 0 0 0 ${w - 10} ${cy}`}
+              d={`M ${L} ${cy} A ${rx} 13 0 0 0 ${R} ${cy}`}
               fill="none"
               stroke="currentColor"
               strokeOpacity="0.3"
@@ -469,7 +508,7 @@ function RocketSection({
               strokeDasharray="8 7"
             />
             <path
-              d={`M 10 ${cy} A ${rx} 13 0 0 1 ${w - 10} ${cy}`}
+              d={`M ${L} ${cy} A ${rx} 13 0 0 1 ${R} ${cy}`}
               fill="none"
               stroke="currentColor"
               strokeOpacity="0.12"
@@ -479,17 +518,17 @@ function RocketSection({
           </g>
         ))}
         {/* Mid rings. */}
-        {[0.4, 0.72].map((t) => (
+        {[0.38, 0.7].map((t) => (
           <g key={t}>
             <path
-              d={`M ${10 - bow * 0.7} ${h * t} A ${rx + bow * 0.7} 13 0 0 0 ${w - 10 + bow * 0.7} ${h * t}`}
+              d={`M ${L} ${h * t} A ${rx} 13 0 0 0 ${R} ${h * t}`}
               fill="none"
               stroke="currentColor"
               strokeOpacity="0.16"
               strokeWidth="1"
             />
             <path
-              d={`M ${10 - bow * 0.7} ${h * t} A ${rx + bow * 0.7} 13 0 0 1 ${w - 10 + bow * 0.7} ${h * t}`}
+              d={`M ${L} ${h * t} A ${rx} 13 0 0 1 ${R} ${h * t}`}
               fill="none"
               stroke="currentColor"
               strokeOpacity="0.07"
@@ -498,9 +537,9 @@ function RocketSection({
             />
           </g>
         ))}
-        {/* Meridians following the bow. */}
+        {/* Meridians. */}
         <path
-          d={`M ${w * 0.28} 22 C ${w * 0.26} ${h * 0.4} ${w * 0.26} ${h * 0.66} ${w * 0.28} ${h - 22} M ${w * 0.5} 26 L ${w * 0.5} ${h - 26} M ${w * 0.72} 22 C ${w * 0.74} ${h * 0.4} ${w * 0.74} ${h * 0.66} ${w * 0.72} ${h - 22}`}
+          d={`M ${ww + bw * 0.28} 22 C ${ww + bw * 0.26} ${h * 0.4} ${ww + bw * 0.26} ${h * 0.66} ${ww + bw * 0.28} ${h - 22} M ${mid} 26 L ${mid} ${h - 26} M ${ww + bw * 0.72} 22 C ${ww + bw * 0.74} ${h * 0.4} ${ww + bw * 0.74} ${h * 0.66} ${ww + bw * 0.72} ${h - 22}`}
           fill="none"
           stroke="currentColor"
           strokeOpacity="0.12"
@@ -635,6 +674,9 @@ export function ElementNode({ data, selected }: NodeProps<BuilderNode>) {
         }
         w={typeof data.values.w === "number" ? data.values.w : undefined}
         h={typeof data.values.h === "number" ? data.values.h : undefined}
+        ww={typeof data.values.ww === "number" ? data.values.ww : undefined}
+        wt={typeof data.values.wt === "number" ? data.values.wt : undefined}
+        wh={typeof data.values.wh === "number" ? data.values.wh : undefined}
         enterIndex={data.enterIndex}
       />
     )

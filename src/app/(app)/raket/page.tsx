@@ -299,6 +299,9 @@ export default async function RaketPage() {
   if (body.length > 0) {
     const CARD_W = 300
     const CARD_H = 130
+    const doorRowY =
+      nodes.find((node) => node.id === "module-booking")?.position.y ??
+      Math.min(...body.map((node) => node.position.y)) + 230
     const minX = Math.min(...body.map((node) => node.position.x))
     const maxX = Math.max(...body.map((node) => node.position.x)) + CARD_W
     const minY = Math.min(...body.map((node) => node.position.y))
@@ -324,8 +327,8 @@ export default async function RaketPage() {
       selectable: false,
       connectable: false,
     })
-    nodes.push(section("nose", 300, minY - 236))
-    nodes.push(section("booster", 240, maxY + 24))
+    nodes.push(section("nose", 300, minY - 260))
+    nodes.push(section("booster", 240, maxY + 88))
 
     /*
       The hull: the faintest possible 3D fuselage wrapped around wherever
@@ -337,18 +340,24 @@ export default async function RaketPage() {
     nodes.push({
       id: "rocket-hull",
       type: "element",
-      // Hugging the cards: the Clients boxes flank the doors from OUTSIDE
-      // the ship, and the booster's cut begins below the hull's — nothing
-      // overlaps either.
-      position: { x: minX - 24, y: minY - 28 },
+      /*
+        The wings reach 264px past the barrel on each side, far enough that
+        the Clients boxes ride INSIDE them; the top leaves 64px of air over
+        Your business so the card floats clear of the cut ring; the bottom
+        stops well short of the booster, which dropped further still.
+      */
+      position: { x: minX - 288, y: minY - 64 },
       data: {
         nodeType: "rocket",
         moduleId: null,
         locked: false,
         values: {
           part: "hull",
-          w: maxX - minX + 48,
-          h: maxY - minY + 36,
+          w: maxX - minX + 576,
+          h: maxY - minY + 100,
+          ww: 264,
+          wt: doorRowY - (minY - 64) - 40,
+          wh: 240,
         },
         enterIndex: nodes.length,
       },
