@@ -496,43 +496,47 @@ function RocketSection({
           strokeWidth="1"
         />
         {/*
-          Strap-on boosters riding in the wing gaps — the space between wing
-          and body earns its keep. Small bells, small flames, same grammar.
+          Strap-on boosters hung UNDER each wing with clear spacing — a
+          launcher's outboard engines. Bigger bells, bigger flames, same
+          grammar as the main engine.
         */}
-        {[ww - 20, w - ww + 20].map((cx) => (
-          <g key={cx}>
-            <path
-              d={`M ${cx - 11} ${wt + wh - 26} L ${cx + 11} ${wt + wh - 26} L ${cx + 16} ${wt + wh + 10} L ${cx - 16} ${wt + wh + 10} Z`}
-              fill="currentColor"
-              fillOpacity="0.09"
-              stroke="currentColor"
-              strokeOpacity="0.35"
-              strokeWidth="1.3"
-            />
-            <line
-              x1={cx - 11}
-              y1={wt + wh - 26}
-              x2={cx + 11}
-              y2={wt + wh - 26}
-              stroke="currentColor"
-              strokeOpacity="0.3"
-              strokeWidth="1"
-              strokeDasharray="5 5"
-            />
-            <g className="flame-flicker">
+        {[ww / 2 - 19, w - ww / 2 + 19].map((cx) => {
+          const top = wt + wh + 26
+          return (
+            <g key={cx}>
               <path
-                d={`M ${cx} ${wt + wh + 14} C ${cx + 11} ${wt + wh + 24} ${cx + 10} ${wt + wh + 38} ${cx} ${wt + wh + 58} C ${cx - 10} ${wt + wh + 38} ${cx - 11} ${wt + wh + 24} ${cx} ${wt + wh + 14} Z`}
-                fill="var(--color-destructive)"
-                fillOpacity="0.4"
+                d={`M ${cx - 16} ${top} L ${cx + 16} ${top} L ${cx + 24} ${top + 52} L ${cx - 24} ${top + 52} Z`}
+                fill="currentColor"
+                fillOpacity="0.09"
+                stroke="currentColor"
+                strokeOpacity="0.35"
+                strokeWidth="1.4"
               />
-              <path
-                d={`M ${cx} ${wt + wh + 17} C ${cx + 6} ${wt + wh + 25} ${cx + 6} ${wt + wh + 34} ${cx} ${wt + wh + 46} C ${cx - 6} ${wt + wh + 34} ${cx - 6} ${wt + wh + 25} ${cx} ${wt + wh + 17} Z`}
-                fill="var(--color-warning)"
-                fillOpacity="0.8"
+              <line
+                x1={cx - 16}
+                y1={top}
+                x2={cx + 16}
+                y2={top}
+                stroke="currentColor"
+                strokeOpacity="0.3"
+                strokeWidth="1"
+                strokeDasharray="5 5"
               />
+              <g className="flame-flicker">
+                <path
+                  d={`M ${cx} ${top + 58} C ${cx + 16} ${top + 72} ${cx + 15} ${top + 92} ${cx} ${top + 122} C ${cx - 15} ${top + 92} ${cx - 16} ${top + 72} ${cx} ${top + 58} Z`}
+                  fill="var(--color-destructive)"
+                  fillOpacity="0.4"
+                />
+                <path
+                  d={`M ${cx} ${top + 62} C ${cx + 9} ${top + 74} ${cx + 9} ${top + 88} ${cx} ${top + 106} C ${cx - 9} ${top + 88} ${cx - 9} ${top + 74} ${cx} ${top + 62} Z`}
+                  fill="var(--color-warning)"
+                  fillOpacity="0.8"
+                />
+              </g>
             </g>
-          </g>
-        ))}
+          )
+        })}
         {/* The barrel's skin. */}
         <path
           d={`M ${L} 16 C ${L - bow} ${h * 0.33} ${L - bow} ${h * 0.66} ${L} ${h - 16} A ${rx} 13 0 0 0 ${R} ${h - 16} C ${R + bow} ${h * 0.66} ${R + bow} ${h * 0.33} ${R} 16 A ${rx} 13 0 0 0 ${L} 16 Z`}

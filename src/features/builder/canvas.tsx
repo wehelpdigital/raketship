@@ -55,35 +55,48 @@ import { RunPreview } from "@/features/builder/run-preview";
 import { useViewportMemory } from "@/features/builder/use-viewport-memory";
 
 /**
- * Space traffic behind the board: small rockets and planets on long, offset
- * loops. Hand-scattered positions and NEGATIVE delays — the sky is already
- * mid-story when the board opens, and with every period different, the
- * pattern never visibly repeats. Deterministic, so it costs no JS at all.
+ * Space traffic behind the board. Planets drift down slowly, each with its
+ * own face — a ring, islands, craters; rockets STREAK upward on a slant with
+ * their boost lit, because on an ascending ship only something faster climbs
+ * the screen. Hand-scattered positions and negative delays keep it feeling
+ * random; the transit-then-rest keyframes keep streaks an event rather than
+ * weather. Deterministic, zero JS.
  */
-const SPACE_TRAFFIC: readonly {
-  kind: "rocket" | "planet";
+const SPACE_PLANETS: readonly {
   left: string;
   size: number;
   duration: number;
   delay: number;
   opacity: number;
-  color?: "planet-c2" | "planet-c3" | "planet-c4" | "planet-c5";
+  color: "planet-c2" | "planet-c3" | "planet-c4" | "planet-c5";
+  feature: "ring" | "land" | "crater";
 }[] = [
-  { kind: "planet", left: "7%", size: 22, duration: 44, delay: -9, opacity: 0.7, color: "planet-c5" },
-  { kind: "rocket", left: "16%", size: 18, duration: 27, delay: -21, opacity: 0.6 },
-  { kind: "planet", left: "29%", size: 12, duration: 38, delay: -30, opacity: 0.55, color: "planet-c3" },
-  { kind: "planet", left: "55%", size: 16, duration: 52, delay: -4, opacity: 0.6, color: "planet-c2" },
-  { kind: "rocket", left: "67%", size: 14, duration: 33, delay: -12, opacity: 0.5 },
-  { kind: "planet", left: "82%", size: 26, duration: 47, delay: -26, opacity: 0.75, color: "planet-c4" },
-  { kind: "rocket", left: "92%", size: 20, duration: 24, delay: -6, opacity: 0.65 },
+  { left: "7%", size: 24, duration: 46, delay: -9, opacity: 0.7, color: "planet-c5", feature: "crater" },
+  { left: "29%", size: 14, duration: 40, delay: -30, opacity: 0.55, color: "planet-c3", feature: "land" },
+  { left: "55%", size: 18, duration: 54, delay: -4, opacity: 0.6, color: "planet-c2", feature: "land" },
+  { left: "82%", size: 30, duration: 49, delay: -26, opacity: 0.75, color: "planet-c4", feature: "ring" },
+];
+
+const SPACE_ROCKETS: readonly {
+  left: string;
+  size: number;
+  duration: number;
+  delay: number;
+  opacity: number;
+  shootX: string;
+  tilt: number;
+}[] = [
+  { left: "14%", size: 16, duration: 26, delay: -5, opacity: 0.85, shootX: "24vw", tilt: 13 },
+  { left: "66%", size: 13, duration: 31, delay: -17, opacity: 0.7, shootX: "-20vw", tilt: -12 },
+  { left: "88%", size: 18, duration: 23, delay: -11, opacity: 0.8, shootX: "-28vw", tilt: -15 },
 ];
 
 function TinyRocket({ size }: { size: number }) {
   return (
     <svg
-      viewBox="0 0 14 26"
+      viewBox="0 0 14 40"
       width={size}
-      height={size * (26 / 14)}
+      height={size * (40 / 14)}
       aria-hidden="true"
       className="text-primary"
     >
@@ -97,6 +110,19 @@ function TinyRocket({ size }: { size: number }) {
         strokeLinejoin="round"
       />
       <circle cx="7" cy="10" r="1.6" fill="currentColor" fillOpacity="0.8" />
+      {/* The boost. */}
+      <g className="flame-flicker">
+        <path
+          d="M7 24 C 10 28 10 32 7 39 C 4 32 4 28 7 24 Z"
+          fill="var(--color-destructive)"
+          fillOpacity="0.5"
+        />
+        <path
+          d="M7 25 C 8.6 28 8.6 31 7 35 C 5.4 31 5.4 28 7 25 Z"
+          fill="var(--color-warning)"
+          fillOpacity="0.85"
+        />
+      </g>
     </svg>
   );
 }
@@ -104,9 +130,9 @@ function TinyRocket({ size }: { size: number }) {
 function SpaceTraffic() {
   return (
     <>
-      {SPACE_TRAFFIC.map((item, index) => (
+      {SPACE_PLANETS.map((item, index) => (
         <div
-          key={index}
+          key={`p${index}`}
           aria-hidden="true"
           className="debris"
           style={
@@ -118,16 +144,65 @@ function SpaceTraffic() {
             } as CSSProperties
           }
         >
-          {item.kind === "planet" ? (
+          <div style={{ position: "relative", width: item.size, height: item.size }}>
             <div
-              className={`planet ${item.color ?? "planet-c5"}`}
+              className={`planet ${item.color}`}
               style={{ width: item.size, height: item.size }}
-            />
-          ) : (
-            <div className="debris-sway">
-              <TinyRocket size={item.size} />
+            >
+              {item.feature === "land" ? (
+                <>
+                  <div
+                    className="planet-land"
+                    style={{
+                      left: "18%",
+                      top: "30%",
+                      width: "44%",
+                      height: "34%",
+                      borderRadius: "62% 38% 55% 45% / 55% 60% 40% 45%",
+                    }}
+                  />
+                  <div
+                    className="planet-land"
+                    style={{
+                      left: "58%",
+                      top: "58%",
+                      width: "30%",
+                      height: "24%",
+                      borderRadius: "45% 55% 60% 40% / 50% 45% 55% 50%",
+                    }}
+                  />
+                </>
+              ) : null}
+              {item.feature === "crater" ? (
+                <>
+                  <div className="planet-crater" style={{ left: "24%", top: "22%", width: "22%", height: "22%" }} />
+                  <div className="planet-crater" style={{ left: "58%", top: "48%", width: "16%", height: "16%" }} />
+                  <div className="planet-crater" style={{ left: "34%", top: "62%", width: "12%", height: "12%" }} />
+                </>
+              ) : null}
             </div>
-          )}
+            {item.feature === "ring" ? <div className="planet-ring" /> : null}
+          </div>
+        </div>
+      ))}
+      {SPACE_ROCKETS.map((item, index) => (
+        <div
+          key={`r${index}`}
+          aria-hidden="true"
+          className="debris-rocket"
+          style={
+            {
+              left: item.left,
+              "--debris-duration": `${item.duration}s`,
+              "--debris-delay": `${item.delay}s`,
+              "--debris-opacity": item.opacity,
+              "--shoot-x": item.shootX,
+            } as CSSProperties
+          }
+        >
+          <div style={{ transform: `rotate(${item.tilt}deg)` }}>
+            <TinyRocket size={item.size} />
+          </div>
         </div>
       ))}
     </>

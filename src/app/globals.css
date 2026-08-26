@@ -266,12 +266,28 @@
   }
 }
 
-@keyframes debris-sway {
-  from {
-    transform: rotate(-7deg);
+/* A rocket overtaking: it RISES fast and slanted — we are ascending, and
+   only something faster climbs the screen — then the sky rests until its
+   next pass. The transit is the first third of the period; the rest is
+   quiet, so streaks stay an event rather than weather. */
+@keyframes rocket-shoot {
+  0% {
+    transform: translate(0, 115vh);
+    opacity: 0;
   }
-  to {
-    transform: rotate(7deg);
+  3% {
+    opacity: var(--debris-opacity, 0.8);
+  }
+  27% {
+    opacity: var(--debris-opacity, 0.8);
+  }
+  30% {
+    transform: translate(var(--shoot-x, 20vw), 0);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(var(--shoot-x, 20vw), 0);
+    opacity: 0;
   }
 }
 
@@ -358,13 +374,43 @@
     opacity: 0;
   }
 
-  .debris-sway {
-    animation: debris-sway 6s ease-in-out infinite alternate;
+  .debris-rocket {
+    position: absolute;
+    top: -140px;
+    pointer-events: none;
+    animation: rocket-shoot var(--debris-duration, 28s) linear infinite;
+    animation-delay: var(--debris-delay, 0s);
+    opacity: 0;
+  }
+
+  /* Land masses and craters ride inside the planet's clip; the ring is a
+     tilted ellipse around a wrapper. */
+  .planet-land {
+    position: absolute;
+    background: color-mix(in oklab, var(--planet-lo) 65%, var(--space-ground));
+  }
+  .planet-crater {
+    position: absolute;
+    border-radius: calc(infinity * 1px);
+    background: color-mix(in oklab, var(--planet-lo) 55%, var(--space-ground));
+  }
+  .planet-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 190%;
+    height: 58%;
+    border: 2px solid
+      color-mix(in oklab, var(--planet-hi) 55%, transparent);
+    border-radius: calc(infinity * 1px);
+    transform: translate(-50%, -50%) rotate(-18deg);
   }
 
   /* Planets: a lit limb and a shaded one, each in its own chart colour mixed
      toward the sky's star and ground inks so they sit IN the scene. */
   .planet {
+    position: relative;
+    overflow: hidden;
     border-radius: calc(infinity * 1px);
     background: radial-gradient(
       circle at 32% 30%,
@@ -403,6 +449,7 @@
     .star-field-near,
     .flame-flicker,
     .debris,
+    .debris-rocket,
     .debris-sway {
       animation: none;
     }
