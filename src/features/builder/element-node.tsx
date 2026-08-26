@@ -386,11 +386,14 @@ function Ring({
   cy,
   rx,
   ry,
+  spin,
 }: {
   cx: number
   cy: number
   rx: number
   ry: number
+  /** The hidden-half dashes crawl sideways — half of the faked rotation. */
+  spin?: boolean
 }) {
   return (
     <>
@@ -408,6 +411,7 @@ function Ring({
         strokeOpacity="0.25"
         strokeWidth="1"
         strokeDasharray="4 4"
+        className={spin ? "ring-drift" : undefined}
       />
     </>
   )
@@ -626,6 +630,16 @@ function RocketSection({
         className={cn(NEON, enterIndex !== undefined && "node-arrive")}
         style={style}
       >
+        <defs>
+          <linearGradient id="raket-facet-nose" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="var(--color-primary)" stopOpacity="0" />
+            <stop offset="0.5" stopColor="var(--color-primary)" stopOpacity="0.16" />
+            <stop offset="1" stopColor="var(--color-primary)" stopOpacity="0" />
+          </linearGradient>
+          <clipPath id="raket-cone-clip">
+            <path d="M28 152 C 62 70 118 22 150 8 C 182 22 238 70 272 152 Z" />
+          </clipPath>
+        </defs>
         {/* The lit and shaded halves of the cone. */}
         <path
           d="M150 8 C 118 22 62 70 28 152 L 150 152 Z"
@@ -653,9 +667,22 @@ function RocketSection({
           strokeOpacity="0.3"
           strokeWidth="1"
         />
+        {/* The spin: a lit face sweeps across the cone while the hidden-half
+            dashes crawl the other way — a body of revolution, turning. */}
+        <g clipPath="url(#raket-cone-clip)">
+          <rect
+            x="-84"
+            y="0"
+            width="84"
+            height="176"
+            fill="url(#raket-facet-nose)"
+            className="facet-sweep"
+            style={{ "--sweep-x": "396px" } as React.CSSProperties}
+          />
+        </g>
         {/* Cross-sections; the base ring is the CUT itself. */}
-        <Ring cx={150} cy={96} rx={78} ry={10} />
-        <Ring cx={150} cy={152} rx={122} ry={14} />
+        <Ring cx={150} cy={96} rx={78} ry={10} spin />
+        <Ring cx={150} cy={152} rx={122} ry={14} spin />
         <circle cx="150" cy="8" r="2" fill="currentColor" fillOpacity="0.9" />
       </svg>
     )
@@ -679,6 +706,14 @@ function RocketSection({
           <stop offset="45%" stopColor="var(--color-destructive)" stopOpacity="0.55" />
           <stop offset="100%" stopColor="var(--color-destructive)" stopOpacity="0" />
         </radialGradient>
+        <linearGradient id="raket-facet-bell" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="var(--color-primary)" stopOpacity="0" />
+          <stop offset="0.5" stopColor="var(--color-primary)" stopOpacity="0.16" />
+          <stop offset="1" stopColor="var(--color-primary)" stopOpacity="0" />
+        </linearGradient>
+        <clipPath id="raket-bell-clip">
+          <path d="M64 14 C 58 46 48 72 40 92 L 200 92 C 192 72 182 46 176 14 Z" />
+        </clipPath>
       </defs>
       {/* Only the METAL glows: the neon filter wraps the bell, not the
           flame, so all three engines burn the exact same fire. */}
@@ -710,10 +745,22 @@ function RocketSection({
           strokeOpacity="0.3"
           strokeWidth="1"
         />
+        {/* The spin, same trick as the nose: sweeping face, crawling dashes. */}
+        <g clipPath="url(#raket-bell-clip)">
+          <rect
+            x="-64"
+            y="8"
+            width="64"
+            height="100"
+            fill="url(#raket-facet-bell)"
+            className="facet-sweep"
+            style={{ "--sweep-x": "312px" } as React.CSSProperties}
+          />
+        </g>
         {/* Rings: the top one is the CUT, the lip is the exhaust's mouth. */}
-        <Ring cx={120} cy={14} rx={56} ry={8} />
-        <Ring cx={120} cy={58} rx={68} ry={9} />
-        <Ring cx={120} cy={92} rx={80} ry={11} />
+        <Ring cx={120} cy={14} rx={56} ry={8} spin />
+        <Ring cx={120} cy={58} rx={68} ry={9} spin />
+        <Ring cx={120} cy={92} rx={80} ry={11} spin />
       </g>
       {/* The plume: a gradient glow with a hot core, well clear of the bell. */}
       <g className="flame-flicker">
