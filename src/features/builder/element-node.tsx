@@ -445,7 +445,7 @@ function RocketSection({
     const R = w - ww - 10
     const rx = bw / 2 - 10
     const bow = bw * 0.012
-    const wb = wt + wh
+
     const mid = ww + bw / 2
     return (
       <svg
@@ -455,9 +455,13 @@ function RocketSection({
         aria-hidden="true"
         className="pointer-events-none text-primary overflow-visible"
       >
-        {/* The wings: swept deltas rooted on the barrel. */}
+        {/*
+          The wings: swept deltas DETACHED from the barrel — a cut gap
+          between root and hull, like every other section of this exploded
+          ship. Decoration only now; the boxes all live in the body.
+        */}
         <path
-          d={`M ${L} ${wt} C ${ww - 70} ${wt + wh * 0.18} ${70} ${wt + wh * 0.45} ${12} ${wt + wh * 0.78} L ${34} ${wb} C ${ww * 0.5} ${wb - 8} ${ww * 0.85} ${wb - 4} ${L} ${wb} Z`}
+          d={`M ${ww - 14} ${wt} C ${ww - 90} ${wt + wh * 0.18} ${70} ${wt + wh * 0.45} ${12} ${wt + wh * 0.78} L ${34} ${wt + wh} C ${ww * 0.45} ${wt + wh - 10} ${ww - 40} ${wt + wh * 0.92} ${ww - 14} ${wt + wh * 0.86} Z`}
           fill="currentColor"
           fillOpacity="0.045"
           stroke="currentColor"
@@ -466,17 +470,26 @@ function RocketSection({
           strokeLinejoin="round"
         />
         <path
-          d={`M ${R} ${wt} C ${w - ww + 70} ${wt + wh * 0.18} ${w - 70} ${wt + wh * 0.45} ${w - 12} ${wt + wh * 0.78} L ${w - 34} ${wb} C ${w - ww * 0.5} ${wb - 8} ${w - ww * 0.85} ${wb - 4} ${R} ${wb} Z`}
+          d={`M ${w - ww + 14} ${wt} C ${w - ww + 90} ${wt + wh * 0.18} ${w - 70} ${wt + wh * 0.45} ${w - 12} ${wt + wh * 0.78} L ${w - 34} ${wt + wh} C ${w - ww * 0.45} ${wt + wh - 10} ${w - ww + 40} ${wt + wh * 0.92} ${w - ww + 14} ${wt + wh * 0.86} Z`}
           fill="currentColor"
           fillOpacity="0.045"
           stroke="currentColor"
           strokeOpacity="0.3"
           strokeWidth="1.5"
           strokeLinejoin="round"
+        />
+        {/* The wings' cut edges, facing the hull. */}
+        <path
+          d={`M ${ww - 14} ${wt} L ${ww - 14} ${wt + wh * 0.86} M ${w - ww + 14} ${wt} L ${w - ww + 14} ${wt + wh * 0.86}`}
+          fill="none"
+          stroke="currentColor"
+          strokeOpacity="0.25"
+          strokeWidth="1.2"
+          strokeDasharray="8 7"
         />
         {/* A rib along each wing. */}
         <path
-          d={`M ${L} ${wt + wh * 0.45} C ${ww * 0.6} ${wt + wh * 0.55} ${ww * 0.3} ${wt + wh * 0.68} ${60} ${wt + wh * 0.82} M ${R} ${wt + wh * 0.45} C ${w - ww * 0.6} ${wt + wh * 0.55} ${w - ww * 0.3} ${wt + wh * 0.68} ${w - 60} ${wt + wh * 0.82}`}
+          d={`M ${ww - 30} ${wt + wh * 0.4} C ${ww * 0.55} ${wt + wh * 0.52} ${ww * 0.3} ${wt + wh * 0.66} ${60} ${wt + wh * 0.8} M ${w - ww + 30} ${wt + wh * 0.4} C ${w - ww * 0.55} ${wt + wh * 0.52} ${w - ww * 0.3} ${wt + wh * 0.66} ${w - 60} ${wt + wh * 0.8}`}
           fill="none"
           stroke="currentColor"
           strokeOpacity="0.12"

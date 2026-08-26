@@ -302,10 +302,31 @@ export default async function RaketPage() {
     const doorRowY =
       nodes.find((node) => node.id === "module-booking")?.position.y ??
       Math.min(...body.map((node) => node.position.y)) + 230
-    const minX = Math.min(...body.map((node) => node.position.x))
-    const maxX = Math.max(...body.map((node) => node.position.x)) + CARD_W
-    const minY = Math.min(...body.map((node) => node.position.y))
-    const maxY = Math.max(...body.map((node) => node.position.y)) + CARD_H
+    /*
+      The body holds EVERY box — the Clients squares included. Bounds run
+      over the cards AND the markers, each at its own real size.
+    */
+    const MARKER_W = 144
+    const boxes = [
+      ...body.map((node) => ({
+        x: node.position.x,
+        y: node.position.y,
+        w: CARD_W,
+        h: CARD_H,
+      })),
+      ...nodes
+        .filter((node) => node.id.startsWith("clients-"))
+        .map((node) => ({
+          x: node.position.x,
+          y: node.position.y,
+          w: MARKER_W,
+          h: MARKER_W,
+        })),
+    ]
+    const minX = Math.min(...boxes.map((box) => box.x))
+    const maxX = Math.max(...boxes.map((box) => box.x + box.w))
+    const minY = Math.min(...boxes.map((box) => box.y))
+    const maxY = Math.max(...boxes.map((box) => box.y + box.h))
     const centerX = (minX + maxX) / 2
 
     const section = (
@@ -341,22 +362,22 @@ export default async function RaketPage() {
       id: "rocket-hull",
       type: "element",
       /*
-        The wings reach 264px past the barrel on each side, far enough that
-        the Clients boxes ride INSIDE them; the top leaves 64px of air over
-        Your business so the card floats clear of the cut ring; the bottom
-        stops well short of the booster, which dropped further still.
+        The barrel wraps every box with 28px of skin clearance; the wings
+        are a 200px zone further out, detached — a cut gap between root and
+        hull. 64px of air stays over Your business, and the bottom stops
+        well short of the dropped booster.
       */
-      position: { x: minX - 288, y: minY - 64 },
+      position: { x: minX - 228, y: minY - 64 },
       data: {
         nodeType: "rocket",
         moduleId: null,
         locked: false,
         values: {
           part: "hull",
-          w: maxX - minX + 576,
+          w: maxX - minX + 456,
           h: maxY - minY + 100,
-          ww: 264,
-          wt: doorRowY - (minY - 64) - 40,
+          ww: 200,
+          wt: doorRowY - (minY - 64) - 30,
           wh: 240,
         },
         enterIndex: nodes.length,
