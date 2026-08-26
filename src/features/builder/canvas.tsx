@@ -18,7 +18,6 @@ import {
   type Connection,
   type Edge,
   type NodeTypes,
-  type Viewport,
 } from "@xyflow/react";
 import { Plus, Sparkles, Store } from "lucide-react";
 import { toast } from "sonner";
@@ -52,7 +51,6 @@ import { ElementNode, type BuilderNode } from "@/features/builder/element-node";
 import { InspectorSheet } from "@/features/builder/inspector-sheet";
 import { DRAG_MIME, PaletteSheet } from "@/features/builder/palette-sheet";
 import { RunPreview } from "@/features/builder/run-preview";
-import { useViewportMemory } from "@/features/builder/use-viewport-memory";
 
 /**
  * Space traffic behind the board. Planets drift down slowly, each with its
@@ -71,10 +69,10 @@ const SPACE_PLANETS: readonly {
   color: "planet-c2" | "planet-c3" | "planet-c4" | "planet-c5";
   feature: "ring" | "land" | "crater";
 }[] = [
-  { left: "7%", size: 24, duration: 46, delay: -9, opacity: 0.7, color: "planet-c5", feature: "crater" },
-  { left: "29%", size: 14, duration: 40, delay: -30, opacity: 0.55, color: "planet-c3", feature: "land" },
-  { left: "55%", size: 18, duration: 54, delay: -4, opacity: 0.6, color: "planet-c2", feature: "land" },
-  { left: "82%", size: 30, duration: 49, delay: -26, opacity: 0.75, color: "planet-c4", feature: "ring" },
+  { left: "7%", size: 16, duration: 46, delay: -9, opacity: 0.7, color: "planet-c5", feature: "crater" },
+  { left: "29%", size: 10, duration: 40, delay: -30, opacity: 0.55, color: "planet-c3", feature: "land" },
+  { left: "55%", size: 12, duration: 54, delay: -4, opacity: 0.6, color: "planet-c2", feature: "land" },
+  { left: "82%", size: 20, duration: 49, delay: -26, opacity: 0.75, color: "planet-c4", feature: "ring" },
 ];
 
 const SPACE_ROCKETS: readonly {
@@ -90,6 +88,57 @@ const SPACE_ROCKETS: readonly {
   { left: "66%", size: 13, duration: 31, delay: -17, opacity: 0.7, shootX: "-20vw", tilt: -12 },
   { left: "88%", size: 18, duration: 23, delay: -11, opacity: 0.8, shootX: "-28vw", tilt: -15 },
 ];
+
+const SPACE_SAUCERS: readonly {
+  top: string;
+  size: number;
+  duration: number;
+  delay: number;
+  opacity: number;
+  from: string;
+  to: string;
+}[] = [
+  { top: "14%", size: 30, duration: 34, delay: -8, opacity: 0.7, from: "-60px", to: "104vw" },
+  { top: "44%", size: 22, duration: 41, delay: -25, opacity: 0.55, from: "104vw", to: "-60px" },
+];
+
+function TinySaucer({ size }: { size: number }) {
+  return (
+    <svg
+      viewBox="0 0 34 16"
+      width={size}
+      height={size * (16 / 34)}
+      aria-hidden="true"
+      className="text-primary"
+    >
+      {/* The dome. */}
+      <path
+        d="M11 8 C 11 4 14 2 17 2 C 20 2 23 4 23 8"
+        fill="currentColor"
+        fillOpacity="0.2"
+        stroke="currentColor"
+        strokeOpacity="0.6"
+        strokeWidth="1"
+      />
+      {/* The disc. */}
+      <ellipse
+        cx="17"
+        cy="9.5"
+        rx="15"
+        ry="4.5"
+        fill="currentColor"
+        fillOpacity="0.25"
+        stroke="currentColor"
+        strokeOpacity="0.7"
+        strokeWidth="1"
+      />
+      {/* The running lights. */}
+      <circle cx="8" cy="10.5" r="1.1" fill="var(--color-warning)" fillOpacity="0.9" />
+      <circle cx="17" cy="12" r="1.1" fill="var(--color-warning)" fillOpacity="0.9" />
+      <circle cx="26" cy="10.5" r="1.1" fill="var(--color-warning)" fillOpacity="0.9" />
+    </svg>
+  );
+}
 
 function TinyRocket({ size }: { size: number }) {
   return (
@@ -182,6 +231,27 @@ function SpaceTraffic() {
               ) : null}
             </div>
             {item.feature === "ring" ? <div className="planet-ring" /> : null}
+          </div>
+        </div>
+      ))}
+      {SPACE_SAUCERS.map((item, index) => (
+        <div
+          key={`s${index}`}
+          aria-hidden="true"
+          className="debris-saucer"
+          style={
+            {
+              top: item.top,
+              "--debris-duration": `${item.duration}s`,
+              "--debris-delay": `${item.delay}s`,
+              "--debris-opacity": item.opacity,
+              "--glide-from": item.from,
+              "--glide-to": item.to,
+            } as CSSProperties
+          }
+        >
+          <div className="debris-bob">
+            <TinySaucer size={item.size} />
           </div>
         </div>
       ))}
@@ -288,7 +358,6 @@ function CanvasInner({
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const { screenToFlowPosition } = useReactFlow();
-  const { remember } = useViewportMemory(flowId);
 
   // Modules are bought in the Raket Market, so the outer board has nothing to
   // add from a palette — only the inner module builders do.
@@ -516,9 +585,12 @@ function CanvasInner({
           }}
           onPaneClick={() => setSelectedKey(null)}
           nodeTypes={NODE_RENDERERS}
+          // Every load frames the WHOLE ship: fitView, with nothing
+          // restoring an old camera over it. The viewport memory that used
+          // to win here is gone — a board that opens half off-screen reads
+          // as broken.
           fitView
           fitViewOptions={FIT_VIEW_OPTIONS}
-          onMoveEnd={(_, viewport: Viewport) => remember(viewport)}
           minZoom={0.4}
           maxZoom={1.5}
           nodeDragThreshold={3}
